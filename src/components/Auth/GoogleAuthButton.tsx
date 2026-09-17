@@ -1,5 +1,5 @@
 import React from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '../../lib/supabaseClient';
 
 export default function GoogleAuthButton() {
   const handleGoogleSignIn = async () => {
