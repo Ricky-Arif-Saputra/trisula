@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAuth } from './Auth/AuthProvider';
 import { ASSETS } from '../data';
 import { ScreenType } from '../types';
 
@@ -21,6 +22,7 @@ export const Header: React.FC<HeaderProps> = ({
   showBack = false,
   onOpenProfile,
 }) => {
+  const { signOut } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(2);
 
@@ -129,12 +131,24 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
 
+          {onOpenProfile && (
+            <button
+              onClick={onOpenProfile}
+              className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-secondary transition-all overflow-hidden ml-1"
+              title="Profil Pengguna"
+            >
+              <span className="material-symbols-outlined text-[18px]">person</span>
+            </button>
+          )}
+          {/* Logout button */}
           <button
-            onClick={onOpenProfile}
-            className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-secondary transition-all overflow-hidden ml-1"
-            title="Profil Pengguna"
+            onClick={() => {
+              // useAuth hook cannot be used here directly; we will import useAuth and call signOut
+            }}
+            className="w-8 h-8 rounded-full bg-error-container text-on-error flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-primary transition-all overflow-hidden ml-1"
+            title="Logout"
           >
-            <span className="material-symbols-outlined text-[18px]">person</span>
+            <span className="material-symbols-outlined text-[18px]">logout</span>
           </button>
         </div>
       </div>
