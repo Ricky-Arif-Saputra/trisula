@@ -64,11 +64,29 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Loading state
+  // Loading state — tampilkan spinner sementara sesi dicek
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-surface text-on-surface">
-        <span className="text-xl">Memuat...</span>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        background: '#f8f9fa',
+        fontFamily: 'sans-serif',
+        gap: '16px',
+      }}>
+        <div style={{
+          width: '40px',
+          height: '40px',
+          border: '4px solid #e0e0e0',
+          borderTop: '4px solid #6750a4',
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite',
+        }} />
+        <span style={{ color: '#6750a4', fontSize: '14px' }}>Memuat...</span>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }

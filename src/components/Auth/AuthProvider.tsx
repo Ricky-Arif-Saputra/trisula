@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { supabase } from '../../lib/supabaseClient'
+import { supabase } from '../../lib/supabaseClient';
 import type { Session, User } from '@supabase/supabase-js';
 
 interface AuthContextProps {
@@ -17,17 +17,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    // 1. Ambil sesi awal langsung (reliable untuk initial render)
+    supabase.auth.getSession()
+      .then(({ data: { session: sess } }) => {
+        setUser(sess?.user ?? null);
+        setSession(sess);
+      })
+      .catch((err) => {
+        console.error('Gagal mengambil sesi Supabase:', err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+
+    // 2. Dengarkan perubahan sesi setelahnya (login, logout, refresh token)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
       setUser(sess?.user ?? null);
       setSession(sess);
+      // Pastikan loading selesai jika onAuthStateChange tiba lebih dulu
       setLoading(false);
     });
-    // Initial session fetch
-    supabase.auth.getSession().then(({ data: { session: sess } }) => {
-      setUser(sess?.user ?? null);
-      setSession(sess);
-      setLoading(false);
-    });
+
     return () => {
       subscription?.unsubscribe();
     };
