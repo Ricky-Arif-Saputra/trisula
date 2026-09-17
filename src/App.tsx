@@ -7,14 +7,12 @@ import { MateriScreen } from './components/screens/MateriScreen';
 import { LatihanScreen } from './components/screens/LatihanScreen';
 import { SimulasiScreen } from './components/screens/SimulasiScreen';
 import { DashboardScreen } from './components/screens/DashboardScreen';
-
-// Auth imports
-import { AuthProvider, useAuth } from './components/Auth/AuthProvider';
+import { useAuth } from './components/Auth/AuthProvider';
 import AuthLayout from './components/Auth/AuthLayout';
 import AuthTabs from './components/Auth/AuthTabs';
 
 export default function App() {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading } = useAuth();
 
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('beranda');
   const [materiCategory, setMateriCategory] = useState<MathCategory>('bilangan');
@@ -22,7 +20,6 @@ export default function App() {
   const [userXp, setUserXp] = useState<number>(4850);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Initialize theme
   useEffect(() => {
     const isDarkStored = localStorage.getItem('trisula_theme') === 'dark';
     setIsDark(isDarkStored);
@@ -67,6 +64,7 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Loading state
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-surface text-on-surface">
@@ -75,6 +73,7 @@ export default function App() {
     );
   }
 
+  // Not logged in — show auth screen
   if (!user) {
     return (
       <AuthLayout>
@@ -83,48 +82,42 @@ export default function App() {
     );
   }
 
+  // Logged in — show main app
   return (
-    <AuthProvider>
-      <div className="min-h-screen bg-surface text-on-surface flex flex-col font-sans transition-colors duration-300">
-        {/* Maximum Width Mobile-First Container */}
-        <div className="w-full max-w-md sm:max-w-xl md:max-w-2xl mx-auto flex flex-col min-h-screen bg-surface relative shadow-xl">
-          {/* Top App Header */}
-          <Header
-            currentScreen={currentScreen}
-            isDark={isDark}
-            onToggleDark={handleToggleTheme}
-            onNavigate={(screen) => handleNavigate(screen)}
-          />
+    <div className="min-h-screen bg-surface text-on-surface flex flex-col font-sans transition-colors duration-300">
+      <div className="w-full max-w-md sm:max-w-xl md:max-w-2xl mx-auto flex flex-col min-h-screen bg-surface relative shadow-xl">
+        <Header
+          currentScreen={currentScreen}
+          isDark={isDark}
+          onToggleDark={handleToggleTheme}
+          onNavigate={(screen) => handleNavigate(screen)}
+        />
 
-          {/* Global Toast Notification */}
-          {toastMessage && (
-            <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl bg-primary text-on-primary shadow-lg text-xs font-bold flex items-center gap-2 animate-in fade-in slide-in-from-top-3">
-              <span className="material-symbols-outlined text-secondary text-[20px]">military_tech</span>
-              <span>{toastMessage}</span>
-            </div>
+        {toastMessage && (
+          <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl bg-primary text-on-primary shadow-lg text-xs font-bold flex items-center gap-2 animate-in fade-in slide-in-from-top-3">
+            <span className="material-symbols-outlined text-secondary text-[20px]">military_tech</span>
+            <span>{toastMessage}</span>
+          </div>
+        )}
+
+        <main className="flex-1 flex flex-col pt-16 pb-20 w-full">
+          {currentScreen === 'beranda' && (
+            <BerandaScreen onNavigate={(screen, cat) => handleNavigate(screen, cat)} />
           )}
+          {currentScreen === 'materi' && (
+            <MateriScreen initialCategory={materiCategory} onNavigateToProblem={() => handleNavigate('latihan')} />
+          )}
+          {currentScreen === 'latihan' && (
+            <LatihanScreen onClaimXp={handleClaimXp} onNavigateToSimulasi={() => handleNavigate('simulasi')} />
+          )}
+          {currentScreen === 'simulasi' && <SimulasiScreen />}
+          {currentScreen === 'dashboard' && (
+            <DashboardScreen onNavigate={(screen, cat) => handleNavigate(screen, cat)} />
+          )}
+        </main>
 
-          {/* Main Screen Viewport */}
-          <main className="flex-1 flex flex-col pt-16 pb-20 w-full">
-            {currentScreen === 'beranda' && (
-              <BerandaScreen onNavigate={(screen, cat) => handleNavigate(screen, cat)} />
-            )}
-            {currentScreen === 'materi' && (
-              <MateriScreen initialCategory={materiCategory} onNavigateToProblem={() => handleNavigate('latihan')} />
-            )}
-            {currentScreen === 'latihan' && (
-              <LatihanScreen onClaimXp={handleClaimXp} onNavigateToSimulasi={() => handleNavigate('simulasi')} />
-            )}
-            {currentScreen === 'simulasi' && <SimulasiScreen />}
-            {currentScreen === 'dashboard' && (
-              <DashboardScreen onNavigate={(screen, cat) => handleNavigate(screen, cat)} />
-            )}
-          </main>
-
-          {/* Floating Bottom Navigation Bar */}
-          <BottomNav currentScreen={currentScreen} onNavigate={(screen) => handleNavigate(screen)} />
-        </div>
+        <BottomNav currentScreen={currentScreen} onNavigate={(screen) => handleNavigate(screen)} />
       </div>
-    </AuthProvider>
+    </div>
   );
 }
