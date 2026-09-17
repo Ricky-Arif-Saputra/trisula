@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+@theme {
+  --color-surface: #faf8ff;
+  --color-surface-dim: #d2d9f4;
+  --color-surface-bright: #faf8ff;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f2f3ff;
+  --color-surface-container: #eaedff;
+  --color-surface-container-high: #e2e7ff;
+  --color-surface-container-highest: #dae2fd;
+  --color-surface-variant: #dae2fd;
+  --color-on-surface: #131b2e;
+  --color-on-surface-variant: #43474d;
+  --color-inverse-surface: #283044;
+  --color-inverse-on-surface: #eef0ff;
+  --color-outline: #74777e;
+  --color-outline-variant: #c4c6ce;
+
+  --color-primary: #000f22;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #0a2540;
+  --color-on-primary-container: #768dad;
+  --color-primary-fixed: #d2e4ff;
+  --color-primary-fixed-dim: #b0c8eb;
+  --color-on-primary-fixed: #001c37;
+  --color-on-primary-fixed-variant: #314865;
+  --color-inverse-primary: #b0c8eb;
+
+  --color-secondary: #006b5c;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #65fade;
+  --color-on-secondary-container: #007262;
+  --color-secondary-fixed: #65fade;
+  --color-secondary-fixed-dim: #41ddc2;
+  --color-on-secondary-fixed: #00201b;
+  --color-on-secondary-fixed-variant: #005045;
+
+  --color-tertiary: #1a0b00;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #381e00;
+  --color-on-tertiary-container: #c87900;
+  --color-tertiary-fixed: #ffdcbc;
+  --color-tertiary-fixed-dim: #ffb86b;
+  --color-on-tertiary-fixed: #2c1700;
+  --color-on-tertiary-fixed-variant: #683d00;
+
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display-lg: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-headline-md: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-body-md: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-math-display: "Plus Jakarta Sans", monospace, sans-serif;
+
+  --spacing-space-xs: 0.25rem;
+  --spacing-space-sm: 0.5rem;
+  --spacing-space-md: 1rem;
+  --spacing-space-lg: 1.5rem;
+  --spacing-space-xl: 2rem;
+  --spacing-space-2xl: 3rem;
+  --spacing-margin-mobile: 1rem;
+  --spacing-margin: 2rem;
+}
+
+@layer base {
+  html, body {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-sans);
+    background-color: var(--color-surface);
+    color: var(--color-on-surface);
+  }
+  
+  .dark {
+    --color-surface: #0a1120;
+    --color-surface-dim: #070d18;
+    --color-surface-bright: #131c30;
+    --color-surface-container-lowest: #0e172a;
+    --color-surface-container-low: #131f38;
+    --color-surface-container: #172643;
+    --color-surface-container-high: #1d2f53;
+    --color-surface-container-highest: #263b65;
+    --color-surface-variant: #263b65;
+    --color-on-surface: #e6edfd;
+    --color-on-surface-variant: #9cb0d1;
+    --color-outline: #5c7094;
+    --color-outline-variant: #34476c;
+
+    --color-primary: #d2e4ff;
+    --color-on-primary: #001c37;
+    --color-primary-container: #1b3252;
+    --color-on-primary-container: #b0c8eb;
+
+    --color-secondary: #41ddc2;
+    --color-on-secondary: #00382f;
+    --color-secondary-container: #005045;
+    --color-on-secondary-container: #65fade;
+  }
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+.material-symbols-outlined.fill-1 {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Hide scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
