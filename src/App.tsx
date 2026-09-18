@@ -15,7 +15,7 @@ export default function App() {
   const { user, loading } = useAuth();
 
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('beranda');
-  const [materiCategory, setMateriCategory] = useState<MathCategory>('bilangan');
+  const [materiCategory, setMateriCategory] = useState<MathCategory | null>(null);
   const [isDark, setIsDark] = useState<boolean>(false);
   const [userXp, setUserXp] = useState<number>(4850);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -56,15 +56,35 @@ export default function App() {
     showToast(`Selamat! +${amount} XP berhasil ditambahkan ke profil Anda.`);
   };
 
-  const handleNavigate = (screen: ScreenType, category?: MathCategory) => {
-    if (category) {
+  const handleNavigate = (screen: ScreenType, category?: MathCategory | null) => {
+    if (category !== undefined) {
       setMateriCategory(category);
+    } else if (screen === 'materi') {
+      setMateriCategory(null); // Reset ke 5 Kartu Materi Utama saat tab Materi diklik
     }
     setCurrentScreen(screen);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Loading state — tampilkan spinner sementara sesi dicek
+  const isDetailView = currentScreen === 'materi' && materiCategory !== null;
+
+  const getHeaderTitle = () => {
+    if (currentScreen === 'materi') {
+      if (materiCategory === 'bilangan') return 'Detail Materi: Bilangan';
+      if (materiCategory === 'aljabar') return 'Detail Materi: Aljabar';
+      if (materiCategory === 'geometri') return 'Detail Materi: Geometri';
+      if (materiCategory === 'trigonometri') return 'Detail Materi: Trigonometri';
+      if (materiCategory === 'peluang') return 'Detail Materi: Data & Peluang';
+      return 'Daftar 5 Materi Utama';
+    }
+    if (currentScreen === 'beranda') return 'TRISULA EduMath';
+    if (currentScreen === 'latihan') return 'Laboratorium Latihan RME';
+    if (currentScreen === 'simulasi') return 'Laboratorium Simulasi 3D';
+    if (currentScreen === 'dashboard') return 'Dasbor Analyst & Profil';
+    return 'TRISULA EduMath';
+  };
+
+  // Loading state
   if (loading) {
     return (
       <div style={{
@@ -81,11 +101,11 @@ export default function App() {
           width: '40px',
           height: '40px',
           border: '4px solid #e0e0e0',
-          borderTop: '4px solid #6750a4',
+          borderTop: '4px solid #006b5c',
           borderRadius: '50%',
           animation: 'spin 0.8s linear infinite',
         }} />
-        <span style={{ color: '#6750a4', fontSize: '14px' }}>Memuat...</span>
+        <span style={{ color: '#006b5c', fontSize: '14px', fontWeight: 600 }}>Memuat TRISULA EduMath...</span>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -106,9 +126,11 @@ export default function App() {
       <div className="w-full max-w-md sm:max-w-2xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl mx-auto flex flex-col min-h-screen bg-surface relative shadow-2xl transition-all duration-300">
         <Header
           currentScreen={currentScreen}
+          title={getHeaderTitle()}
+          showBack={isDetailView}
+          onBack={() => setMateriCategory(null)}
           isDark={isDark}
           onToggleDark={handleToggleTheme}
-          onNavigate={(screen) => handleNavigate(screen)}
         />
 
         {toastMessage && (
@@ -123,7 +145,11 @@ export default function App() {
             <BerandaScreen onNavigate={(screen, cat) => handleNavigate(screen, cat)} />
           )}
           {currentScreen === 'materi' && (
-            <MateriScreen initialCategory={materiCategory} onNavigateToProblem={() => handleNavigate('latihan')} />
+            <MateriScreen
+              initialCategory={materiCategory}
+              onSelectCategory={(cat) => setMateriCategory(cat)}
+              onNavigateToProblem={() => handleNavigate('latihan')}
+            />
           )}
           {currentScreen === 'latihan' && (
             <LatihanScreen onClaimXp={handleClaimXp} onNavigateToSimulasi={() => handleNavigate('simulasi')} />
@@ -134,7 +160,16 @@ export default function App() {
           )}
         </main>
 
-        <BottomNav currentScreen={currentScreen} onNavigate={(screen) => handleNavigate(screen)} />
+        <BottomNav
+          currentScreen={currentScreen}
+          onSelectScreen={(screen) => {
+            if (screen === 'materi') {
+              handleNavigate('materi', null); // Reset materi topic to 5 main cards view
+            } else {
+              handleNavigate(screen);
+            }
+          }}
+        />
       </div>
     </div>
   );
