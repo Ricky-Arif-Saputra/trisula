@@ -16,10 +16,18 @@ export default function GoogleAuthButton() {
         },
       });
       if (authError) {
-        setError(authError.message);
+        if (authError.message.includes('not enabled') || authError.message.includes('validation_failed')) {
+          setError('Google Provider belum diaktifkan di Supabase Dashboard. Silakan aktifkan provider Google pada menu Authentication > Providers.');
+        } else {
+          setError(authError.message);
+        }
       }
     } catch (err: any) {
-      setError(err?.message || 'Terjadi kesalahan saat menghubungkan ke Google.');
+      if (err?.message?.includes('not enabled') || err?.message?.includes('validation_failed')) {
+        setError('Google Provider belum diaktifkan di Supabase Dashboard (Authentication > Providers > Google).');
+      } else {
+        setError(err?.message || 'Terjadi kesalahan saat menghubungkan ke akun Google.');
+      }
     } finally {
       setLoading(false);
     }
@@ -36,6 +44,7 @@ export default function GoogleAuthButton() {
           color: '#ff8a80',
           fontSize: '12px',
           fontWeight: 600,
+          lineHeight: '1.4',
         }}>
           {error}
         </div>

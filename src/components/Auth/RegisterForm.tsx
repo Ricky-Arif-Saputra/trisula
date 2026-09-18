@@ -42,7 +42,7 @@ export default function RegisterForm() {
 
     const cleanNisn = nisn.trim();
     const cleanName = fullName.trim();
-    const email = `${cleanNisn}@trisula.internal`;
+    const email = `${cleanNisn}@trisula.com`;
 
     try {
       const { data, error: signUpError } = await supabase.auth.signUp({
@@ -57,7 +57,15 @@ export default function RegisterForm() {
       });
 
       if (signUpError) {
-        setError(signUpError.message);
+        if (signUpError.message.includes('already registered')) {
+          setError('NISN ini sudah terdaftar. Silakan pilih tab "Masuk".');
+        } else if (signUpError.message.includes('invalid') || signUpError.message.includes('Email')) {
+          setError('Format NISN tidak valid. Pastikan hanya memasukkan angka NISN.');
+        } else if (signUpError.message.includes('Failed to fetch')) {
+          setError('Gagal terhubung ke Supabase. Periksa koneksi internet Anda.');
+        } else {
+          setError(signUpError.message);
+        }
       } else {
         if (data?.user) {
           try {
@@ -71,7 +79,7 @@ export default function RegisterForm() {
             console.error('Gagal menyimpan profil:', profileErr);
           }
         }
-        setSuccess('Pendaftaran berhasil! Akun Anda telah dibuat. Silakan gunakan NISN dan kata sandi Anda untuk masuk.');
+        setSuccess('Pendaftaran berhasil! Akun Anda telah dibuat. Silakan beralih ke tab "Masuk".');
         setFullName('');
         setNisn('');
         setPassword('');
@@ -94,6 +102,7 @@ export default function RegisterForm() {
           color: '#ff8a80',
           fontSize: '12px',
           fontWeight: 600,
+          lineHeight: '1.4',
         }}>
           {error}
         </div>
@@ -108,6 +117,7 @@ export default function RegisterForm() {
           color: '#41ddc2',
           fontSize: '12px',
           fontWeight: 600,
+          lineHeight: '1.4',
         }}>
           {success}
         </div>
@@ -184,12 +194,10 @@ export default function RegisterForm() {
             title={showPassword ? 'Sembunyikan Kata Sandi' : 'Tampilkan Kata Sandi'}
           >
             {showPassword ? (
-              /* Eye Off Icon */
               <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-7 0-10-7-10-7a19.16 19.16 0 014.188-4.898M9.88 9.88a3 3 0 104.24 4.24M1 1l22 22" />
               </svg>
             ) : (
-              /* Eye Icon */
               <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />

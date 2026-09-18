@@ -36,16 +36,28 @@ export default function LoginForm() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const email = `${nisn.trim()}@trisula.internal`;
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
-    if (authError) {
-      setError(
-        authError.message === 'Invalid login credentials'
-          ? 'NISN atau kata sandi salah. Silakan periksa kembali.'
-          : authError.message
-      );
+
+    const cleanNisn = nisn.trim();
+    const email = `${cleanNisn}@trisula.com`;
+
+    try {
+      const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      if (authError) {
+        if (authError.message.includes('Invalid login credentials')) {
+          setError('NISN atau kata sandi salah. Silakan periksa kembali.');
+        } else if (authError.message.includes('Email not confirmed')) {
+          setError('Email belum dikonfirmasi oleh Supabase. Harap hilangkan centang "Confirm email" di Supabase Dashboard (Authentication > Providers > Email).');
+        } else if (authError.message.includes('Failed to fetch')) {
+          setError('Gagal terhubung ke Supabase. Periksa koneksi internet Anda.');
+        } else {
+          setError(authError.message);
+        }
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Terjadi kesalahan saat masuk.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -59,6 +71,7 @@ export default function LoginForm() {
           color: '#ff8a80',
           fontSize: '12px',
           fontWeight: 600,
+          lineHeight: '1.4',
         }}>
           {error}
         </div>
@@ -117,12 +130,10 @@ export default function LoginForm() {
             title={showPassword ? 'Sembunyikan Kata Sandi' : 'Tampilkan Kata Sandi'}
           >
             {showPassword ? (
-              /* Eye Off Icon */
               <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-7 0-10-7-10-7a19.16 19.16 0 014.188-4.898M9.88 9.88a3 3 0 104.24 4.24M1 1l22 22" />
               </svg>
             ) : (
-              /* Eye Icon */
               <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
