@@ -42,10 +42,11 @@ export default function RegisterForm() {
 
     const cleanNisn = nisn.trim();
     const cleanName = fullName.trim();
-    const email = `${cleanNisn}@trisula.com`;
+    let email = `${cleanNisn}@trisula.internal`;
 
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      // 1. Coba daftarkan via email internal ${nisn}@trisula.internal
+      let { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -56,19 +57,35 @@ export default function RegisterForm() {
         },
       });
 
+      // 2. Jika Supabase Auth menolak TLD .internal (email_address_invalid), fallback otomatis ke @trisula.com
+      if (signUpError && signUpError.message.includes('invalid')) {
+        email = `${cleanNisn}@trisula.com`;
+        const retryRes = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              nama_lengkap: cleanName,
+              nisn: cleanNisn,
+            },
+          },
+        });
+        data = retryRes.data;
+        signUpError = retryRes.error;
+      }
+
       if (signUpError) {
         if (signUpError.message.includes('rate limit') || signUpError.status === 429) {
-          setError('⚠️ Batas email Supabase tercapai (Email Rate Limit 429). Harap matikan "Confirm email" di Supabase Dashboard (Authentication > Providers > Email) agar tidak perlu konfirmasi email.');
+          setError('⚠️ Batas pengiriman email Supabase tercapai (Email Rate Limit 429). Harap matikan centang "Confirm email" di Supabase Dashboard (Authentication > Providers > Email) agar pendaftaran bisa langsung berhasil.');
         } else if (signUpError.message.includes('already registered')) {
           setError('NISN ini sudah terdaftar. Silakan beralih ke tab "Masuk".');
-        } else if (signUpError.message.includes('invalid')) {
-          setError('Format NISN tidak valid. Pastikan hanya memasukkan angka NISN.');
         } else if (signUpError.message.includes('Failed to fetch')) {
           setError('Gagal terhubung ke Supabase. Periksa koneksi internet Anda.');
         } else {
           setError(signUpError.message);
         }
       } else {
+        // 3. Simpan data profil (id, nama_lengkap, nisn) ke tabel profiles di Supabase
         if (data?.user) {
           try {
             const { error: profErr } = await supabase.from('profiles').upsert({
@@ -77,28 +94,25 @@ export default function RegisterForm() {
               nisn: cleanNisn,
             });
             if (profErr) {
-              console.error('Gagal simpan ke tabel profiles:', profErr);
+              console.error('Gagal menyimpan ke tabel profiles:', profErr);
             }
           } catch (profileErr) {
-            console.error('Gagal menyimpan profil:', profileErr);
+            console.error('Gagal simpan profil:', profileErr);
           }
         }
 
         if (data?.session) {
           setSuccess('Pendaftaran berhasil! Anda otomatis masuk.');
         } else {
-          setSuccess('Akun berhasil dibuat! Silakan beralih ke tab "Masuk". (Jika gagal masuk, matikan "Confirm email" di Supabase Dashboard).');
+          setSuccess('Akun berhasil dibuat! Silakan beralih ke tab "Masuk" untuk login dengan NISN Anda.');
         }
+
         setFullName('');
         setNisn('');
         setPassword('');
       }
     } catch (err: any) {
-      if (err?.message?.includes('rate limit') || err?.status === 429) {
-        setError('⚠️ Batas pengiriman email Supabase tercapai. Harap matikan "Confirm email" di Supabase Dashboard (Authentication > Providers > Email).');
-      } else {
-        setError(err?.message || 'Terjadi kesalahan saat mendaftar.');
-      }
+      setError(err?.message || 'Terjadi kesalahan saat mendaftar.');
     } finally {
       setLoading(false);
     }

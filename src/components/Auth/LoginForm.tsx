@@ -38,10 +38,24 @@ export default function LoginForm() {
     setLoading(true);
 
     const cleanNisn = nisn.trim();
-    const email = `${cleanNisn}@trisula.com`;
+    let email = `${cleanNisn}@trisula.internal`;
 
     try {
-      const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      // 1. Coba login dengan ${nisn}@trisula.internal
+      let { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+
+      // 2. Jika gagal atau email invalid, coba fallback ke ${nisn}@trisula.com
+      if (authError) {
+        email = `${cleanNisn}@trisula.com`;
+        const retryRes = await supabase.auth.signInWithPassword({ email, password });
+        if (!retryRes.error) {
+          authError = null;
+        } else {
+          // Jika keduanya gagal, gunakan error akhir atau error yang lebih spesifik
+          authError = retryRes.error.message.includes('Invalid login credentials') ? retryRes.error : authError;
+        }
+      }
+
       if (authError) {
         if (authError.message.includes('Invalid login credentials')) {
           setError('NISN atau kata sandi salah. Silakan periksa kembali.');
