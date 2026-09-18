@@ -13,963 +13,789 @@ export const MateriScreen: React.FC<MateriScreenProps> = ({
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<MathCategory>(initialCategory);
 
-  // Bilangan state
-  const [selectedFormula, setSelectedFormula] = useState<'exponential' | 'linear' | null>(null);
-  const [nInput, setNInput] = useState<string>('');
+  // ==========================================
+  // 1. BILANGAN STATE
+  // ==========================================
+  const [decInput, setDecInput] = useState<number>(42);
+  const [selectedFormula, setSelectedFormula] = useState<'exponential' | 'linear'>('exponential');
+  const [nInput, setNInput] = useState<string>('7');
   const [bilanganFeedback, setBilanganFeedback] = useState<{
     text: string;
     type: 'idle' | 'success' | 'warning' | 'error';
   }>({
-    text: 'Silakan pilih rumus eksponensial dan masukkan kalkulasi tahun untuk melihat evaluasi realistik dari model keuangan siswa.',
-    type: 'idle',
+    text: 'Model Eksponensial Bunga Majemuk: Saldo akhir M_n = M_0 (1 + i)^n.',
+    type: 'success',
   });
-  const [showHintBilangan, setShowHintBilangan] = useState<boolean>(false);
 
-  // Aljabar state
-  const [selectedCornerPoint, setSelectedCornerPoint] = useState<string | null>(null);
-  const [aljabarFeedback, setAljabarFeedback] = useState<string>(
-    'Pilihlah salah satu kombinasi titik uji untuk menganalisis risiko bisnis (misalnya pasar yang menuntut variasi produk bukan hanya satu model).'
-  );
+  // ==========================================
+  // 2. ALJABAR STATE
+  // ==========================================
+  const [aljabarSubTab, setAljabarSubTab] = useState<'linear' | 'fungsi'>('linear');
+  // Balance scale (2x + 4 = 12 -> x = 4)
+  const [xValScale, setXValScale] = useState<number>(4);
+  // Function machine f(x) = 2x + 5
+  const [funcXInput, setFuncXInput] = useState<number>(3);
 
-  // Scratchpad state
-  const [showScratchpad, setShowScratchpad] = useState<boolean>(false);
-  const [scratchText, setScratchText] = useState<string>('');
+  // ==========================================
+  // 3. GEOMETRI & PENGUKURAN STATE
+  // ==========================================
+  const [geometriSubTab, setGeometriSubTab] = useState<'objek' | 'transformasi' | 'pengukuran'>('objek');
+  const [selectedShape, setSelectedShape] = useState<'cube' | 'prism' | 'sphere'>('cube');
+  const [wireframeMode, setWireframeMode] = useState<boolean>(true);
+  const [transformMode, setTransformMode] = useState<'translasi' | 'refleksi' | 'rotasi' | 'dilatasi'>('translasi');
+  const [transformVal, setTransformVal] = useState<number>(3);
+  const [gaugeLiquid, setGaugeLiquid] = useState<number>(75);
 
-  const insertSymbol = (sym: string) => {
-    setScratchText((prev) => prev + sym);
+  // ==========================================
+  // 4. TRIGONOMETRI STATE
+  // ==========================================
+  const [trigAngle, setTrigAngle] = useState<number>(45);
+
+  // ==========================================
+  // 5. DATA & PELUANG STATE
+  // ==========================================
+  const [dataSubTab, setDataSubTab] = useState<'data' | 'peluang'>('data');
+  const [chartType, setChartType] = useState<'bar' | 'pie' | 'line'>('bar');
+  const [diceVal, setDiceVal] = useState<number | null>(6);
+  const [coinVal, setCoinVal] = useState<'ANGKA' | 'GARUDA' | null>('GARUDA');
+  const [isRolling, setIsRolling] = useState<boolean>(false);
+
+  // Helper calculation functions for Trigonometri
+  const getTrigValues = (deg: number) => {
+    const rad = (deg * Math.PI) / 180;
+    const sin = Math.sin(rad);
+    const cos = Math.cos(rad);
+    const tan = Math.abs(cos) < 0.0001 ? Infinity : Math.tan(rad);
+
+    // Standard right triangle sides (hypotenuse = 1)
+    const miring = 1.0;
+    const depan = Math.abs(sin);
+    const samping = Math.abs(cos);
+
+    return {
+      sin: sin.toFixed(3),
+      cos: cos.toFixed(3),
+      tan: isFinite(tan) ? tan.toFixed(3) : 'Tak Hingga',
+      depan: depan.toFixed(3),
+      samping: samping.toFixed(3),
+      miring: miring.toFixed(1),
+    };
   };
 
-  // Bilangan solver logic
-  const handleSelectFormula = (type: 'exponential' | 'linear') => {
-    setSelectedFormula(type);
-    if (type === 'exponential') {
-      setBilanganFeedback({
-        text: 'Model eksponensial tepat! Tabungan ini mendapatkan bunga berbunga secara majemuk, bukan penambahan tetap.',
-        type: 'success',
-      });
-    } else {
-      setBilanganFeedback({
-        text: 'Perhatian: Bunga tunggal berasumsi bahwa nilai pokok tabungan tidak mengakumulasi bunga di tahun berikutnya. Pilih model majemuk.',
-        type: 'error',
-      });
-    }
-  };
+  const trigVals = getTrigValues(trigAngle);
 
-  const handleValidateBilangan = () => {
-    if (selectedFormula !== 'exponential') {
-      setBilanganFeedback({
-        text: 'Langkah 1 belum tuntas: Tentukan terlebih dahulu rumus pemodelan matematika yang valid.',
-        type: 'error',
-      });
-      return;
-    }
-    const val = parseFloat(nInput);
-    if (isNaN(val)) {
-      setBilanganFeedback({
-        text: 'Silakan masukkan perkiraan nilai n (tahun) pada kolom input Langkah 2.',
-        type: 'warning',
-      });
-      return;
-    }
-
-    if (val >= 6.8 && val <= 7.1) {
-      setBilanganFeedback({
-        text: 'Luar Biasa! Secara teoritis n ≈ 6,96 tahun. Secara realistik perbankan, bunga dicairkan periodik tahunan sehingga dibutuhkan tepat 7 tahun agar saldo mencapai minimal Rp15.036.000.',
-        type: 'success',
-      });
-    } else if (val > 7.1) {
-      setBilanganFeedback({
-        text: `Estimasi ${val} tahun memang menghasilkan lebih dari Rp15 juta, namun siswa mencari waktu tercepat (minimum) yaitu tepat pada tahun ke-7.`,
-        type: 'warning',
-      });
-    } else {
-      const estimated = Math.round(10000000 * Math.pow(1.06, val)).toLocaleString('id-ID');
-      setBilanganFeedback({
-        text: `Pada tahun ke-${val}, uang siswa baru bernilai sekitar Rp${estimated}, belum mencapai target Rp15.000.000. Coba kembali!`,
-        type: 'warning',
-      });
-    }
-  };
-
-  const handleCornerPoint = (pt: string) => {
-    setSelectedCornerPoint(pt);
-    if (pt === 'B') {
-      setAljabarFeedback(
-        'Titik Optimal Terpilih: (18, 8). Memberikan laba maksimal Rp1.800.000 dengan memanfaatkan 100% kapasitas kanvas dan sol karet secara efisien tanpa bahan terbuang.'
-      );
-    } else if (pt === 'A') {
-      setAljabarFeedback(
-        'Titik A (0, 20): Laba mencapai Rp1.800.000, namun hanya memproduksi tipe B sehingga meninggalkan sisa sol karet berlebih di gudang UMKM.'
-      );
-    } else {
-      setAljabarFeedback(
-        'Titik C (24, 0): Hanya menghasilkan laba Rp1.440.000 (Kurang optimal dibandingkan titik potong B).'
-      );
-    }
+  // Roll Dice Simulation
+  const handleRollDice = () => {
+    setIsRolling(true);
+    setTimeout(() => {
+      const randDice = Math.floor(Math.random() * 6) + 1;
+      const randCoin = Math.random() > 0.5 ? 'GARUDA' : 'ANGKA';
+      setDiceVal(randDice);
+      setCoinVal(randCoin);
+      setIsRolling(false);
+    }, 600);
   };
 
   return (
-    <div className="flex flex-col w-full pb-10">
-      {/* Top Hero & Daily Streak Motivation */}
+    <div className="flex flex-col w-full pb-16 font-sans">
+      {/* HEADER BANNER */}
       <section className="px-margin-mobile pt-space-sm pb-space-md flex flex-col gap-space-sm">
-        <div className="p-space-md rounded-xl bg-gradient-to-r from-primary-container via-primary to-primary-container text-on-primary shadow-md relative overflow-hidden">
-          <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-secondary/15 rounded-full blur-2xl pointer-events-none"></div>
+        <div className="p-space-lg rounded-2xl bg-gradient-to-br from-[#0a2540] via-[#004d40] to-[#006b5c] text-white shadow-xl relative overflow-hidden border border-white/10 backdrop-blur-xl">
+          <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-[#00E676]/15 rounded-full blur-3xl pointer-events-none"></div>
           <div className="flex items-center justify-between relative z-10">
-            <div className="flex items-center gap-space-sm">
-              <div className="w-10 h-10 rounded-lg bg-secondary-container text-on-secondary-container flex items-center justify-center flex-shrink-0 shadow-sm">
-                <span className="material-symbols-outlined text-[24px]">school</span>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-[#00E676] to-[#00B0FF] text-black flex items-center justify-center flex-shrink-0 shadow-lg font-bold text-xl">
+                📐
               </div>
               <div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-secondary-fixed-dim uppercase tracking-wider font-bold">
-                    Kurikulum Merdeka XII
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-[#00E676] uppercase tracking-wider font-extrabold">
+                    Neo-Clean Glassmorphism 3D
                   </span>
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-secondary-fixed"></span>
-                  <span className="text-xs text-surface-container-highest opacity-90">Fase F+</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00B0FF] animate-pulse"></span>
+                  <span className="text-[11px] text-white/70">Fase F+ (Kelas XII)</span>
                 </div>
-                <h2 className="text-base sm:text-lg font-bold leading-snug">
-                  Modul RME Inti Interaktif
+                <h2 className="text-lg sm:text-xl font-extrabold text-white leading-snug">
+                  Modul Interaktif 5 Domain Matematika
                 </h2>
               </div>
             </div>
 
-            <div className="flex flex-col items-end">
-              <div className="flex items-center gap-1 bg-surface-container-lowest/10 px-2.5 py-1 rounded-full text-tertiary-fixed text-xs font-bold">
-                <span className="material-symbols-outlined text-[16px] text-tertiary-fixed-dim">
-                  local_fire_department
-                </span>
-                <span>5 Hari</span>
-              </div>
-              <span className="text-[10px] text-primary-fixed-dim mt-0.5 font-medium">
-                Konsistensi Belajar
+            <div className="hidden sm:flex flex-col items-end">
+              <span className="px-3 py-1 rounded-full bg-white/10 text-[#00E676] text-xs font-bold border border-[#00E676]/30">
+                ⚡ 100% Interaktif
               </span>
             </div>
           </div>
-
-          {/* Quick Progress Bar Real-world Milestone */}
-          <div className="mt-space-md pt-space-xs relative z-10">
-            <div className="flex justify-between items-center text-xs mb-1">
-              <span className="text-primary-fixed-dim">Penguasaan 5 Domain Realistis</span>
-              <span className="text-secondary-fixed font-bold">60% Tuntas</span>
-            </div>
-            <div className="w-full h-2 rounded-full bg-surface-container-lowest/20 overflow-hidden">
-              <div
-                className="h-full bg-secondary-fixed rounded-full transition-all duration-500"
-                style={{ width: '60%' }}
-              ></div>
-            </div>
-          </div>
         </div>
       </section>
 
-      {/* Horizontal Category Filters (5 Core Strands) */}
-      <section className="sticky top-16 z-30 bg-surface/95 dark:bg-surface-container-lowest/95 backdrop-blur-md py-2 px-margin-mobile shadow-sm">
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+      {/* 5 CATEGORY TABS (NEON GLOW NAVIGATOR) */}
+      <section className="sticky top-16 z-30 bg-surface/90 dark:bg-surface-container-lowest/90 backdrop-blur-xl py-3 px-margin-mobile border-b border-outline-variant/20 shadow-sm">
+        <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-1">
+          {/* BILANGAN */}
           <button
-            className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
-              selectedCategory === 'bilangan'
-                ? 'bg-primary-container text-on-primary shadow-sm'
-                : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'
-            }`}
             onClick={() => setSelectedCategory('bilangan')}
-          >
-            <span className="material-symbols-outlined text-[18px]">percent</span>
-            <span>Bilangan</span>
-            <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full bg-secondary text-on-secondary font-bold">
-              2/3
-            </span>
-          </button>
-
-          <button
-            className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
-              selectedCategory === 'aljabar'
-                ? 'bg-primary-container text-on-primary shadow-sm'
+            className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all cursor-pointer ${
+              selectedCategory === 'bilangan'
+                ? 'bg-gradient-to-r from-[#00E676] to-[#00B0FF] text-black shadow-[0_4px_16px_rgba(0,230,118,0.4)] scale-105'
                 : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'
             }`}
+          >
+            <span className="text-base">🔢</span>
+            <span>BILANGAN</span>
+            <span className="px-2 py-0.5 rounded-full bg-black/20 text-xs font-bold">85%</span>
+          </button>
+
+          {/* ALJABAR */}
+          <button
             onClick={() => setSelectedCategory('aljabar')}
-          >
-            <span className="material-symbols-outlined text-[18px]">query_stats</span>
-            <span>Aljabar</span>
-            <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full bg-surface-container-highest text-on-surface-variant font-bold">
-              1/3
-            </span>
-          </button>
-
-          <button
-            className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
-              selectedCategory === 'geometri'
-                ? 'bg-primary-container text-on-primary shadow-sm'
+            className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all cursor-pointer ${
+              selectedCategory === 'aljabar'
+                ? 'bg-gradient-to-r from-[#7C4DFF] to-[#D500F9] text-white shadow-[0_4px_16px_rgba(124,77,255,0.4)] scale-105'
                 : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'
             }`}
+          >
+            <span className="text-base">➗</span>
+            <span>ALJABAR</span>
+            <span className="px-2 py-0.5 rounded-full bg-white/20 text-xs font-bold">70%</span>
+          </button>
+
+          {/* GEOMETRI */}
+          <button
             onClick={() => setSelectedCategory('geometri')}
-          >
-            <span className="material-symbols-outlined text-[18px]">view_in_ar</span>
-            <span>Geometri</span>
-            <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full bg-surface-container-highest text-on-surface-variant font-bold">
-              2/3
-            </span>
-          </button>
-
-          <button
-            className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
-              selectedCategory === 'trigonometri'
-                ? 'bg-primary-container text-on-primary shadow-sm'
+            className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all cursor-pointer ${
+              selectedCategory === 'geometri'
+                ? 'bg-gradient-to-r from-[#FF6D00] to-[#FFAB00] text-black shadow-[0_4px_16px_rgba(255,109,0,0.4)] scale-105'
                 : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'
             }`}
+          >
+            <span className="text-base">📐</span>
+            <span>GEOMETRI & PENGUKURAN</span>
+            <span className="px-2 py-0.5 rounded-full bg-black/20 text-xs font-bold">60%</span>
+          </button>
+
+          {/* TRIGONOMETRI */}
+          <button
             onClick={() => setSelectedCategory('trigonometri')}
-          >
-            <span className="material-symbols-outlined text-[18px]">architecture</span>
-            <span>Trigonometri</span>
-            <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full bg-surface-container-highest text-on-surface-variant font-bold">
-              0/3
-            </span>
-          </button>
-
-          <button
-            className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
-              selectedCategory === 'peluang'
-                ? 'bg-primary-container text-on-primary shadow-sm'
+            className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all cursor-pointer ${
+              selectedCategory === 'trigonometri'
+                ? 'bg-gradient-to-r from-[#00E5FF] to-[#2979FF] text-black shadow-[0_4px_16px_rgba(0,229,255,0.4)] scale-105'
                 : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'
             }`}
-            onClick={() => setSelectedCategory('peluang')}
           >
-            <span className="material-symbols-outlined text-[18px]">bar_chart</span>
-            <span>Data & Peluang</span>
-            <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full bg-surface-container-highest text-on-surface-variant font-bold">
-              1/3
-            </span>
+            <span className="text-base">📐</span>
+            <span>TRIGONOMETRI</span>
+            <span className="px-2 py-0.5 rounded-full bg-black/20 text-xs font-bold">45%</span>
+          </button>
+
+          {/* DATA & PELUANG */}
+          <button
+            onClick={() => setSelectedCategory('peluang')}
+            className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all cursor-pointer ${
+              selectedCategory === 'peluang'
+                ? 'bg-gradient-to-r from-[#FF4081] to-[#FFEA00] text-black shadow-[0_4px_16px_rgba(255,64,129,0.4)] scale-105'
+                : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            <span className="text-base">📊</span>
+            <span>DATA & PELUANG</span>
+            <span className="px-2 py-0.5 rounded-full bg-black/20 text-xs font-bold">90%</span>
           </button>
         </div>
       </section>
 
-      {/* Dynamic Content Container */}
+      {/* DYNAMIC CONTENT PER CATEGORY */}
       <div className="px-margin-mobile flex flex-col gap-space-lg mt-space-md">
-        {/* ============================================== */}
-        {/* CATEGORY 1: BILANGAN */}
-        {/* ============================================== */}
+
+        {/* ============================================================== */}
+        {/* 1. KATEGORI BILANGAN (Emerald Green & Electric Cyan) */}
+        {/* ============================================================== */}
         {selectedCategory === 'bilangan' && (
           <div className="flex flex-col gap-space-lg animate-in fade-in">
-            {/* Real-world Context Card */}
-            <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-sm relative">
+            {/* Header Status Card */}
+            <div className="p- space-md p-5 rounded-2xl bg-gradient-to-br from-[#004d40]/80 via-[#006b5c]/60 to-[#0a2540]/80 border border-[#00E676]/30 backdrop-blur-xl shadow-xl flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary-fixed text-on-primary-fixed text-xs font-bold">
-                  <span className="material-symbols-outlined text-[16px]">travel_explore</span>
-                  <span>Konteks Realistik 1: Literasi Finansial & Biomedis</span>
-                </div>
-                <span className="text-xs text-on-surface-variant font-medium">
-                  Bunga & Logaritma
+                <span className="px-3 py-1 rounded-full bg-[#00E676]/20 text-[#00E676] text-xs font-extrabold border border-[#00E676]/40">
+                  🟢 Level: Sedang
                 </span>
+                <span className="text-xs text-[#00B0FF] font-bold">Progress: 85% Selesai</span>
               </div>
-              <div className="grid grid-cols-1 gap-space-sm mt-1">
-                <div className="relative rounded-lg overflow-hidden h-36 bg-surface-container">
-                  <img
-                    className="w-full h-full object-cover"
-                    alt="Indonesian student analyzing financial charts"
-                    src={ASSETS.bilanganContext}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-primary/25 to-transparent flex items-end p-space-sm">
-                    <p className="text-xs sm:text-sm text-on-primary font-semibold">
-                      Simulasi Deposito Perbankan vs. Multiplikasi Koloni Bakteri
-                    </p>
-                  </div>
-                </div>
-                <p className="text-xs text-on-surface-variant leading-relaxed">
-                  Fenomena pertumbuhan majemuk terjadi di ranah riil: saldo tabungan bank
-                  syariah/konvensional bertumbuh secara periodik mengikuti suku bunga majemuk, sama
-                  persis polanya dengan replikasi sel bakteri di laboratorium mikrobiologi SMA.
-                </p>
-              </div>
-            </div>
-
-            {/* Problem 1: Interactive Workspace Component */}
-            <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-md flex flex-col gap-space-md">
-              {/* Header RME Badge */}
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-container text-on-secondary-container text-xs font-bold">
-                  <span className="material-symbols-outlined text-[16px]">calculate</span>
-                  Latihan Mandiri 1 (Bunga Majemuk)
-                </span>
-                <span className="text-xs px-2 py-0.5 rounded bg-surface-container text-on-surface-variant">
-                  Bobot: Sedang (HOTS)
-                </span>
-              </div>
-
-              {/* Problem Statement */}
-              <div className="p-space-sm rounded-lg bg-surface-container-low flex flex-col gap-1">
-                <div className="text-base font-bold text-primary dark:text-primary-fixed">
-                  Kapan Nilai Tabungan Mencapai Rp15.000.000?
-                </div>
-                <p className="text-xs text-on-surface leading-relaxed">
-                  Seorang siswa kelas XII menyisihkan uang prestasi sebesar{' '}
-                  <strong className="text-primary dark:text-primary-fixed font-semibold">
-                    Rp10.000.000
-                  </strong>{' '}
-                  ke tabungan berjangka dengan bunga majemuk{' '}
-                  <strong className="text-primary dark:text-primary-fixed font-semibold">
-                    6% per tahun
-                  </strong>
-                  . Hitung estimasi waktu minimum (dalam tahun bulat) agar nilai akhir tabungan
-                  minimal{' '}
-                  <strong className="text-primary dark:text-primary-fixed font-semibold">
-                    Rp15.000.000
-                  </strong>
-                  !
-                </p>
-              </div>
-
-              {/* RME Interactive 3-Phase Stepper Workspace */}
-              <div className="flex flex-col gap-space-md bg-surface-container-lowest rounded-lg p-1">
-                {/* Stepper Navigator */}
-                <div className="flex items-center justify-between px-2 pt-1 pb-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center text-xs font-bold">
-                      1
-                    </span>
-                    <span className="text-xs sm:text-sm font-bold text-primary dark:text-primary-fixed">
-                      Pemodelan Matematis
-                    </span>
-                  </div>
-                  <div className="text-xs text-secondary font-semibold flex items-center gap-0.5">
-                    <span className="material-symbols-outlined text-[14px]">touch_app</span> Ketuk
-                    Pilihan
-                  </div>
-                </div>
-
-                {/* Step 1: Horizontal Mathematization */}
-                <div className="p-space-sm rounded-lg bg-surface-container-low flex flex-col gap-space-xs">
-                  <label className="text-xs text-on-surface-variant font-semibold flex items-center gap-1">
-                    <span>Langkah 1: Identifikasi Model Eksponensial Bunga Majemuk</span>
-                  </label>
-                  <div className="grid grid-cols-1 gap-2 mt-1">
-                    <button
-                      className={`w-full text-left p-2.5 rounded-lg font-mono text-xs sm:text-sm transition-all flex items-center justify-between cursor-pointer ${
-                        selectedFormula === 'exponential'
-                          ? 'bg-secondary-container text-on-secondary-container ring-2 ring-secondary'
-                          : 'bg-surface-container-lowest text-on-surface hover:bg-secondary-container/20'
-                      }`}
-                      onClick={() => handleSelectFormula('exponential')}
-                    >
-                      <span>M_n = M_0 · (1 + i)^n</span>
-                      {selectedFormula === 'exponential' && (
-                        <span className="material-symbols-outlined text-secondary text-[20px]">
-                          check_circle
-                        </span>
-                      )}
-                    </button>
-                    <button
-                      className={`w-full text-left p-2.5 rounded-lg font-mono text-xs sm:text-sm transition-all flex items-center justify-between cursor-pointer ${
-                        selectedFormula === 'linear'
-                          ? 'bg-error-container text-on-error-container ring-2 ring-error'
-                          : 'bg-surface-container-lowest text-on-surface hover:bg-secondary-container/20'
-                      }`}
-                      onClick={() => handleSelectFormula('linear')}
-                    >
-                      <span>M_n = M_0 · (1 + n · i) (Bunga Tunggal)</span>
-                      {selectedFormula === 'linear' && (
-                        <span className="material-symbols-outlined text-error text-[20px]">
-                          cancel
-                        </span>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Step 2: Symbolic Substitution */}
-                <div className="p-space-sm rounded-lg bg-surface-container-low flex flex-col gap-space-xs">
-                  <label className="text-xs text-on-surface-variant font-semibold">
-                    Langkah 2: Substitusi Nilai & Transformasi Logaritma
-                  </label>
-                  <div className="bg-surface-container-lowest p-3 rounded-lg flex flex-col gap-2 font-mono text-xs text-on-surface">
-                    <div className="text-on-surface-variant">
-                      15.000.000 ≤ 10.000.000 · (1 + 0,06)^n
-                    </div>
-                    <div className="text-on-surface-variant">
-                      1,5 ≤ (1,06)^n ⟹ n ≥ log(1,5) / log(1,06)
-                    </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs font-bold text-primary dark:text-primary-fixed">
-                        Input Nilai n:
-                      </span>
-                      <input
-                        className="w-28 px-2 py-1 rounded bg-surface-container text-on-surface font-bold text-center focus:outline-none focus:ring-2 focus:ring-secondary"
-                        value={nInput}
-                        onChange={(e) => setNInput(e.target.value)}
-                        placeholder="Contoh: 6.96"
-                        type="number"
-                        step="0.1"
-                      />
-                      <span className="text-xs text-on-surface-variant">tahun</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Step 3: Realistic Reflection & Action */}
-                <div className="flex items-center justify-between gap-2 pt-1">
-                  <button
-                    className="flex-1 py-3 px-4 rounded-lg bg-primary-container text-on-primary text-xs sm:text-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all shadow-sm cursor-pointer"
-                    onClick={handleValidateBilangan}
-                  >
-                    <span className="material-symbols-outlined text-[18px]">verified</span>
-                    <span>Validasi Solusi RME</span>
-                  </button>
-                  <button
-                    className="p-3 rounded-lg bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
-                    onClick={() => setShowHintBilangan(!showHintBilangan)}
-                    title="Bantuan Berpikir"
-                  >
-                    <span className="material-symbols-outlined text-[20px]">lightbulb</span>
-                  </button>
-                </div>
-
-                {/* Dynamic Hint Dropper */}
-                {showHintBilangan && (
-                  <div className="p-3 rounded-lg bg-tertiary-fixed text-on-tertiary-fixed flex items-start gap-2 text-xs">
-                    <span className="material-symbols-outlined text-[18px] text-tertiary-container flex-shrink-0">
-                      info
-                    </span>
-                    <div>
-                      Gunakan nilai aproksimasi log(1,5) ≈ 0,1761 dan log(1,06) ≈ 0,0253. Karena
-                      bunga dihitung per siklus tahunan, bulatkan ke atas agar saldo minimal Rp15
-                      juta tercapai.
-                    </div>
-                  </div>
-                )}
-
-                {/* AI TRISULA FEEDBACK BOX */}
-                <div
-                  className={`p-3.5 rounded-xl flex flex-col gap-2 transition-all duration-300 ${
-                    bilanganFeedback.type === 'success'
-                      ? 'bg-secondary-container/40 border border-secondary/30'
-                      : bilanganFeedback.type === 'error'
-                      ? 'bg-error-container/30 border border-error/30'
-                      : bilanganFeedback.type === 'warning'
-                      ? 'bg-tertiary-fixed/40 border border-tertiary/30'
-                      : 'bg-surface-container'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-secondary text-xs font-bold">
-                      <span className="material-symbols-outlined text-[20px]">auto_awesome</span>
-                      <span>Umpan Balik Cerdas TRISULA AI</span>
-                    </div>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-semibold">
-                      Aktif
-                    </span>
-                  </div>
-                  <p className="text-xs text-on-surface-variant leading-relaxed">
-                    {bilanganFeedback.text}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Problem 2: Contextual Showcase (Bakteri Eksponensial) */}
-            <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-sm">
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant text-xs font-semibold">
-                  <span className="material-symbols-outlined text-[16px]">biotech</span>
-                  Contoh 2: Pertumbuhan Koloni Medis
-                </span>
-                <span className="text-xs text-secondary font-bold">Studi Kasus</span>
-              </div>
-              <h3 className="text-sm sm:text-base font-bold text-on-surface">
-                Pembelahan Sel Bakteri E. Coli Laboratorium
+              <h3 className="text-lg font-extrabold text-white">
+                🔢 Grid Numerik & Konverter Basis Bilangan Digital
               </h3>
-              <p className="text-xs text-on-surface-variant leading-relaxed">
-                Suatu kultur laboratorium dimulai dengan 500 sel bakteri. Setiap 20 menit, koloni
-                melipatgandakan diri dua kali lipat (N(t) = N_0 · 2^(t/20)). Dalam 2 jam (120
-                menit), populasi mencapai:
-              </p>
-              <div className="p-2.5 rounded-lg bg-surface-container flex items-center justify-between font-mono text-xs">
-                <span className="text-primary dark:text-primary-fixed font-bold">
-                  N(120) = 500 · 2^6 = 32.000 bakteri
+              <div className="w-full bg-black/30 h-2.5 rounded-full overflow-hidden border border-white/10">
+                <div className="bg-gradient-to-r from-[#00E676] to-[#00B0FF] h-full rounded-full w-[85%] transition-all duration-500"></div>
+              </div>
+            </div>
+
+            {/* Interactive Base Converter Widget */}
+            <div className="p-5 rounded-2xl bg-surface-container-lowest dark:bg-surface-container-low border border-outline-variant/30 shadow-lg flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-extrabold uppercase text-[#00E676] tracking-wider">
+                  ⚡ Simulator Basis Bilangan (Base Converter 3D)
                 </span>
-                <span className="text-xs px-2 py-1 rounded bg-secondary-container text-on-secondary-container font-bold">
-                  Terverifikasi
-                </span>
+                <span className="text-[11px] text-on-surface-variant">Real-Time Input</span>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-on-surface">Uji Angka Desimal (Base 10):</label>
+                <input
+                  type="number"
+                  value={decInput}
+                  onChange={(e) => setDecInput(parseInt(e.target.value) || 0)}
+                  className="w-full p-3 rounded-xl bg-surface-container text-on-surface font-mono font-bold text-lg border border-outline-variant/30 focus:outline-none focus:ring-2 focus:ring-[#00E676]"
+                />
+              </div>
+
+              {/* Dynamic Base Displays */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                {/* BINARY */}
+                <div className="p-3.5 rounded-xl bg-gradient-to-r from-[#00E676]/10 to-transparent border border-[#00E676]/30 flex flex-col gap-1">
+                  <span className="text-[11px] font-extrabold text-[#00E676] uppercase">Biner (Base 2):</span>
+                  <span className="font-mono text-base font-extrabold text-on-surface break-all">
+                    {decInput.toString(2)}₂
+                  </span>
+                </div>
+                {/* HEXADECIMAL */}
+                <div className="p-3.5 rounded-xl bg-gradient-to-r from-[#00B0FF]/10 to-transparent border border-[#00B0FF]/30 flex flex-col gap-1">
+                  <span className="text-[11px] font-extrabold text-[#00B0FF] uppercase">Heksadesimal (Base 16):</span>
+                  <span className="font-mono text-base font-extrabold text-on-surface break-all">
+                    0x{decInput.toString(16).toUpperCase()}₁₆
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Interactive Exponential Bunga Majemuk Calculator */}
+            <div className="p-5 rounded-2xl bg-surface-container-lowest dark:bg-surface-container-low border border-outline-variant/30 shadow-lg flex flex-col gap-4">
+              <span className="text-xs font-extrabold uppercase text-[#00B0FF] tracking-wider">
+                📈 Model Pertumbuhan Eksponensial (Bunga Majemuk)
+              </span>
+              <div className="p-4 rounded-xl bg-surface-container text-xs leading-relaxed space-y-2">
+                <p className="font-bold text-on-surface">Kalkulasi Tahun (n) untuk Saldo Rp10.000.000 pada Bunga 6%:</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={nInput}
+                    onChange={(e) => setNInput(e.target.value)}
+                    className="w-24 p-2 rounded-lg bg-surface-container-highest font-mono font-bold text-center border border-outline-variant/40"
+                  />
+                  <span className="font-bold text-on-surface">Tahun</span>
+                </div>
+                <div className="p-3 rounded-lg bg-[#00E676]/15 border border-[#00E676]/30 text-[#00E676] font-mono font-bold text-sm">
+                  Nilai Akhir M_{nInput} = Rp{Math.round(10000000 * Math.pow(1.06, parseFloat(nInput) || 0)).toLocaleString('id-ID')}
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* ============================================== */}
-        {/* CATEGORY 2: ALJABAR */}
-        {/* ============================================== */}
+        {/* ============================================================== */}
+        {/* 2. KATEGORI ALJABAR (Deep Violet & Electric Purple) */}
+        {/* ============================================================== */}
         {selectedCategory === 'aljabar' && (
           <div className="flex flex-col gap-space-lg animate-in fade-in">
-            <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-sm">
+            {/* Header Card */}
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-[#2a0845]/90 via-[#6441a5]/70 to-[#7C4DFF]/50 border border-[#D500F9]/30 backdrop-blur-xl shadow-xl flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary-fixed text-on-primary-fixed text-xs font-bold">
-                  <span className="material-symbols-outlined text-[16px]">storefront</span>
-                  <span>Konteks Realistik 2: Ekonomi Sirkular UMKM</span>
-                </div>
-                <span className="text-xs text-on-surface-variant font-medium">Program Linier</span>
-              </div>
-              <div className="relative rounded-lg overflow-hidden h-36 bg-surface-container">
-                <img
-                  className="w-full h-full object-cover"
-                  alt="Indonesian local shoemaking craftsman"
-                  src={ASSETS.aljabarContext}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-primary/20 to-transparent flex items-end p-space-sm">
-                  <p className="text-xs sm:text-sm text-on-primary font-semibold">
-                    Optimasi Alokasi Bahan Kulit Sintetis & Sol Karet
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-on-surface-variant leading-relaxed">
-                Sentra pengrajin sepatu Cibaduyut menghadapi kendala stok bahan baku mingguan dan
-                jam kerja mesin pres. Program linier membantu menghitung kombinasi produksi sepatu
-                tipe A & B demi keuntungan operasional maksimum.
-              </p>
-            </div>
-
-            {/* Problem 1: Program Linier UMKM */}
-            <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-md flex flex-col gap-space-md">
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-container text-on-secondary-container text-xs font-bold">
-                  <span className="material-symbols-outlined text-[16px]">tune</span>
-                  Latihan Optimasi Produksi
+                <span className="px-3 py-1 rounded-full bg-[#D500F9]/20 text-[#D500F9] text-xs font-extrabold border border-[#D500F9]/40">
+                  🔴 Level: HOTS / Sedang
                 </span>
-                <span className="text-xs px-2 py-0.5 rounded bg-surface-container text-on-surface-variant">
-                  Fungsi Objektif
-                </span>
+                <span className="text-xs text-[#7C4DFF] font-bold">Progress: 70% Selesai</span>
               </div>
-              <div className="p-space-sm rounded-lg bg-surface-container-low flex flex-col gap-1.5">
-                <div className="text-sm sm:text-base font-bold text-primary dark:text-primary-fixed">
-                  Berapa Pasang Sepatu Model A & B?
-                </div>
-                <p className="text-xs text-on-surface leading-relaxed">
-                  Sepatu Casual (x) memberi laba Rp60.000/pasang; Sepatu Sport (y) memberi laba
-                  Rp90.000/pasang. Bahan kanvas tersedia 60 m², sol karet tersedia 48 unit.
-                </p>
-                <div className="font-mono text-xs p-2 rounded bg-surface-container-lowest text-on-surface leading-relaxed">
-                  Kendala 1: 2x + 3y ≤ 60 (Kanvas)
-                  <br />
-                  Kendala 2: 2x + y ≤ 48 (Sol Karet)
-                  <br />
-                  Fungsi Sasaran: Z = 60.000x + 90.000y
-                </div>
-              </div>
-
-              {/* Interactive Corner-Point Evaluator */}
-              <div className="flex flex-col gap-2">
-                <span className="text-xs text-on-surface-variant font-semibold">
-                  Pilih Titik Ekstrem Garis Selidik (Corner Points):
-                </span>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    className={`p-2.5 rounded-lg text-left transition-all cursor-pointer ${
-                      selectedCornerPoint === 'A'
-                        ? 'bg-secondary-container text-on-secondary-container ring-2 ring-secondary'
-                        : 'bg-surface-container-low hover:bg-secondary-container/30'
-                    }`}
-                    onClick={() => handleCornerPoint('A')}
-                  >
-                    <span className="text-xs font-bold block">Titik A (0, 20)</span>
-                    <span className="text-[11px] text-on-surface-variant">Laba: Rp1.800.000</span>
-                  </button>
-                  <button
-                    className={`p-2.5 rounded-lg text-left transition-all cursor-pointer ${
-                      selectedCornerPoint === 'B'
-                        ? 'bg-secondary-container text-on-secondary-container ring-2 ring-secondary'
-                        : 'bg-surface-container-low hover:bg-secondary-container/30'
-                    }`}
-                    onClick={() => handleCornerPoint('B')}
-                  >
-                    <span className="text-xs font-bold block">Titik B (18, 8)</span>
-                    <span className="text-[11px] text-on-surface-variant">Solusi Seimbang (100%)</span>
-                  </button>
-                  <button
-                    className={`p-2.5 rounded-lg text-left transition-all cursor-pointer ${
-                      selectedCornerPoint === 'C'
-                        ? 'bg-secondary-container text-on-secondary-container ring-2 ring-secondary'
-                        : 'bg-surface-container-low hover:bg-secondary-container/30'
-                    }`}
-                    onClick={() => handleCornerPoint('C')}
-                  >
-                    <span className="text-xs font-bold block">Titik C (24, 0)</span>
-                    <span className="text-[11px] text-on-surface-variant">Laba: Rp1.440.000</span>
-                  </button>
-                  <button
-                    className="p-2.5 rounded-lg text-left bg-surface-container-low hover:bg-secondary-container/30 transition-all cursor-pointer"
-                    onClick={() => handleCornerPoint('B')}
-                  >
-                    <span className="text-xs font-bold block text-secondary">Evaluasi Grafis</span>
-                    <span className="text-[11px] text-on-surface-variant">Analisis Garis Selidik</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-surface-container flex flex-col gap-1">
-                <div className="flex items-center gap-1 text-secondary text-xs font-bold">
-                  <span className="material-symbols-outlined text-[18px]">psychology</span>
-                  <span>Refleksi Realistis UMKM</span>
-                </div>
-                <p className="text-xs text-on-surface-variant leading-relaxed">
-                  {aljabarFeedback}
-                </p>
+              <h3 className="text-lg font-extrabold text-white">
+                ➗ Timbangan Digital Linear & Mesin Input-Output Fungsi
+              </h3>
+              <div className="w-full bg-black/30 h-2.5 rounded-full overflow-hidden border border-white/10">
+                <div className="bg-gradient-to-r from-[#7C4DFF] to-[#D500F9] h-full rounded-full w-[70%] transition-all duration-500"></div>
               </div>
             </div>
 
-            {/* Problem 2: Marginal Cost Parabola */}
-            <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-xs">
-              <span className="text-xs text-secondary font-bold uppercase">
-                Contoh 2: Biaya Marjinal Pabrik
-              </span>
-              <h4 className="text-sm font-bold text-on-surface">Kemasan Biodegradable</h4>
-              <p className="text-xs text-on-surface-variant leading-relaxed">
-                Fungsi biaya total C(x) = 2x² - 80x + 1.200 (ribu rupiah). Biaya minimum dicapai
-                saat turunan pertama C'(x) = 4x - 80 = 0 ⟹ x = 20 unit.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* ============================================== */}
-        {/* CATEGORY 3: GEOMETRI */}
-        {/* ============================================== */}
-        {selectedCategory === 'geometri' && (
-          <div className="flex flex-col gap-space-lg animate-in fade-in">
-            <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary-fixed text-on-primary-fixed text-xs font-bold">
-                  <span className="material-symbols-outlined text-[16px]">roofing</span>
-                  <span>Konteks Realistik 3: Arsitektur Nusantara</span>
-                </div>
-                <span className="text-xs text-on-surface-variant font-medium">Dimensi Tiga</span>
-              </div>
-              <div className="relative rounded-lg overflow-hidden h-36 bg-surface-container">
-                <img
-                  className="w-full h-full object-cover"
-                  alt="Traditional Indonesian vernacular architecture"
-                  src={ASSETS.geometriContext}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-primary/20 to-transparent flex items-end p-space-sm">
-                  <p className="text-xs sm:text-sm text-on-primary font-semibold">
-                    Struktur Rangka Atap Rumah Adat Berbentuk Prisma
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-on-surface-variant leading-relaxed">
-                Struktur kuda-kuda atap tradisional memanfaatkan kekakuan segitiga siku-siku dan
-                ruang prisma untuk sirkulasi udara optimal di iklim tropis lembap Indonesia.
-              </p>
-            </div>
-
-            {/* Problem 1: Prisma Segitiga Atap */}
-            <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-md flex flex-col gap-space-md">
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-container text-on-secondary-container text-xs font-bold">
-                  <span className="material-symbols-outlined text-[16px]">straighten</span>
-                  Latihan Volume & Rangka
-                </span>
-                <span className="text-xs px-2 py-0.5 rounded bg-surface-container text-on-surface-variant">
-                  Prisma Segitiga
-                </span>
-              </div>
-              <div className="p-space-sm rounded-lg bg-surface-container-low flex flex-col gap-1">
-                <div className="text-sm sm:text-base font-bold text-primary dark:text-primary-fixed">
-                  Volume Ruang Udara Atap Rumah
-                </div>
-                <p className="text-xs text-on-surface leading-relaxed">
-                  Atap memiliki panjang bubungan 12 m, lebar alas 8 m, dan tinggi puncak tepat di
-                  tengah sebesar 3 m.
-                </p>
-              </div>
-              <div className="p-3 rounded-lg bg-surface-container flex flex-col gap-2 font-mono text-xs">
-                <div className="text-on-surface-variant">
-                  1. Luas Penampang Segitiga Depan:
-                </div>
-                <div className="text-primary dark:text-primary-fixed font-bold">
-                  Luas Alas = 1/2 · alas · tinggi = 1/2 · 8 · 3 = 12 m²
-                </div>
-                <div className="text-on-surface-variant mt-1">2. Volume Prisma Udara:</div>
-                <div className="text-primary dark:text-primary-fixed font-bold">
-                  Volume = Luas Alas · Panjang = 12 · 12 = 144 m³
-                </div>
-              </div>
-              <div className="p-3.5 rounded-xl bg-surface-container-low flex items-start gap-2.5">
-                <span className="material-symbols-outlined text-secondary text-[22px] flex-shrink-0">
-                  lightbulb
-                </span>
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-xs font-bold text-primary dark:text-primary-fixed">
-                    Refleksi RME - Insulasi Suhu
-                  </span>
-                  <p className="text-xs text-on-surface-variant leading-relaxed">
-                    Kapasitas 144 m³ udara ini bertindak sebagai peredam panas alami matahari siang
-                    sebelum mencapai plafon kamar siswa di bawahnya.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Problem 2: Jarak Titik Lampu ke Pojok Lantai */}
-            <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-xs">
-              <span className="text-xs text-secondary font-bold uppercase">
-                Contoh 2: Ruang Kelas XII-MIPA 1
-              </span>
-              <h4 className="text-sm font-bold text-on-surface">
-                Jarak Titik Lampu Plafon ke Pojok Lantai
-              </h4>
-              <p className="text-xs text-on-surface-variant leading-relaxed">
-                Ruang kelas berukuran 8m × 6m × 4m. Lampu di pusat plafon (4, 3, 4). Jarak ke titik
-                pojok (0, 0, 0):
-              </p>
-              <div className="p-2 rounded bg-surface-container text-xs font-mono text-primary dark:text-primary-fixed font-bold">
-                d = √(4² + 3² + 4²) = √(16 + 9 + 16) = √41 ≈ 6,40 meter
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ============================================== */}
-        {/* CATEGORY 4: TRIGONOMETRI */}
-        {/* ============================================== */}
-        {selectedCategory === 'trigonometri' && (
-          <div className="flex flex-col gap-space-lg animate-in fade-in">
-            <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary-fixed text-on-primary-fixed text-xs font-bold">
-                  <span className="material-symbols-outlined text-[16px]">height</span>
-                  <span>Konteks Realistik 4: Eksplorasi Klinometer</span>
-                </div>
-                <span className="text-xs text-on-surface-variant font-medium">
-                  Trigonometri Analitis
-                </span>
-              </div>
-              <div className="relative rounded-lg overflow-hidden h-36 bg-surface-container">
-                <img
-                  className="w-full h-full object-cover"
-                  alt="Students measuring building with inclinometer"
-                  src={ASSETS.trigonometriContext}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-primary/20 to-transparent flex items-end p-space-sm">
-                  <p className="text-xs sm:text-sm text-on-primary font-semibold">
-                    Mengukur Gedung Bertingkat Tanpa Memanjat
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-on-surface-variant leading-relaxed">
-                Dengan klinometer busur sederhana dan meteran pita gulung, siswa memanfaatkan rasio
-                tangen dua sudut pandang untuk menentukan elevasi gedung tanpa alat laser scanner.
-              </p>
-            </div>
-
-            {/* Problem 1: Dua Titik Elevasi */}
-            <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-md flex flex-col gap-space-md">
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-container text-on-secondary-container text-xs font-bold">
-                  <span className="material-symbols-outlined text-[16px]">navigation</span>
-                  Latihan Klinometer Dinamis
-                </span>
-                <span className="text-xs px-2 py-0.5 rounded bg-surface-container text-on-surface-variant">
-                  Rasio Tangen
-                </span>
-              </div>
-              <div className="p-space-sm rounded-lg bg-surface-container-low flex flex-col gap-1">
-                <div className="text-sm sm:text-base font-bold text-primary dark:text-primary-fixed">
-                  Pengukuran Tinggi Gedung Sekolah
-                </div>
-                <p className="text-xs text-on-surface leading-relaxed">
-                  Dari titik A, sudut elevasi puncak gedung adalah 35°. Siswa berjalan 40 meter maju
-                  ke titik B, sudut elevasi menjadi 50°. Tinggi mata pengamat 1,5m ditambahkan di
-                  akhir.
-                </p>
-              </div>
-              <div className="p-3 rounded-lg bg-surface-container flex flex-col gap-2 font-mono text-xs">
-                <div className="text-on-surface-variant">Model Persamaan Tangen:</div>
-                <div className="text-on-surface text-[11px]">
-                  Misal x adalah jarak titik B ke gedung, dan h adalah tinggi gedung:
-                </div>
-                <div className="text-primary dark:text-primary-fixed font-bold">
-                  tan 50° = h / x ⟹ x = h / tan 50° ≈ h / 1,1918
-                </div>
-                <div className="text-primary dark:text-primary-fixed font-bold">
-                  tan 35° = h / (x + 40) ⟹ h = (x + 40) · 0,7002
-                </div>
-                <div className="text-xs text-secondary font-bold mt-1">
-                  Solusi Bersama: h ≈ 67,8 meter (Total +1,5m = 69,3 meter)
-                </div>
-              </div>
-            </div>
-
-            {/* Problem 2: Navigasi Selat Sunda */}
-            <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-xs">
-              <span className="text-xs text-secondary font-bold uppercase">
-                Contoh 2: Navigasi Maritim
-              </span>
-              <h4 className="text-sm font-bold text-on-surface">
-                Vektor Arus Penyeberangan Merak - Bakauheni
-              </h4>
-              <p className="text-xs text-on-surface-variant leading-relaxed">
-                Kapal feri berkecepatan 15 knot mengarah ke Utara, namun arus laut Selat Sunda
-                berkecepatan 4 knot mengarah ke Timur. Arah lintasan resultan dihitung dengan θ =
-                arctan(4/15) ≈ 14,9° condong ke Timur laut.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* ============================================== */}
-        {/* CATEGORY 5: DATA & PELUANG */}
-        {/* ============================================== */}
-        {selectedCategory === 'peluang' && (
-          <div className="flex flex-col gap-space-lg animate-in fade-in">
-            <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary-fixed text-on-primary-fixed text-xs font-bold">
-                  <span className="material-symbols-outlined text-[16px]">analytics</span>
-                  <span>Konteks Realistik 5: Analisis UTBK SNBT</span>
-                </div>
-                <span className="text-xs text-on-surface-variant font-medium">
-                  Distribusi Normal
-                </span>
-              </div>
-              <div className="relative rounded-lg overflow-hidden h-36 bg-surface-container">
-                <img
-                  className="w-full h-full object-cover"
-                  alt="Student analyzing bell curve normal distribution graphs"
-                  src={ASSETS.peluangContext}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-primary/20 to-transparent flex items-end p-space-sm">
-                  <p className="text-xs sm:text-sm text-on-primary font-semibold">
-                    Standardisasi Skor UTBK & Penentuan Ambang Kelulusan
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-on-surface-variant leading-relaxed">
-                Panitia SNPMB menerapkan model kurva lonceng (Gaussian) dengan skor standar
-                (Z-score) untuk membandingkan performa siswa lintas paket soal tes potensi skolastik
-                secara adil.
-              </p>
-            </div>
-
-            {/* Problem 1: Z-score Ujian 40 Siswa */}
-            <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-md flex flex-col gap-space-md">
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-container text-on-secondary-container text-xs font-bold">
-                  <span className="material-symbols-outlined text-[16px]">equalizer</span>
-                  Latihan Z-Score & Peluang Lolos
-                </span>
-                <span className="text-xs px-2 py-0.5 rounded bg-surface-container text-on-surface-variant">
-                  N(μ, σ²)
-                </span>
-              </div>
-              <div className="p-space-sm rounded-lg bg-surface-container-low flex flex-col gap-1">
-                <div className="text-sm sm:text-base font-bold text-primary dark:text-primary-fixed">
-                  Berapa Peluang Siswa Meraih Skor di Atas 650?
-                </div>
-                <p className="text-xs text-on-surface leading-relaxed">
-                  Data simulasi tryout nasional 40 siswa memiliki rata-rata μ = 580 dengan deviasi
-                  standar σ = 50. Berapa persentase peluang siswa meraih skor X ≥ 650?
-                </p>
-              </div>
-
-              {/* Interactive Curve Schema */}
-              <div className="p-3 rounded-lg bg-surface-container flex flex-col gap-2">
-                <div className="flex items-center justify-between text-xs font-semibold">
-                  <span className="text-on-surface">1. Hitung Z-score:</span>
-                  <span className="font-mono font-bold text-primary dark:text-primary-fixed">
-                    Z = (650 - 580) / 50 = +1,40
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs font-semibold">
-                  <span className="text-on-surface">2. Peluang Tabel P(Z ≥ 1,40):</span>
-                  <span className="font-mono font-bold text-secondary">
-                    1 - 0,9192 = 0,0808 (8,08%)
-                  </span>
-                </div>
-
-                {/* Micro Visual Bar Histogram Simulation */}
-                <div className="mt-2 pt-2 flex items-end justify-between h-14 px-4 bg-surface-container-lowest rounded-md">
-                  <div className="w-5 bg-surface-container-highest rounded-t h-4" title="Z < -1"></div>
-                  <div className="w-5 bg-surface-container-highest rounded-t h-8" title="Z = -0.5"></div>
-                  <div className="w-5 bg-surface-container-highest rounded-t h-12" title="Mean (Z = 0)"></div>
-                  <div className="w-5 bg-secondary rounded-t h-7" title="Target: Z = +1.4 (8.08%)"></div>
-                  <div className="w-5 bg-surface-container-highest rounded-t h-3" title="Z > 2"></div>
-                </div>
-                <div className="text-[10px] text-center text-on-surface-variant font-medium">
-                  Distribusi Peserta Ujian: Hanya 8 dari 100 siswa berada di kuadran unggulan ini
-                </div>
-              </div>
-            </div>
-
-            {/* Problem 2: Hidroponik Buah */}
-            <div className="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-xs">
-              <span className="text-xs text-secondary font-bold uppercase">
-                Contoh 2: Panen Hidroponik Smart Green House
-              </span>
-              <h4 className="text-sm font-bold text-on-surface">Bobot Melon Golden Aroma</h4>
-              <p className="text-xs text-on-surface-variant leading-relaxed">
-                Bobot melon berdistribusi normal dengan rata-rata 1.200 gram dan deviasi 100 gram.
-                Standar ekspor supermarket mensyaratkan bobot &gt; 1.000 gram (Z = -2,0). Peluang
-                lolos sortasi ekspor mencapai 97,72%.
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Bottom Interactive Scratchpad Drawer */}
-      <div className="mt-space-lg px-margin-mobile">
-        <div className="p-space-md rounded-xl bg-surface-container-high text-on-surface flex items-center justify-between shadow-sm">
-          <div className="flex items-center gap-space-sm">
-            <div className="w-10 h-10 rounded-full bg-surface-container-lowest flex items-center justify-center text-primary dark:text-primary-fixed shadow-xs flex-shrink-0">
-              <span className="material-symbols-outlined text-[20px]">edit_note</span>
-            </div>
-            <div>
-              <div className="text-xs sm:text-sm font-bold">
-                Coret-coretan Digital & Simbol Cepat
-              </div>
-              <p className="text-xs text-on-surface-variant">
-                Gunakan tombol simbol π, √x, log pada pengerjaan mandiri
-              </p>
-            </div>
-          </div>
-          <button
-            className="px-3 py-2 rounded-lg bg-primary-container text-on-primary text-xs font-bold flex-shrink-0 hover:opacity-90 transition-opacity cursor-pointer"
-            onClick={() => setShowScratchpad(!showScratchpad)}
-          >
-            {showScratchpad ? 'Tutup Pad' : 'Buka Pad'}
-          </button>
-        </div>
-
-        {/* Embedded Scratchpad Drawer */}
-        {showScratchpad && (
-          <div className="mt-space-sm p-space-md rounded-xl bg-surface-container-lowest shadow-lg flex flex-col gap-2 border border-outline-variant/30 animate-in fade-in">
-            <div className="flex justify-between items-center pb-2">
-              <span className="text-xs font-bold text-primary dark:text-primary-fixed">
-                Keypad Cepat Matematika RME
-              </span>
+            {/* Sub-Tab Selector Aljabar */}
+            <div className="flex bg-surface-container-high rounded-xl p-1 gap-1">
               <button
-                className="text-on-surface-variant hover:text-on-surface text-xs font-bold cursor-pointer"
-                onClick={() => setShowScratchpad(false)}
+                onClick={() => setAljabarSubTab('linear')}
+                className={`flex-1 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+                  aljabarSubTab === 'linear'
+                    ? 'bg-gradient-to-r from-[#7C4DFF] to-[#D500F9] text-white shadow-md'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}
               >
-                Tutup
+                a. Timbangan Linear (2x + 4 = 12)
+              </button>
+              <button
+                onClick={() => setAljabarSubTab('fungsi')}
+                className={`flex-1 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+                  aljabarSubTab === 'fungsi'
+                    ? 'bg-gradient-to-r from-[#7C4DFF] to-[#D500F9] text-white shadow-md'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                b. Mesin Fungsi f(x) = 2x + 5
               </button>
             </div>
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-              {['π', '√', '^2', 'log(', '≤', 'θ', '∑'].map((sym) => (
-                <button
-                  key={sym}
-                  className="px-3 py-1.5 rounded bg-surface-container text-primary dark:text-primary-fixed font-mono text-sm font-bold hover:bg-secondary-container hover:text-on-secondary-container transition-colors cursor-pointer"
-                  onClick={() => insertSymbol(sym)}
-                >
-                  {sym === '^2' ? 'x²' : sym === '√' ? '√x' : sym}
-                </button>
-              ))}
-            </div>
-            <textarea
-              className="w-full p-2.5 rounded bg-surface-container-low text-xs font-mono text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary"
-              value={scratchText}
-              onChange={(e) => setScratchText(e.target.value)}
-              placeholder="Tuliskan catatan langkah konseptual atau verifikasi hitungan di sini..."
-              rows={3}
-            />
+
+            {/* SUB-MATERIAL A: TIMBANGAN DIGITAL LINEAR */}
+            {aljabarSubTab === 'linear' && (
+              <div className="p-5 rounded-2xl bg-surface-container-lowest dark:bg-surface-container-low border border-outline-variant/30 shadow-lg flex flex-col gap-4">
+                <span className="text-xs font-extrabold uppercase text-[#D500F9] tracking-wider">
+                  ⚖️ Timbangan Digital Interaktif (Balance Scale 3D)
+                </span>
+                <p className="text-xs text-on-surface-variant leading-relaxed">
+                  Geser nilai variabel <strong>x</strong> untuk menyeimbangkan timbangan aljabar: <code>2x + 4 = 12</code>
+                </p>
+
+                {/* Balance Scale Visual Widget */}
+                <div className="p-6 rounded-2xl bg-gradient-to-b from-[#7C4DFF]/15 to-transparent border border-[#7C4DFF]/30 flex flex-col items-center gap-4">
+                  <div className="flex items-center justify-between w-full max-w-md">
+                    {/* Left Pan */}
+                    <div className="flex flex-col items-center gap-1 p-4 rounded-xl bg-surface-container border border-[#7C4DFF]/40 shadow-inner">
+                      <span className="text-xs font-bold text-on-surface">Sisi Kiri</span>
+                      <span className="font-mono text-lg font-extrabold text-[#D500F9]">
+                        2({xValScale}) + 4 = {2 * xValScale + 4}
+                      </span>
+                    </div>
+
+                    {/* Scale Pivot Icon */}
+                    <div className={`text-3xl transition-transform duration-300 ${xValScale === 4 ? 'rotate-0' : xValScale < 4 ? '-rotate-12' : 'rotate-12'}`}>
+                      ⚖️
+                    </div>
+
+                    {/* Right Pan */}
+                    <div className="flex flex-col items-center gap-1 p-4 rounded-xl bg-surface-container border border-[#7C4DFF]/40 shadow-inner">
+                      <span className="text-xs font-bold text-on-surface">Sisi Kanan</span>
+                      <span className="font-mono text-lg font-extrabold text-[#7C4DFF]">
+                        12
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Slider Control */}
+                  <div className="w-full max-w-md flex flex-col gap-2 pt-2">
+                    <div className="flex justify-between text-xs font-bold">
+                      <span>Ubah Nilai x:</span>
+                      <span className="text-[#D500F9]">x = {xValScale}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={10}
+                      value={xValScale}
+                      onChange={(e) => setXValScale(parseInt(e.target.value))}
+                      className="w-full accent-[#D500F9] cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Status Indicator */}
+                  <div className={`w-full p-3 rounded-xl font-bold text-xs text-center border ${
+                    xValScale === 4
+                      ? 'bg-[#00E676]/20 border-[#00E676]/50 text-[#00E676]'
+                      : 'bg-[#D500F9]/20 border-[#D500F9]/50 text-[#D500F9]'
+                  }`}>
+                    {xValScale === 4
+                      ? '✅ SEIMBANG (EQUILIBRIUM): Nilai x = 4 adalah solusi tepat!'
+                      : `⚠️ TIDAK SEIMBANG: Sisi kiri bernilai ${2 * xValScale + 4}, belum sama dengan 12.`}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUB-MATERIAL B: MESIN FUNGSI INPUT-OUTPUT */}
+            {aljabarSubTab === 'fungsi' && (
+              <div className="p-5 rounded-2xl bg-surface-container-lowest dark:bg-surface-container-low border border-outline-variant/30 shadow-lg flex flex-col gap-4">
+                <span className="text-xs font-extrabold uppercase text-[#7C4DFF] tracking-wider">
+                  ⚙️ Mesin Pemetaan Fungsi (Input-Output Machine)
+                </span>
+                <p className="text-xs text-on-surface-variant leading-relaxed">
+                  Masukkan nilai domain <strong>x</strong> ke dalam mesin fungsi <code>f(x) = 2x + 5</code>:
+                </p>
+
+                <div className="p-5 rounded-2xl bg-surface-container border border-[#7C4DFF]/30 flex flex-col items-center gap-4">
+                  <div className="flex items-center gap-3 w-full justify-center">
+                    {/* INPUT DOMAIN */}
+                    <div className="flex flex-col items-center gap-1 p-3 rounded-xl bg-[#7C4DFF]/20 border border-[#7C4DFF]/50 text-center">
+                      <span className="text-[11px] font-bold text-[#7C4DFF]">Input (Domain x)</span>
+                      <input
+                        type="number"
+                        value={funcXInput}
+                        onChange={(e) => setFuncXInput(parseInt(e.target.value) || 0)}
+                        className="w-16 p-1.5 rounded-lg bg-surface-container-highest font-mono font-extrabold text-center text-on-surface text-base"
+                      />
+                    </div>
+
+                    <span className="text-2xl text-[#D500F9]">➔</span>
+
+                    {/* MACHINE PROCESS */}
+                    <div className="p-4 rounded-2xl bg-gradient-to-r from-[#7C4DFF] to-[#D500F9] text-white font-mono font-extrabold text-sm text-center shadow-lg">
+                      f(x) = 2({funcXInput}) + 5
+                    </div>
+
+                    <span className="text-2xl text-[#D500F9]">➔</span>
+
+                    {/* OUTPUT KODOMAIN */}
+                    <div className="flex flex-col items-center gap-1 p-3 rounded-xl bg-[#D500F9]/20 border border-[#D500F9]/50 text-center">
+                      <span className="text-[11px] font-bold text-[#D500F9]">Output (Kodomain)</span>
+                      <span className="font-mono text-xl font-extrabold text-on-surface">
+                        {2 * funcXInput + 5}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
+
+        {/* ============================================================== */}
+        {/* 3. KATEGORI GEOMETRI DAN PENGUKURAN (Sunset Orange & Warm Amber) */}
+        {/* ============================================================== */}
+        {selectedCategory === 'geometri' && (
+          <div className="flex flex-col gap-space-lg animate-in fade-in">
+            {/* Header Card */}
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-[#4a1c00]/90 via-[#8a3300]/70 to-[#FF6D00]/50 border border-[#FFAB00]/30 backdrop-blur-xl shadow-xl flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="px-3 py-1 rounded-full bg-[#FFAB00]/20 text-[#FFAB00] text-xs font-extrabold border border-[#FFAB00]/40">
+                  🟢 Level: Sedang
+                </span>
+                <span className="text-xs text-[#FF6D00] font-bold">Progress: 60% Selesai</span>
+              </div>
+              <h3 className="text-lg font-extrabold text-white">
+                📐 Viewer Objek 3D 360°, Vektor Transformasi, & Meteran Cairan
+              </h3>
+              <div className="w-full bg-black/30 h-2.5 rounded-full overflow-hidden border border-white/10">
+                <div className="bg-gradient-to-r from-[#FF6D00] to-[#FFAB00] h-full rounded-full w-[60%] transition-all duration-500"></div>
+              </div>
+            </div>
+
+            {/* Sub-Tab Selector Geometri */}
+            <div className="flex bg-surface-container-high rounded-xl p-1 gap-1">
+              <button
+                onClick={() => setGeometriSubTab('objek')}
+                className={`flex-1 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+                  geometriSubTab === 'objek'
+                    ? 'bg-gradient-to-r from-[#FF6D00] to-[#FFAB00] text-black shadow-md'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                a. Objek 3D 360°
+              </button>
+              <button
+                onClick={() => setGeometriSubTab('transformasi')}
+                className={`flex-1 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+                  geometriSubTab === 'transformasi'
+                    ? 'bg-gradient-to-r from-[#FF6D00] to-[#FFAB00] text-black shadow-md'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                b. Transformasi Vektor
+              </button>
+              <button
+                onClick={() => setGeometriSubTab('pengukuran')}
+                className={`flex-1 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+                  geometriSubTab === 'pengukuran'
+                    ? 'bg-gradient-to-r from-[#FF6D00] to-[#FFAB00] text-black shadow-md'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                c. Gauge Pengukuran
+              </button>
+            </div>
+
+            {/* SUB-MATERIAL A: OBJEK GEOMETRI 3D 360 */}
+            {geometriSubTab === 'objek' && (
+              <div className="p-5 rounded-2xl bg-surface-container-lowest dark:bg-surface-container-low border border-outline-variant/30 shadow-lg flex flex-col gap-4">
+                <span className="text-xs font-extrabold uppercase text-[#FF6D00] tracking-wider">
+                  📦 Interactive 3D Wireframe Viewer
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSelectedShape('cube')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer ${selectedShape === 'cube' ? 'bg-[#FF6D00] text-white' : 'bg-surface-container text-on-surface'}`}
+                  >
+                    Kubus (s=6cm)
+                  </button>
+                  <button
+                    onClick={() => setSelectedShape('prism')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer ${selectedShape === 'prism' ? 'bg-[#FF6D00] text-white' : 'bg-surface-container text-on-surface'}`}
+                  >
+                    Prisma Segitiga
+                  </button>
+                  <button
+                    onClick={() => setSelectedShape('sphere')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer ${selectedShape === 'sphere' ? 'bg-[#FF6D00] text-white' : 'bg-surface-container text-on-surface'}`}
+                  >
+                    Bola (r=7cm)
+                  </button>
+                </div>
+
+                {/* 3D Visual Box Simulation */}
+                <div className="h-48 rounded-2xl bg-gradient-to-b from-[#FF6D00]/20 to-transparent border border-[#FF6D00]/30 flex items-center justify-center relative overflow-hidden">
+                  <div className="text-6xl animate-bounce">
+                    {selectedShape === 'cube' ? '🧊' : selectedShape === 'prism' ? '📐' : '🔮'}
+                  </div>
+                  <div className="absolute bottom-3 left-3 px-3 py-1 rounded-full bg-black/40 backdrop-blur-md text-[11px] text-[#FFAB00] font-mono font-bold">
+                    Rotasi 360° Wireframe Neon
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUB-MATERIAL B: TRANSFORMASI GEOMETRI */}
+            {geometriSubTab === 'transformasi' && (
+              <div className="p-5 rounded-2xl bg-surface-container-lowest dark:bg-surface-container-low border border-outline-variant/30 shadow-lg flex flex-col gap-4">
+                <span className="text-xs font-extrabold uppercase text-[#FFAB00] tracking-wider">
+                  🔄 Simulator Vektor Gerak Transformasi
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {(['translasi', 'refleksi', 'rotasi', 'dilatasi'] as const).map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => setTransformMode(m)}
+                      className={`p-2 rounded-xl text-xs font-bold capitalize cursor-pointer ${transformMode === m ? 'bg-[#FF6D00] text-white' : 'bg-surface-container text-on-surface'}`}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+                <div className="p-4 rounded-xl bg-surface-container font-mono text-xs text-on-surface space-y-1">
+                  <div>Titik Awal P(2, 3) ➔ Mode: <strong>{transformMode.toUpperCase()}</strong> ({transformVal})</div>
+                  <div className="text-[#FF6D00] font-bold text-sm">
+                    {transformMode === 'translasi' && `Hasil P'(2+${transformVal}, 3+${transformVal}) = P'(${2 + transformVal}, ${3 + transformVal})`}
+                    {transformMode === 'refleksi' && `Hasil P'(-2, 3) [Cerminan Sumbu Y]`}
+                    {transformMode === 'rotasi' && `Hasil Rotasi 90°: P'(-3, 2)`}
+                    {transformMode === 'dilatasi' && `Hasil Skala k=${transformVal}: P'(${2 * transformVal}, ${3 * transformVal})`}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUB-MATERIAL C: GAUGE PENGUKURAN */}
+            {geometriSubTab === 'pengukuran' && (
+              <div className="p-5 rounded-2xl bg-surface-container-lowest dark:bg-surface-container-low border border-outline-variant/30 shadow-lg flex flex-col gap-4">
+                <span className="text-xs font-extrabold uppercase text-[#FF6D00] tracking-wider">
+                  🧪 Meteran Liquid Gauge Volume Interaktif
+                </span>
+                <div className="flex flex-col gap-2">
+                  <div className="flex justify-between text-xs font-bold">
+                    <span>Kapasitas Cairan:</span>
+                    <span className="text-[#FF6D00]">{gaugeLiquid}% (Volume 750 mL)</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={gaugeLiquid}
+                    onChange={(e) => setGaugeLiquid(parseInt(e.target.value))}
+                    className="w-full accent-[#FF6D00] cursor-pointer"
+                  />
+                </div>
+                <div className="h-16 w-full rounded-xl bg-surface-container border border-[#FF6D00]/30 overflow-hidden relative p-1">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#FF6D00] to-[#FFAB00] rounded-lg transition-all duration-300 flex items-center justify-end pr-3 font-mono font-bold text-black text-xs"
+                    style={{ width: `${gaugeLiquid}%` }}
+                  >
+                    {gaugeLiquid}%
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* 4. KATEGORI TRIGONOMETRI (Glowing Cyan & Wave Blue) */}
+        {/* ============================================================== */}
+        {selectedCategory === 'trigonometri' && (
+          <div className="flex flex-col gap-space-lg animate-in fade-in">
+            {/* Header Card */}
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-[#002b4d]/90 via-[#005288]/70 to-[#00E5FF]/40 border border-[#00E5FF]/30 backdrop-blur-xl shadow-xl flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="px-3 py-1 rounded-full bg-[#00E5FF]/20 text-[#00E5FF] text-xs font-extrabold border border-[#00E5FF]/40">
+                  🔴 Level: Sedang / HOTS
+                </span>
+                <span className="text-xs text-[#2979FF] font-bold">Progress: 45% Selesai</span>
+              </div>
+              <h3 className="text-lg font-extrabold text-white">
+                📐 Lingkaran Satuan (Unit Circle 3D) & Gelombang Sinus
+              </h3>
+              <div className="w-full bg-black/30 h-2.5 rounded-full overflow-hidden border border-white/10">
+                <div className="bg-gradient-to-r from-[#00E5FF] to-[#2979FF] h-full rounded-full w-[45%] transition-all duration-500"></div>
+              </div>
+            </div>
+
+            {/* Interactive Unit Circle & Trigonometric Ratios */}
+            <div className="p-5 rounded-2xl bg-surface-container-lowest dark:bg-surface-container-low border border-outline-variant/30 shadow-lg flex flex-col gap-4">
+              <span className="text-xs font-extrabold uppercase text-[#00E5FF] tracking-wider">
+                ⭕ Unit Circle & Rasio Sudut Istimewa (θ)
+              </span>
+
+              {/* Quick Angle Selector Buttons */}
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+                {[0, 30, 45, 60, 90, 180, 360].map((angle) => (
+                  <button
+                    key={angle}
+                    onClick={() => setTrigAngle(angle)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-mono font-extrabold transition-all cursor-pointer ${
+                      trigAngle === angle
+                        ? 'bg-gradient-to-r from-[#00E5FF] to-[#2979FF] text-black shadow-md scale-105'
+                        : 'bg-surface-container text-on-surface hover:bg-surface-container-highest'
+                    }`}
+                  >
+                    {angle}°
+                  </button>
+                ))}
+              </div>
+
+              {/* Trigonometric Values Display Table */}
+              <div className="grid grid-cols-3 gap-3 pt-2">
+                <div className="p-3 rounded-xl bg-[#00E5FF]/15 border border-[#00E5FF]/40 flex flex-col items-center">
+                  <span className="text-[11px] font-extrabold text-[#00E5FF]">sin({trigAngle}°)</span>
+                  <span className="font-mono text-base font-extrabold text-on-surface">{trigVals.sin}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-[#2979FF]/15 border border-[#2979FF]/40 flex flex-col items-center">
+                  <span className="text-[11px] font-extrabold text-[#2979FF]">cos({trigAngle}°)</span>
+                  <span className="font-mono text-base font-extrabold text-on-surface">{trigVals.cos}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-[#00E5FF]/15 border border-[#00E5FF]/40 flex flex-col items-center">
+                  <span className="text-[11px] font-extrabold text-[#00E5FF]">tan({trigAngle}°)</span>
+                  <span className="font-mono text-base font-extrabold text-on-surface">{trigVals.tan}</span>
+                </div>
+              </div>
+
+              {/* Side Ratios Display */}
+              <div className="p-4 rounded-xl bg-surface-container flex items-center justify-between font-mono text-xs text-on-surface">
+                <span>Sisi Depan = <strong>{trigVals.depan}</strong></span>
+                <span>Samping = <strong>{trigVals.samping}</strong></span>
+                <span>Miring = <strong>{trigVals.miring}</strong></span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* 5. KATEGORI DATA DAN PELUANG (Coral Pink & Neon Yellow) */}
+        {/* ============================================================== */}
+        {selectedCategory === 'peluang' && (
+          <div className="flex flex-col gap-space-lg animate-in fade-in">
+            {/* Header Card */}
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-[#4a0027]/90 via-[#8a0045]/70 to-[#FF4081]/40 border border-[#FFEA00]/30 backdrop-blur-xl shadow-xl flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="px-3 py-1 rounded-full bg-[#FFEA00]/20 text-[#FFEA00] text-xs font-extrabold border border-[#FFEA00]/40">
+                  🟢 Level: Mudah
+                </span>
+                <span className="text-xs text-[#FF4081] font-bold">Progress: 90% Selesai</span>
+              </div>
+              <h3 className="text-lg font-extrabold text-white">
+                📊 Dashboard Statistik 3D & Simulator Peluang (Dice/Coin Flip)
+              </h3>
+              <div className="w-full bg-black/30 h-2.5 rounded-full overflow-hidden border border-white/10">
+                <div className="bg-gradient-to-r from-[#FF4081] to-[#FFEA00] h-full rounded-full w-[90%] transition-all duration-500"></div>
+              </div>
+            </div>
+
+            {/* Sub-Tab Selector Data & Peluang */}
+            <div className="flex bg-surface-container-high rounded-xl p-1 gap-1">
+              <button
+                onClick={() => setDataSubTab('data')}
+                className={`flex-1 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+                  dataSubTab === 'data'
+                    ? 'bg-gradient-to-r from-[#FF4081] to-[#FFEA00] text-black shadow-md'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                a. Data & Grafik 3D
+              </button>
+              <button
+                onClick={() => setDataSubTab('peluang')}
+                className={`flex-1 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+                  dataSubTab === 'peluang'
+                    ? 'bg-gradient-to-r from-[#FF4081] to-[#FFEA00] text-black shadow-md'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                b. Simulator Peluang Dadu/Koin
+              </button>
+            </div>
+
+            {/* SUB-MATERIAL A: DATA & STATISTIK */}
+            {dataSubTab === 'data' && (
+              <div className="p-5 rounded-2xl bg-surface-container-lowest dark:bg-surface-container-low border border-outline-variant/30 shadow-lg flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold uppercase text-[#FF4081] tracking-wider">
+                    📊 Visualisasi Bar & Pie Chart 3D
+                  </span>
+                  <div className="flex gap-1">
+                    {(['bar', 'pie', 'line'] as const).map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setChartType(t)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold uppercase cursor-pointer ${chartType === t ? 'bg-[#FF4081] text-white' : 'bg-surface-container text-on-surface'}`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3D Bar Chart Visual Mockup */}
+                <div className="h-44 rounded-2xl bg-surface-container p-4 flex items-end justify-around border border-[#FF4081]/30">
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[10px] font-bold text-on-surface">MIPA 1</span>
+                    <div className="w-10 bg-gradient-to-t from-[#FF4081] to-[#FFEA00] rounded-t-lg h-28 shadow-lg"></div>
+                    <span className="text-[10px] text-on-surface-variant font-mono">88%</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[10px] font-bold text-on-surface">MIPA 2</span>
+                    <div className="w-10 bg-gradient-to-t from-[#FF4081] to-[#FFEA00] rounded-t-lg h-36 shadow-lg"></div>
+                    <span className="text-[10px] text-on-surface-variant font-mono">95%</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[10px] font-bold text-on-surface">MIPA 3</span>
+                    <div className="w-10 bg-gradient-to-t from-[#FF4081] to-[#FFEA00] rounded-t-lg h-24 shadow-lg"></div>
+                    <span className="text-[10px] text-on-surface-variant font-mono">76%</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUB-MATERIAL B: SIMULATOR PELUANG */}
+            {dataSubTab === 'peluang' && (
+              <div className="p-5 rounded-2xl bg-surface-container-lowest dark:bg-surface-container-low border border-outline-variant/30 shadow-lg flex flex-col gap-4">
+                <span className="text-xs font-extrabold uppercase text-[#FFEA00] tracking-wider">
+                  🎲 Simulator Peluang 3D Melayang & Flip Koin
+                </span>
+
+                <div className="p-6 rounded-2xl bg-gradient-to-b from-[#FF4081]/20 to-transparent border border-[#FF4081]/30 flex flex-col items-center gap-4">
+                  <div className="flex items-center gap-6">
+                    {/* Dadu */}
+                    <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br from-[#FF4081] to-[#FFEA00] text-black font-extrabold text-3xl flex items-center justify-center shadow-xl ${isRolling ? 'animate-spin' : ''}`}>
+                      {diceVal}
+                    </div>
+
+                    {/* Koin */}
+                    <div className={`w-16 h-16 rounded-full bg-gradient-to-br from-[#FFEA00] to-[#FF4081] text-black font-extrabold text-xs flex items-center justify-center shadow-xl border-2 border-white ${isRolling ? 'animate-ping' : ''}`}>
+                      {coinVal}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleRollDice}
+                    disabled={isRolling}
+                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#FF4081] to-[#FFEA00] text-black font-extrabold text-xs shadow-lg hover:opacity-90 active:scale-95 transition-all cursor-pointer"
+                  >
+                    {isRolling ? 'Kocok Dadu & Flip Koin...' : '🎲 Lempar Dadu & Koin Sekarang'}
+                  </button>
+
+                  <div className="text-xs font-mono text-on-surface-variant">
+                    Peluang Angka 6 pada Dadu = 1/6 (16,67%) | Koin = 1/2 (50%)
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
     </div>
   );
