@@ -51,6 +51,8 @@ export default function RegisterForm() {
         password,
         options: {
           data: {
+            display_name: cleanName, // Memungkinkan Supabase Dashboard menampilkan nama langsung di kolom "Display name"
+            full_name: cleanName,
             nama_lengkap: cleanName,
             nisn: cleanNisn,
           },
@@ -65,6 +67,8 @@ export default function RegisterForm() {
           password,
           options: {
             data: {
+              display_name: cleanName, // Memungkinkan Supabase Dashboard menampilkan nama langsung di kolom "Display name"
+              full_name: cleanName,
               nama_lengkap: cleanName,
               nisn: cleanNisn,
             },
