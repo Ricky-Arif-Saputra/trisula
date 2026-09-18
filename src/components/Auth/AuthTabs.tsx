@@ -22,13 +22,32 @@ export default function AuthTabs() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Tab Buttons */}
+      {/* 1. Google OAuth (Tombol Utama) */}
+      <GoogleAuthButton />
+
+      {/* Divider */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '4px 0' }}>
+        <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.12)' }} />
+        <span style={{
+          fontSize: '11px',
+          fontWeight: 600,
+          color: 'rgba(255,255,255,0.4)',
+          textTransform: 'uppercase',
+          letterSpacing: '1px'
+        }}>
+          atau dengan NISN
+        </span>
+        <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.12)' }} />
+      </div>
+
+      {/* 2. NISN Tab Buttons (Masuk / Buat Akun) */}
       <div style={{
         display: 'flex',
         gap: '8px',
         padding: '4px',
         borderRadius: '12px',
         background: 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(255,255,255,0.08)',
       }}>
         <button
           type="button"
@@ -46,26 +65,7 @@ export default function AuthTabs() {
         </button>
       </div>
 
-      {/* Divider */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }} />
-        <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1px' }}>atau</span>
-        <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }} />
-      </div>
-
-      {/* Google OAuth */}
-      <GoogleAuthButton />
-
-      {/* Another Divider */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }} />
-        <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-          {activeTab === 'login' ? 'masuk dengan nisn' : 'daftar dengan nisn'}
-        </span>
-        <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }} />
-      </div>
-
-      {/* Form */}
+      {/* Form Content */}
       {activeTab === 'login' ? <LoginForm /> : <RegisterForm />}
     </div>
   );

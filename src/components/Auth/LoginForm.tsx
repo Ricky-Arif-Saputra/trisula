@@ -28,6 +28,7 @@ const inputBlurHandler = (e: React.FocusEvent<HTMLInputElement>) => {
 export default function LoginForm() {
   const [nisn, setNisn] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,12 +36,13 @@ export default function LoginForm() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const email = `${nisn}@trisula.internal`;
+    const email = `${nisn.trim()}@trisula.internal`;
     const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
     if (authError) {
-      setError(authError.message === 'Invalid login credentials'
-        ? 'NISN atau sandi salah. Silakan coba lagi.'
-        : authError.message
+      setError(
+        authError.message === 'Invalid login credentials'
+          ? 'NISN atau kata sandi salah. Silakan periksa kembali.'
+          : authError.message
       );
     }
     setLoading(false);
@@ -61,31 +63,82 @@ export default function LoginForm() {
           {error}
         </div>
       )}
-      <input
-        type="text"
-        placeholder="NISN"
-        value={nisn}
-        onChange={(e) => setNisn(e.target.value)}
-        onFocus={inputFocusHandler}
-        onBlur={inputBlurHandler}
-        style={inputStyle}
-        required
-      />
-      <input
-        type="password"
-        placeholder="Sandi"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        onFocus={inputFocusHandler}
-        onBlur={inputBlurHandler}
-        style={inputStyle}
-        required
-      />
+
+      {/* Input NISN */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <label style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>
+          NISN (Nomor Induk Siswa Nasional)
+        </label>
+        <input
+          type="text"
+          placeholder="Masukkan NISN Anda"
+          value={nisn}
+          onChange={(e) => setNisn(e.target.value)}
+          onFocus={inputFocusHandler}
+          onBlur={inputBlurHandler}
+          style={inputStyle}
+          required
+        />
+      </div>
+
+      {/* Input Kata Sandi + Toggle Eye */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <label style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>
+          Kata Sandi
+        </label>
+        <div style={{ position: 'relative', width: '100%' }}>
+          <input
+            type={showPassword ? 'text' : 'password'}
+            placeholder="Masukkan kata sandi"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onFocus={inputFocusHandler}
+            onBlur={inputBlurHandler}
+            style={{ ...inputStyle, paddingRight: '44px' }}
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            style={{
+              position: 'absolute',
+              right: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'none',
+              border: 'none',
+              color: 'rgba(255,255,255,0.6)',
+              cursor: 'pointer',
+              padding: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            title={showPassword ? 'Sembunyikan Kata Sandi' : 'Tampilkan Kata Sandi'}
+          >
+            {showPassword ? (
+              /* Eye Off Icon */
+              <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-7 0-10-7-10-7a19.16 19.16 0 014.188-4.898M9.88 9.88a3 3 0 104.24 4.24M1 1l22 22" />
+              </svg>
+            ) : (
+              /* Eye Icon */
+              <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Submit Button */}
       <button
         type="submit"
         disabled={loading}
         style={{
           width: '100%',
+          marginTop: '6px',
           padding: '13px',
           border: 'none',
           borderRadius: '12px',
@@ -99,7 +152,7 @@ export default function LoginForm() {
           fontFamily: 'inherit',
         }}
       >
-        {loading ? 'Memproses...' : 'Masuk'}
+        {loading ? 'Memproses...' : 'Masuk dengan NISN'}
       </button>
     </form>
   );
