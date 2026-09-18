@@ -28,7 +28,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="fixed top-0 inset-x-0 z-50 bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] dark:shadow-none dark:border-b dark:border-outline-variant/30">
-      <div className="max-w-2xl mx-auto h-16 px-margin-mobile flex items-center justify-between gap-space-sm">
+      <div className="max-w-md sm:max-w-2xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl mx-auto h-16 px-4 sm:px-6 flex items-center justify-between gap-space-sm">
         {/* Left: Logo and title / Back button */}
         <div className="flex items-center gap-space-xs min-w-0 flex-1">
           {showBack && (

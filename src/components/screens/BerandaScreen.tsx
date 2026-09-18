@@ -130,7 +130,7 @@ export const BerandaScreen: React.FC<BerandaScreenProps> = ({
         </div>
 
         {/* CTAs */}
-        <div className="flex flex-col gap-space-sm">
+        <div className="flex flex-col sm:flex-row gap-space-sm">
           <button
             className="w-full h-12 rounded-lg bg-secondary text-surface font-bold text-sm flex items-center justify-center gap-2 shadow-[0_4px_16px_rgba(0,194,168,0.3)] active:scale-[0.98] transition-all hover:bg-secondary/90 cursor-pointer"
             onClick={() => onNavigate('latihan-rme')}
@@ -399,8 +399,8 @@ export const BerandaScreen: React.FC<BerandaScreenProps> = ({
           </button>
         </div>
 
-        {/* Stacked cards */}
-        <div className="flex flex-col gap-space-sm">
+        {/* Stacked cards / Grid on Laptop */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-space-sm">
           {/* Strand 1: Bilangan */}
           <div
             onClick={() => onNavigate('materi', 'bilangan')}

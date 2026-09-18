@@ -490,7 +490,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             <span className="text-xs font-bold text-on-surface-variant">3/4 Terbuka</span>
           </div>
 
-          <div className="grid grid-cols-2 gap-space-sm">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-space-sm">
             {TRISULA_BADGES.map((badge) => (
               <div
                 key={badge.id}

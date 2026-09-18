@@ -103,7 +103,7 @@ export default function App() {
   // Logged in — show main app
   return (
     <div className="min-h-screen bg-surface text-on-surface flex flex-col font-sans transition-colors duration-300">
-      <div className="w-full max-w-md sm:max-w-xl md:max-w-2xl mx-auto flex flex-col min-h-screen bg-surface relative shadow-xl">
+      <div className="w-full max-w-md sm:max-w-2xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl mx-auto flex flex-col min-h-screen bg-surface relative shadow-2xl transition-all duration-300">
         <Header
           currentScreen={currentScreen}
           isDark={isDark}
