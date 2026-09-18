@@ -57,9 +57,11 @@ export default function RegisterForm() {
       });
 
       if (signUpError) {
-        if (signUpError.message.includes('already registered')) {
-          setError('NISN ini sudah terdaftar. Silakan pilih tab "Masuk".');
-        } else if (signUpError.message.includes('invalid') || signUpError.message.includes('Email')) {
+        if (signUpError.message.includes('rate limit') || signUpError.status === 429) {
+          setError('⚠️ Batas email Supabase tercapai (Email Rate Limit 429). Harap matikan "Confirm email" di Supabase Dashboard (Authentication > Providers > Email) agar tidak perlu konfirmasi email.');
+        } else if (signUpError.message.includes('already registered')) {
+          setError('NISN ini sudah terdaftar. Silakan beralih ke tab "Masuk".');
+        } else if (signUpError.message.includes('invalid')) {
           setError('Format NISN tidak valid. Pastikan hanya memasukkan angka NISN.');
         } else if (signUpError.message.includes('Failed to fetch')) {
           setError('Gagal terhubung ke Supabase. Periksa koneksi internet Anda.');
@@ -79,13 +81,22 @@ export default function RegisterForm() {
             console.error('Gagal menyimpan profil:', profileErr);
           }
         }
-        setSuccess('Pendaftaran berhasil! Akun Anda telah dibuat. Silakan beralih ke tab "Masuk".');
+
+        if (data?.session) {
+          setSuccess('Pendaftaran berhasil! Anda otomatis masuk.');
+        } else {
+          setSuccess('Akun berhasil dibuat! Silakan beralih ke tab "Masuk". (Jika gagal masuk, matikan "Confirm email" di Supabase Dashboard).');
+        }
         setFullName('');
         setNisn('');
         setPassword('');
       }
     } catch (err: any) {
-      setError(err?.message || 'Terjadi kesalahan saat mendaftar.');
+      if (err?.message?.includes('rate limit') || err?.status === 429) {
+        setError('⚠️ Batas pengiriman email Supabase tercapai. Harap matikan "Confirm email" di Supabase Dashboard (Authentication > Providers > Email).');
+      } else {
+        setError(err?.message || 'Terjadi kesalahan saat mendaftar.');
+      }
     } finally {
       setLoading(false);
     }
