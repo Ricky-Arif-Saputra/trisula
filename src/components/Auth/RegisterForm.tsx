@@ -71,12 +71,14 @@ export default function RegisterForm() {
       } else {
         if (data?.user) {
           try {
-            await supabase.from('profiles').upsert({
+            const { error: profErr } = await supabase.from('profiles').upsert({
               id: data.user.id,
               nama_lengkap: cleanName,
               nisn: cleanNisn,
-              updated_at: new Date().toISOString(),
             });
+            if (profErr) {
+              console.error('Gagal simpan ke tabel profiles:', profErr);
+            }
           } catch (profileErr) {
             console.error('Gagal menyimpan profil:', profileErr);
           }
