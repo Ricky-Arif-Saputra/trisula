@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ASSETS } from '../../data';
 import { ScreenType, MathCategory } from '../../types';
+import { useAuth } from '../Auth/AuthProvider';
 
 interface BerandaScreenProps {
   onNavigate: (screen: ScreenType, category?: MathCategory) => void;
@@ -11,6 +12,7 @@ export const BerandaScreen: React.FC<BerandaScreenProps> = ({
   onNavigate,
   onOpenTeacherMode,
 }) => {
+  const { userName } = useAuth();
   const [activeRmeStep, setActiveRmeStep] = useState<number>(1);
   const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
 
@@ -38,6 +40,23 @@ export const BerandaScreen: React.FC<BerandaScreenProps> = ({
     <div className="flex flex-col w-full px-margin-mobile gap-space-xl pb-12">
       {/* HERO SECTION */}
       <section className="flex flex-col gap-space-md pt-2">
+        {/* User Greeting Banner */}
+        <div className="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-primary-container via-[#006b5c] to-secondary-container text-white shadow-md">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-xl shadow-inner border border-white/20 flex-shrink-0">
+              👋
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-[11px] font-semibold text-white/80 uppercase tracking-wider">
+                Selamat Datang
+              </span>
+              <h2 className="text-base sm:text-lg font-extrabold text-white truncate">
+                Halo, {userName}!
+              </h2>
+            </div>
+          </div>
+        </div>
+
         {/* Grade & Methodology Badges */}
         <div className="flex items-center gap-space-xs flex-wrap">
           <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container-high text-primary-container dark:text-primary font-bold text-xs">

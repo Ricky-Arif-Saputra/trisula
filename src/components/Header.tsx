@@ -140,13 +140,11 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="material-symbols-outlined text-[18px]">person</span>
             </button>
           )}
-          {/* Logout button */}
+          {/* Logout button (Tombol Keluar) */}
           <button
-            onClick={() => {
-              // useAuth hook cannot be used here directly; we will import useAuth and call signOut
-            }}
-            className="w-8 h-8 rounded-full bg-error-container text-on-error flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-primary transition-all overflow-hidden ml-1"
-            title="Logout"
+            onClick={() => signOut()}
+            className="w-8 h-8 rounded-full bg-error/15 text-error hover:bg-error hover:text-white flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-error/50 transition-all overflow-hidden ml-1"
+            title="Keluar / Logout"
           >
             <span className="material-symbols-outlined text-[18px]">logout</span>
           </button>

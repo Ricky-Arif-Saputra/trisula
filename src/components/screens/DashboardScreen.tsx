@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ASSETS, COGNITIVE_ASPECTS, STRANDS_DATA, TRISULA_BADGES, INITIAL_STUDENT_PROFILE } from '../../data';
 import { ScreenType, MathCategory } from '../../types';
+import { useAuth } from '../Auth/AuthProvider';
 
 interface DashboardScreenProps {
   initialPerspective?: 'siswa' | 'guru';
@@ -11,6 +12,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   initialPerspective = 'siswa',
   onNavigate,
 }) => {
+  const { userName } = useAuth();
   const [perspective, setPerspective] = useState<'siswa' | 'guru'>(initialPerspective);
   const [taskAssigned, setTaskAssigned] = useState<boolean>(false);
   const [bookmarked, setBookmarked] = useState<boolean>(false);
@@ -85,7 +87,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     {profile.className}
                   </span>
                   <h2 className="text-base sm:text-lg font-bold text-on-primary truncate mt-0.5">
-                    {profile.name}
+                    {userName || profile.name}
                   </h2>
                   <p className="text-xs text-surface-container-highest/90 flex items-center gap-1 mt-0.5">
                     <span className="material-symbols-outlined text-tertiary-fixed-dim text-[16px] fill-1">
