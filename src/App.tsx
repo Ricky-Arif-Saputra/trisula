@@ -16,6 +16,7 @@ export default function App() {
 
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('beranda');
   const [materiCategory, setMateriCategory] = useState<MathCategory | null>(null);
+  const [latihanCategory, setLatihanCategory] = useState<MathCategory | null>(null);
   const [isDark, setIsDark] = useState<boolean>(false);
   const [userXp, setUserXp] = useState<number>(4850);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -58,15 +59,22 @@ export default function App() {
 
   const handleNavigate = (screen: ScreenType, category?: MathCategory | null) => {
     if (category !== undefined) {
-      setMateriCategory(category);
-    } else if (screen === 'materi') {
-      setMateriCategory(null); // Reset ke 5 Kartu Materi Utama saat tab Materi diklik
+      if (screen === 'materi') setMateriCategory(category);
+      if (screen === 'latihan') setLatihanCategory(category);
+    } else {
+      if (screen === 'materi') setMateriCategory(null); // Reset ke 5 Kartu Utama
+      if (screen === 'latihan') setLatihanCategory(null); // Reset ke 5 Topik Latihan
     }
     setCurrentScreen(screen);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const isDetailView = currentScreen === 'materi' && materiCategory !== null;
+  const isDetailView = (currentScreen === 'materi' && materiCategory !== null) || (currentScreen === 'latihan' && latihanCategory !== null);
+
+  const handleBack = () => {
+    if (currentScreen === 'materi') setMateriCategory(null);
+    if (currentScreen === 'latihan') setLatihanCategory(null);
+  };
 
   const getHeaderTitle = () => {
     if (currentScreen === 'materi') {
@@ -77,8 +85,15 @@ export default function App() {
       if (materiCategory === 'peluang') return 'Detail Materi: Data & Peluang';
       return 'Daftar 5 Materi Utama';
     }
+    if (currentScreen === 'latihan') {
+      if (latihanCategory === 'bilangan') return 'Latihan: Bilangan';
+      if (latihanCategory === 'aljabar') return 'Latihan: Aljabar';
+      if (latihanCategory === 'geometri') return 'Latihan: Geometri';
+      if (latihanCategory === 'trigonometri') return 'Latihan: Trigonometri';
+      if (latihanCategory === 'peluang') return 'Latihan: Data & Peluang';
+      return 'Daftar Topik Latihan';
+    }
     if (currentScreen === 'beranda') return 'TRISULA EduMath';
-    if (currentScreen === 'latihan') return 'Laboratorium Latihan RME';
     if (currentScreen === 'simulasi') return 'Laboratorium Simulasi 3D';
     if (currentScreen === 'dashboard') return 'Dasbor Analyst & Profil';
     return 'TRISULA EduMath';
@@ -128,7 +143,7 @@ export default function App() {
           currentScreen={currentScreen}
           title={getHeaderTitle()}
           showBack={isDetailView}
-          onBack={() => setMateriCategory(null)}
+          onBack={handleBack}
           isDark={isDark}
           onToggleDark={handleToggleTheme}
         />
@@ -152,7 +167,12 @@ export default function App() {
             />
           )}
           {currentScreen === 'latihan' && (
-            <LatihanScreen onClaimXp={handleClaimXp} onNavigateToSimulasi={() => handleNavigate('simulasi')} />
+            <LatihanScreen 
+              initialCategory={latihanCategory}
+              onSelectCategory={(cat) => setLatihanCategory(cat)}
+              onClaimXp={handleClaimXp} 
+              onNavigateToSimulasi={() => handleNavigate('simulasi')} 
+            />
           )}
           {currentScreen === 'simulasi' && <SimulasiScreen />}
           {currentScreen === 'dashboard' && (
@@ -163,11 +183,7 @@ export default function App() {
         <BottomNav
           currentScreen={currentScreen}
           onSelectScreen={(screen) => {
-            if (screen === 'materi') {
-              handleNavigate('materi', null); // Reset materi topic to 5 main cards view
-            } else {
-              handleNavigate(screen);
-            }
+            handleNavigate(screen, null); // Always reset category when using BottomNav
           }}
         />
       </div>
