@@ -164,7 +164,7 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
 
           <div className="space-y-3">
             <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Mode Latihan</label>
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div 
                 onClick={() => handleStartQuiz('mandiri')}
                 className="p-4 rounded-xl border-2 border-transparent hover:border-secondary/50 bg-surface-container cursor-pointer transition-all flex flex-col gap-2 group"
@@ -174,6 +174,17 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
                   <span className="font-bold text-sm">Latihan Mandiri</span>
                 </div>
                 <p className="text-xs text-on-surface-variant">Feedback instan dan pembahasan step-by-step setelah setiap soal.</p>
+              </div>
+
+              <div 
+                onClick={() => handleStartQuiz('time_attack')}
+                className="p-4 rounded-xl border-2 border-transparent hover:border-error/50 bg-surface-container cursor-pointer transition-all flex flex-col gap-2 group"
+              >
+                <div className="flex items-center gap-2 text-error">
+                  <span className="material-symbols-outlined">timer</span>
+                  <span className="font-bold text-sm">Time Attack</span>
+                </div>
+                <p className="text-xs text-on-surface-variant">Kuis berwaktu seperti ujian. (Segera Hadir)</p>
               </div>
             </div>
           </div>
