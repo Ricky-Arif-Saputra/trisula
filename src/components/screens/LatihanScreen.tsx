@@ -164,7 +164,7 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
 
           <div className="space-y-3">
             <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Mode Latihan</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               <div 
                 onClick={() => handleStartQuiz('mandiri')}
                 className="p-4 rounded-xl border-2 border-transparent hover:border-secondary/50 bg-surface-container cursor-pointer transition-all flex flex-col gap-2 group"
@@ -174,17 +174,6 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
                   <span className="font-bold text-sm">Latihan Mandiri</span>
                 </div>
                 <p className="text-xs text-on-surface-variant">Feedback instan dan pembahasan step-by-step setelah setiap soal.</p>
-              </div>
-
-              <div 
-                onClick={() => handleStartQuiz('time_attack')}
-                className="p-4 rounded-xl border-2 border-transparent hover:border-error/50 bg-surface-container cursor-pointer transition-all flex flex-col gap-2 group"
-              >
-                <div className="flex items-center gap-2 text-error">
-                  <span className="material-symbols-outlined">timer</span>
-                  <span className="font-bold text-sm">Time Attack</span>
-                </div>
-                <p className="text-xs text-on-surface-variant">Kuis berwaktu seperti ujian. Skor akhir dihitung berdasarkan kecepatan.</p>
               </div>
             </div>
           </div>
@@ -232,12 +221,12 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
   // VIEW 4: ACTIVE QUIZ UI
   // ==============================================================
   if (isQuizActive) {
-    if (selectedCategory === 'bilangan' && quizLevel === 'mudah' && quizMode === 'mandiri') {
+    if (quizMode === 'mandiri') {
       if (selectedQuestion === null) {
         return (
           <div className="flex flex-col w-full pb-16 font-sans px-margin-mobile animate-in fade-in pt-4">
             <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30 shadow-md">
-              <h3 className="text-lg font-bold text-on-surface mb-2">Daftar Soal Latihan</h3>
+              <h3 className="text-lg font-bold text-on-surface mb-2">Daftar Soal Latihan: {selectedCategory}</h3>
               <p className="text-sm text-on-surface-variant mb-6">Pilih soal untuk mulai mengerjakan latihan mandiri.</p>
               
               <div className="flex flex-col gap-3">
@@ -259,96 +248,53 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
           </div>
         );
       } else if (selectedQuestion === 1) {
-        return (
-          <div className="flex flex-col w-full pb-16 font-sans animate-in fade-in pt-4 relative">
-             <button
-               onClick={() => setSelectedQuestion(null)}
-               className="mx-margin-mobile mb-4 px-4 py-2 rounded-xl bg-surface-container-high text-on-surface font-bold text-xs flex items-center gap-2 self-start hover:bg-surface-container-highest cursor-pointer transition-colors"
-             >
-               <span className="material-symbols-outlined text-[16px]">arrow_back</span>
-               Kembali ke Daftar Soal
-             </button>
-             <QuizQuestionRME />
-          </div>
-        );
+        if (selectedCategory === 'bilangan') {
+          return (
+            <div className="flex flex-col w-full pb-16 font-sans animate-in fade-in pt-4 relative">
+               <button
+                 onClick={() => setSelectedQuestion(null)}
+                 className="mx-margin-mobile mb-4 px-4 py-2 rounded-xl bg-surface-container-high text-on-surface font-bold text-xs flex items-center gap-2 self-start hover:bg-surface-container-highest cursor-pointer transition-colors"
+               >
+                 <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                 Kembali ke Daftar Soal
+               </button>
+               <QuizQuestionRME />
+            </div>
+          );
+        } else {
+          return (
+            <div className="flex flex-col w-full pb-16 font-sans px-margin-mobile animate-in fade-in pt-4">
+               <button
+                 onClick={() => setSelectedQuestion(null)}
+                 className="mb-4 px-4 py-2 rounded-xl bg-surface-container-high text-on-surface font-bold text-xs flex items-center gap-2 self-start hover:bg-surface-container-highest cursor-pointer transition-colors"
+               >
+                 <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                 Kembali ke Daftar Soal
+               </button>
+               <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30 shadow-md text-center py-12">
+                  <span className="material-symbols-outlined text-4xl text-on-surface-variant mb-2">construction</span>
+                  <h3 className="font-bold text-lg">Soal Segera Hadir</h3>
+                  <p className="text-sm text-on-surface-variant mt-2">Soal interaktif untuk kategori ini masih dalam tahap pengembangan.</p>
+               </div>
+            </div>
+          );
+        }
       }
     }
-    const dummyQuestions = [
-      { q: "Berapakah hasil dari 2x + 5 = 15?", options: ["x = 5", "x = 10", "x = 2", "x = 4"], correct: 0 },
-      { q: "Jika f(x) = 3x - 2, maka f(4) adalah...", options: ["10", "12", "14", "8"], correct: 0 },
-      { q: "Luas segitiga dengan alas 6cm dan tinggi 8cm adalah...", options: ["24 cm²", "48 cm²", "14 cm²", "36 cm²"], correct: 0 },
-      { q: "Nilai dari sin(30°) adalah...", options: ["0.5", "1", "0.866", "0"], correct: 0 },
-      { q: "Peluang muncul angka pada koin adalah...", options: ["1/2", "1/4", "1/6", "1"], correct: 0 },
-    ];
-    const currentQ = dummyQuestions[currentQuestionIdx];
-
+    
+    // Fallback if other mode (like time attack if somehow accessed)
     return (
-      <div className="flex flex-col w-full pb-16 font-sans px-margin-mobile animate-in fade-in pt-4">
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-xs font-bold text-on-surface-variant bg-surface-container px-3 py-1 rounded-full">
-            Soal {currentQuestionIdx + 1} dari 5
-          </span>
-          {quizMode === 'time_attack' && (
-            <span className="text-sm font-bold text-error flex items-center gap-1 timer-urgent">
-              <span className="material-symbols-outlined text-[18px]">timer</span>
-              14:59
-            </span>
-          )}
-        </div>
-
-        <div className="w-full bg-surface-container-high h-2 rounded-full mb-6 overflow-hidden">
-          <div 
-            className="h-full bg-primary transition-all duration-500" 
-            style={{ width: `${((currentQuestionIdx + 1) / 5) * 100}%` }}
-          />
-        </div>
-
-        <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30 shadow-md">
-          <h3 className="text-lg font-bold text-on-surface mb-6 leading-relaxed">
-            {currentQ.q}
-          </h3>
-
-          <div className="flex flex-col gap-3">
-            {currentQ.options.map((opt, idx) => {
-              const isSelected = selectedAnswer === idx;
-              const isCorrect = idx === currentQ.correct;
-              
-              let btnClass = "border-outline-variant/30 hover:border-primary hover:bg-primary/5 text-on-surface";
-              if (selectedAnswer !== null) {
-                if (isSelected && isCorrect) btnClass = "border-secondary bg-secondary/10 text-secondary";
-                else if (isSelected && !isCorrect) btnClass = "border-error bg-error/10 text-error";
-                else if (isCorrect) btnClass = "border-secondary bg-secondary/10 text-secondary";
-              }
-
-              return (
-                <button
-                  key={idx}
-                  disabled={selectedAnswer !== null}
-                  onClick={() => handleAnswer(idx, isCorrect)}
-                  className={`w-full text-left p-4 rounded-xl border-2 font-semibold transition-all cursor-pointer flex items-center justify-between ${btnClass}`}
-                >
-                  <span>{opt}</span>
-                  {selectedAnswer !== null && isCorrect && <span className="material-symbols-outlined text-secondary">check_circle</span>}
-                  {selectedAnswer !== null && isSelected && !isCorrect && <span className="material-symbols-outlined text-error">cancel</span>}
-                </button>
-              );
-            })}
-          </div>
-
-          {selectedAnswer !== null && quizMode === 'mandiri' && (
-             <div className="mt-6 p-4 bg-secondary-container/20 rounded-xl border border-secondary/30 animate-in fade-in slide-in-from-bottom-2">
-                <h4 className="text-sm font-bold text-secondary mb-1 flex items-center gap-1">
-                   <span className="material-symbols-outlined text-[18px]">lightbulb</span>
-                   Pembahasan:
-                </h4>
-                <p className="text-xs text-on-surface-variant leading-relaxed">
-                   Jawaban yang tepat adalah opsi pertama. Gunakan operasi aljabar dasar untuk menyelesaikan persamaan. 
-                   Pindahkan konstanta ke satu sisi dan variabel ke sisi lainnya.
-                </p>
-             </div>
-          )}
-        </div>
-      </div>
+       <div className="flex flex-col w-full pb-16 font-sans px-margin-mobile animate-in fade-in pt-4">
+         <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30 shadow-md text-center">
+            <h3 className="font-bold text-lg">Fitur Segera Hadir</h3>
+            <button 
+              onClick={() => setIsQuizActive(false)}
+              className="mt-6 px-6 py-2 bg-primary text-on-primary font-bold rounded-lg cursor-pointer"
+            >
+              Kembali
+            </button>
+         </div>
+       </div>
     );
   }
 
