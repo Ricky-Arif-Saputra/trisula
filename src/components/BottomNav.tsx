@@ -10,7 +10,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentScreen, onSelectScr
   const navItems: { id: ScreenType; label: string; icon: string }[] = [
     { id: 'beranda', label: 'Beranda', icon: 'home' },
     { id: 'materi', label: 'Materi', icon: 'menu_book' },
-    { id: 'latihan-rme', label: 'Latihan', icon: 'ads_click' },
+    { id: 'latihan', label: 'Latihan', icon: 'ads_click' },
     { id: 'simulasi', label: 'Simulasi', icon: 'science' },
     { id: 'dashboard', label: 'Dashboard', icon: 'leaderboard' },
   ];

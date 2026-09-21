@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface LatihanScreenProps {
   onClaimXp?: (amount: number) => void;
