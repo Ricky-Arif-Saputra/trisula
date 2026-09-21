@@ -303,6 +303,6 @@ export const QuizQuestionRME: React.FC = () => {
           )}
         </div>
       </div>
-    );
-  };
+    </div>
+  );
 };
