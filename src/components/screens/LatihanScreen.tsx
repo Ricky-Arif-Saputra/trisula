@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MathCategory } from '../../types';
 import { QuizQuestionRME } from './QuizQuestionRME';
 import { QuizQuestionRMESedang } from './QuizQuestionRMESedang';
+import { QuizQuestionRMESulit } from './QuizQuestionRMESulit';
 
 interface LatihanScreenProps {
   initialCategory?: MathCategory | null;
@@ -242,13 +243,13 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
               <p className="text-sm text-on-surface-variant mb-6">Pilih soal untuk mulai mengerjakan latihan mandiri.</p>
               
               <div className="flex flex-col gap-3">
-                {selectedCategory === 'bilangan' && (quizLevel === 'mudah' || quizLevel === 'sedang') ? (
+                {selectedCategory === 'bilangan' && (quizLevel === 'mudah' || quizLevel === 'sedang' || quizLevel === 'sulit') ? (
                   <>
                     <button
                       onClick={() => setSelectedQuestion(1)}
                       className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest hover:bg-surface-container-high transition-colors font-bold text-on-surface flex items-center justify-between cursor-pointer"
                     >
-                      <span>Soal 1: {quizLevel === 'mudah' ? 'Literasi Keuangan' : 'Aritmetika Sosial (Bunga Majemuk)'}</span>
+                      <span>Soal 1: {quizLevel === 'mudah' ? 'Literasi Keuangan' : quizLevel === 'sedang' ? 'Aritmetika Sosial (Bunga Majemuk)' : 'Pilihan Ganda Kompleks'}</span>
                       <span className="material-symbols-outlined text-primary">arrow_forward</span>
                     </button>
                     <button className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest opacity-50 cursor-not-allowed font-bold text-on-surface">
@@ -279,7 +280,7 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
                  <span className="material-symbols-outlined text-[16px]">arrow_back</span>
                  Kembali ke Daftar Soal
                </button>
-               {quizLevel === 'mudah' ? <QuizQuestionRME /> : <QuizQuestionRMESedang />}
+               {quizLevel === 'mudah' ? <QuizQuestionRME /> : quizLevel === 'sedang' ? <QuizQuestionRMESedang /> : <QuizQuestionRMESulit />}
             </div>
           );
         } else {
