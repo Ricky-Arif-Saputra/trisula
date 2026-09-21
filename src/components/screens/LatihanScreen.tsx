@@ -241,19 +241,28 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
               <p className="text-sm text-on-surface-variant mb-6">Pilih soal untuk mulai mengerjakan latihan mandiri.</p>
               
               <div className="flex flex-col gap-3">
-                <button
-                  onClick={() => setSelectedQuestion(1)}
-                  className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest hover:bg-surface-container-high transition-colors font-bold text-on-surface flex items-center justify-between cursor-pointer"
-                >
-                  <span>Soal 1: Literasi Keuangan</span>
-                  <span className="material-symbols-outlined text-primary">arrow_forward</span>
-                </button>
-                <button className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest opacity-50 cursor-not-allowed font-bold text-on-surface">
-                  Soal 2 (Segera Hadir)
-                </button>
-                <button className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest opacity-50 cursor-not-allowed font-bold text-on-surface">
-                  Soal 3 (Segera Hadir)
-                </button>
+                {selectedCategory === 'bilangan' && quizLevel === 'mudah' ? (
+                  <>
+                    <button
+                      onClick={() => setSelectedQuestion(1)}
+                      className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest hover:bg-surface-container-high transition-colors font-bold text-on-surface flex items-center justify-between cursor-pointer"
+                    >
+                      <span>Soal 1: Literasi Keuangan</span>
+                      <span className="material-symbols-outlined text-primary">arrow_forward</span>
+                    </button>
+                    <button className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest opacity-50 cursor-not-allowed font-bold text-on-surface">
+                      Soal 2 (Segera Hadir)
+                    </button>
+                    <button className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest opacity-50 cursor-not-allowed font-bold text-on-surface">
+                      Soal 3 (Segera Hadir)
+                    </button>
+                  </>
+                ) : (
+                  <div className="text-center p-8 border border-dashed border-outline-variant/30 rounded-xl bg-surface-container-lowest">
+                    <span className="material-symbols-outlined text-3xl text-on-surface-variant mb-2">construction</span>
+                    <p className="text-sm text-on-surface-variant">Daftar soal untuk kategori dan level ini belum tersedia (Segera Hadir).</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
