@@ -3,6 +3,7 @@ import { MathCategory } from '../../types';
 import { QuizQuestionRME } from './QuizQuestionRME';
 import { QuizQuestionRMESedang } from './QuizQuestionRMESedang';
 import { QuizQuestionRMESulit } from './QuizQuestionRMESulit';
+import { QuizQuestionRMEDiskon } from './QuizQuestionRMEDiskon';
 
 interface LatihanScreenProps {
   initialCategory?: MathCategory | null;
@@ -252,9 +253,19 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
                       <span>Soal 1: {quizLevel === 'mudah' ? 'Literasi Keuangan' : quizLevel === 'sedang' ? 'Aritmetika Sosial (Bunga Majemuk)' : 'Pilihan Ganda Kompleks'}</span>
                       <span className="material-symbols-outlined text-primary">arrow_forward</span>
                     </button>
-                    <button className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest opacity-50 cursor-not-allowed font-bold text-on-surface">
-                      Soal 2 (Segera Hadir)
-                    </button>
+                    {quizLevel === 'sedang' ? (
+                      <button
+                        onClick={() => setSelectedQuestion(2)}
+                        className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest hover:bg-surface-container-high transition-colors font-bold text-on-surface flex items-center justify-between cursor-pointer"
+                      >
+                        <span>Soal 2: Diskon Bertingkat</span>
+                        <span className="material-symbols-outlined text-primary">arrow_forward</span>
+                      </button>
+                    ) : (
+                      <button className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest opacity-50 cursor-not-allowed font-bold text-on-surface">
+                        Soal 2 (Segera Hadir)
+                      </button>
+                    )}
                     <button className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest opacity-50 cursor-not-allowed font-bold text-on-surface">
                       Soal 3 (Segera Hadir)
                     </button>
@@ -281,6 +292,38 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
                  Kembali ke Daftar Soal
                </button>
                {quizLevel === 'mudah' ? <QuizQuestionRME /> : quizLevel === 'sedang' ? <QuizQuestionRMESedang /> : <QuizQuestionRMESulit />}
+            </div>
+          );
+        } else {
+          return (
+            <div className="flex flex-col w-full pb-16 font-sans px-margin-mobile animate-in fade-in pt-4">
+               <button
+                 onClick={() => setSelectedQuestion(null)}
+                 className="mb-4 px-4 py-2 rounded-xl bg-surface-container-high text-on-surface font-bold text-xs flex items-center gap-2 self-start hover:bg-surface-container-highest cursor-pointer transition-colors"
+               >
+                 <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                 Kembali ke Daftar Soal
+               </button>
+               <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30 shadow-md text-center py-12">
+                  <span className="material-symbols-outlined text-4xl text-on-surface-variant mb-2">construction</span>
+                  <h3 className="font-bold text-lg">Soal Segera Hadir</h3>
+                  <p className="text-sm text-on-surface-variant mt-2">Soal interaktif untuk kategori ini masih dalam tahap pengembangan.</p>
+               </div>
+            </div>
+          );
+        }
+      } else if (selectedQuestion === 2) {
+        if (selectedCategory === 'bilangan' && quizLevel === 'sedang') {
+          return (
+            <div className="flex flex-col w-full pb-16 font-sans animate-in fade-in pt-4 relative">
+               <button
+                 onClick={() => setSelectedQuestion(null)}
+                 className="mx-margin-mobile mb-4 px-4 py-2 rounded-xl bg-surface-container-high text-on-surface font-bold text-xs flex items-center gap-2 self-start hover:bg-surface-container-highest cursor-pointer transition-colors"
+               >
+                 <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                 Kembali ke Daftar Soal
+               </button>
+               <QuizQuestionRMEDiskon />
             </div>
           );
         } else {
