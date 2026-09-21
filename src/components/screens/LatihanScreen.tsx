@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MathCategory } from '../../types';
+import { QuizQuestionRME } from './QuizQuestionRME';
 
 interface LatihanScreenProps {
   initialCategory?: MathCategory | null;
@@ -28,6 +29,7 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
   const [score, setScore] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [selectedQuestion, setSelectedQuestion] = useState<number | null>(null);
   
   // Sync prop
   useEffect(() => {
@@ -50,6 +52,7 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
     setCurrentQuestionIdx(0);
     setScore(0);
     setSelectedAnswer(null);
+    setSelectedQuestion(null);
   };
 
   const handleAnswer = (idx: number, isCorrect: boolean) => {
@@ -229,6 +232,47 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
   // VIEW 4: ACTIVE QUIZ UI
   // ==============================================================
   if (isQuizActive) {
+    if (selectedCategory === 'bilangan' && quizLevel === 'mudah' && quizMode === 'mandiri') {
+      if (selectedQuestion === null) {
+        return (
+          <div className="flex flex-col w-full pb-16 font-sans px-margin-mobile animate-in fade-in pt-4">
+            <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30 shadow-md">
+              <h3 className="text-lg font-bold text-on-surface mb-2">Daftar Soal Latihan</h3>
+              <p className="text-sm text-on-surface-variant mb-6">Pilih soal untuk mulai mengerjakan latihan mandiri.</p>
+              
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => setSelectedQuestion(1)}
+                  className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest hover:bg-surface-container-high transition-colors font-bold text-on-surface flex items-center justify-between cursor-pointer"
+                >
+                  <span>Soal 1: Literasi Keuangan</span>
+                  <span className="material-symbols-outlined text-primary">arrow_forward</span>
+                </button>
+                <button className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest opacity-50 cursor-not-allowed font-bold text-on-surface">
+                  Soal 2 (Segera Hadir)
+                </button>
+                <button className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest opacity-50 cursor-not-allowed font-bold text-on-surface">
+                  Soal 3 (Segera Hadir)
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      } else if (selectedQuestion === 1) {
+        return (
+          <div className="flex flex-col w-full pb-16 font-sans animate-in fade-in pt-4 relative">
+             <button
+               onClick={() => setSelectedQuestion(null)}
+               className="mx-margin-mobile mb-4 px-4 py-2 rounded-xl bg-surface-container-high text-on-surface font-bold text-xs flex items-center gap-2 self-start hover:bg-surface-container-highest cursor-pointer transition-colors"
+             >
+               <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+               Kembali ke Daftar Soal
+             </button>
+             <QuizQuestionRME />
+          </div>
+        );
+      }
+    }
     const dummyQuestions = [
       { q: "Berapakah hasil dari 2x + 5 = 15?", options: ["x = 5", "x = 10", "x = 2", "x = 4"], correct: 0 },
       { q: "Jika f(x) = 3x - 2, maka f(4) adalah...", options: ["10", "12", "14", "8"], correct: 0 },
