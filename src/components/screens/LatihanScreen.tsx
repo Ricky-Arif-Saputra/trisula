@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MathCategory } from '../../types';
 import { QuizQuestionRME } from './QuizQuestionRME';
+import { QuizQuestionRMESedang } from './QuizQuestionRMESedang';
 
 interface LatihanScreenProps {
   initialCategory?: MathCategory | null;
@@ -241,13 +242,13 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
               <p className="text-sm text-on-surface-variant mb-6">Pilih soal untuk mulai mengerjakan latihan mandiri.</p>
               
               <div className="flex flex-col gap-3">
-                {selectedCategory === 'bilangan' && quizLevel === 'mudah' ? (
+                {selectedCategory === 'bilangan' && (quizLevel === 'mudah' || quizLevel === 'sedang') ? (
                   <>
                     <button
                       onClick={() => setSelectedQuestion(1)}
                       className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest hover:bg-surface-container-high transition-colors font-bold text-on-surface flex items-center justify-between cursor-pointer"
                     >
-                      <span>Soal 1: Literasi Keuangan</span>
+                      <span>Soal 1: {quizLevel === 'mudah' ? 'Literasi Keuangan' : 'Aritmetika Sosial (Bunga Majemuk)'}</span>
                       <span className="material-symbols-outlined text-primary">arrow_forward</span>
                     </button>
                     <button className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest opacity-50 cursor-not-allowed font-bold text-on-surface">
@@ -278,7 +279,7 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
                  <span className="material-symbols-outlined text-[16px]">arrow_back</span>
                  Kembali ke Daftar Soal
                </button>
-               <QuizQuestionRME />
+               {quizLevel === 'mudah' ? <QuizQuestionRME /> : <QuizQuestionRMESedang />}
             </div>
           );
         } else {
