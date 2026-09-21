@@ -4,6 +4,7 @@ import { QuizQuestionRME } from './QuizQuestionRME';
 import { QuizQuestionRMESedang } from './QuizQuestionRMESedang';
 import { QuizQuestionRMESulit } from './QuizQuestionRMESulit';
 import { QuizQuestionRMEDiskon } from './QuizQuestionRMEDiskon';
+import { QuizQuestionRMEInflasi } from './QuizQuestionRMEInflasi';
 
 interface LatihanScreenProps {
   initialCategory?: MathCategory | null;
@@ -253,12 +254,12 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
                       <span>Soal 1: {quizLevel === 'mudah' ? 'Literasi Keuangan' : quizLevel === 'sedang' ? 'Aritmetika Sosial (Bunga Majemuk)' : 'Pilihan Ganda Kompleks'}</span>
                       <span className="material-symbols-outlined text-primary">arrow_forward</span>
                     </button>
-                    {quizLevel === 'sedang' ? (
+                    {quizLevel === 'sedang' || quizLevel === 'sulit' ? (
                       <button
                         onClick={() => setSelectedQuestion(2)}
                         className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest hover:bg-surface-container-high transition-colors font-bold text-on-surface flex items-center justify-between cursor-pointer"
                       >
-                        <span>Soal 2: Diskon Bertingkat</span>
+                        <span>Soal 2: {quizLevel === 'sedang' ? 'Diskon Bertingkat' : 'Literasi Finansial & Inflasi'}</span>
                         <span className="material-symbols-outlined text-primary">arrow_forward</span>
                       </button>
                     ) : (
@@ -313,7 +314,7 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
           );
         }
       } else if (selectedQuestion === 2) {
-        if (selectedCategory === 'bilangan' && quizLevel === 'sedang') {
+        if (selectedCategory === 'bilangan' && (quizLevel === 'sedang' || quizLevel === 'sulit')) {
           return (
             <div className="flex flex-col w-full pb-16 font-sans animate-in fade-in pt-4 relative">
                <button
@@ -323,7 +324,7 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
                  <span className="material-symbols-outlined text-[16px]">arrow_back</span>
                  Kembali ke Daftar Soal
                </button>
-               <QuizQuestionRMEDiskon />
+               {quizLevel === 'sedang' ? <QuizQuestionRMEDiskon /> : <QuizQuestionRMEInflasi />}
             </div>
           );
         } else {
