@@ -5,9 +5,14 @@ export const QuizAljabarInvers: React.FC = () => {
   const [selectedOptions, setSelectedOptions] = useState<number[]>([]);
   const [hasSubmitted, setHasSubmitted] = useState<boolean>(false);
 
+  // RME Simulator: user enters a final price, system finds original
+  const [simFinalPrice, setSimFinalPrice] = useState<number>(90);
+  // f(x) = 2x + 10, so f⁻¹(y) = (y - 10) / 2
+  const simOriginalPrice = (simFinalPrice - 10) / 2;
+
   const questionData = {
-    context: "Sebuah toko menerapkan sistem penetapan harga dengan aturan berikut: harga awal suatu barang dimodelkan oleh fungsi x (dalam ribuan rupiah). Setelah dikenakan pajak dan biaya layanan, harga jual akhir dinyatakan oleh fungsi f(x) = 2x + 10 dengan f(x) juga dalam ribuan rupiah. Seorang pelanggan ingin mengetahui harga awal barang jika harga setelah pajak yang ia bayar adalah Rp90.000,00.",
-    question: "Berdasarkan situasi tersebut, manakah pernyataan yang benar terkait fungsi invers yang digunakan untuk menghitung harga awal serta nominal harga sebelum pajak?",
+    context: "Sebuah toko menerapkan sistem penetapan harga dengan aturan berikut: harga awal suatu barang dimodelkan oleh fungsi x (dalam ribuan rupiah). Setelah dikenakan pajak dan biaya layanan, harga jual akhir dinyatakan oleh fungsi f(x) = 2x + 10. Seorang pelanggan ingin mengetahui harga awal barang jika harga setelah pajak yang ia bayar adalah Rp90.000,00.",
+    question: "Manakah pernyataan yang benar terkait fungsi invers yang digunakan untuk menghitung harga awal serta nominal harga sebelum pajak?",
     options: [
       "A. Invers fungsi f(x) adalah f⁻¹(x) = (x - 10) / 2",
       "B. Invers fungsi f(x) adalah f⁻¹(x) = (x + 10) / 2",
@@ -15,100 +20,66 @@ export const QuizAljabarInvers: React.FC = () => {
       "D. Harga awal barang tersebut adalah Rp50.000",
       "E. Harga awal barang tersebut adalah Rp45.000"
     ],
-    correctOptionIdxs: [0, 2], // A, C
+    correctOptionIdxs: [0, 2],
   };
 
-  const handleToggleOption = (idx: number) => {
+  const handleToggle = (idx: number) => {
     if (hasSubmitted) return;
-    setSelectedOptions(prev => 
-      prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
-    );
+    setSelectedOptions(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]);
   };
 
-  const isAllCorrect = 
+  const isAllCorrect =
     selectedOptions.length === questionData.correctOptionIdxs.length &&
     questionData.correctOptionIdxs.every(idx => selectedOptions.includes(idx));
 
-  const handleSubmit = () => {
-    if (selectedOptions.length > 0) {
-      setHasSubmitted(true);
-    }
-  };
+  const handleSubmit = () => { if (selectedOptions.length > 0) setHasSubmitted(true); };
+
+  const formatK = (n: number) => `Rp${n.toLocaleString('id-ID')}.000`;
 
   return (
     <div className="w-full max-w-4xl mx-auto p-4 md:p-6 font-sans">
       <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-slate-200 dark:border-slate-700 shadow-lg overflow-hidden">
-        
         <div className="bg-slate-50 dark:bg-slate-800/50 p-5 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#0F172A] text-white flex items-center justify-center shadow-md">
               <span className="material-symbols-outlined text-rose-400">autorenew</span>
             </div>
             <div>
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">
-                Topik: Aljabar - Fungsi Invers
-              </span>
-              <h2 className="text-base font-bold text-slate-800 dark:text-white capitalize font-serif leading-tight">
-                Fungsi Invers Multi-Select (Sulit)
-              </h2>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Topik: Aljabar - Fungsi Invers</span>
+              <h2 className="text-base font-bold text-slate-800 dark:text-white font-serif leading-tight">Fungsi Invers Multi-Select (Sulit)</h2>
             </div>
           </div>
-          <span className="px-3 py-1 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-full">
-            Soal 1 / 3
-          </span>
+          <span className="px-3 py-1 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-full">Soal 1/3</span>
         </div>
 
         <div className="p-6">
-          <div className="callout-example mb-6">
-            <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300 mb-4">
-              {questionData.context}
-            </p>
-          </div>
-          
-          <h3 className="text-base font-bold text-slate-800 dark:text-white mb-4 leading-relaxed">
-            {questionData.question}
-            <span className="block text-xs font-normal text-slate-500 mt-1 italic">
-              *Pilih semua opsi yang bernilai benar (Multi-Select).
-            </span>
-          </h3>
+          <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300 mb-6">{questionData.context}</p>
+          <h3 className="text-base font-bold text-slate-800 dark:text-white mb-1">{questionData.question}</h3>
+          <p className="text-xs text-slate-500 italic mb-4">*Pilih semua opsi yang bernilai benar (Multi-Select).</p>
 
           <div className="flex flex-col gap-3 mb-6">
             {questionData.options.map((opt, idx) => {
               const isSelected = selectedOptions.includes(idx);
               const isCorrectOpt = questionData.correctOptionIdxs.includes(idx);
-              
-              let btnClass = "border-slate-200 dark:border-slate-700 hover:border-[#0F172A] dark:hover:border-slate-500 text-slate-700 dark:text-slate-300";
-              
+              let btnClass = "border-slate-200 dark:border-slate-700 hover:border-rose-400 text-slate-700 dark:text-slate-300";
               if (hasSubmitted) {
-                if (isSelected && isCorrectOpt) btnClass = "border-[#059669] bg-[#059669]/10 text-[#059669]";
+                if (isSelected && isCorrectOpt) btnClass = "border-emerald-500 bg-emerald-500/10 text-emerald-600";
                 else if (isSelected && !isCorrectOpt) btnClass = "border-rose-500 bg-rose-500/10 text-rose-500";
-                else if (!isSelected && isCorrectOpt) btnClass = "border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-500";
-                else btnClass = "border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 opacity-50";
+                else if (!isSelected && isCorrectOpt) btnClass = "border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-400";
+                else btnClass = "border-slate-200 dark:border-slate-700 text-slate-400 opacity-50";
               } else if (isSelected) {
-                btnClass = "border-[#0F172A] dark:border-white bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-bold ring-2 ring-[#0F172A] dark:ring-white";
+                btnClass = "border-rose-400 bg-rose-50 dark:bg-rose-900/10 text-rose-700 dark:text-rose-300 font-bold ring-2 ring-rose-400/30";
               }
-
               return (
-                <button
-                  key={idx}
-                  disabled={hasSubmitted}
-                  onClick={() => handleToggleOption(idx)}
-                  className={`w-full text-left p-4 rounded-xl border-2 transition-all cursor-pointer flex items-start gap-3 ${btnClass}`}
-                >
-                  <div className={`mt-0.5 w-5 h-5 rounded flex items-center justify-center border-2 flex-shrink-0 transition-colors ${
-                    isSelected 
-                      ? (hasSubmitted ? (isCorrectOpt ? 'bg-[#059669] border-[#059669]' : 'bg-rose-500 border-rose-500') : 'bg-[#0F172A] dark:bg-white border-[#0F172A] dark:border-white text-white dark:text-[#0F172A]') 
-                      : 'border-slate-300 dark:border-slate-600 bg-transparent'
-                  }`}>
-                    {isSelected && <span className="material-symbols-outlined text-[14px] font-bold">check</span>}
+                <button key={idx} disabled={hasSubmitted} onClick={() => handleToggle(idx)}
+                  className={`w-full text-left p-4 rounded-xl border-2 transition-all cursor-pointer flex items-start gap-3 ${btnClass}`}>
+                  <div className={`mt-0.5 w-5 h-5 rounded flex items-center justify-center border-2 flex-shrink-0 ${
+                    isSelected ? (hasSubmitted ? (isCorrectOpt ? 'bg-emerald-500 border-emerald-500' : 'bg-rose-500 border-rose-500') : 'bg-rose-500 border-rose-500 text-white') : 'border-slate-300 dark:border-slate-600'}`}>
+                    {isSelected && <span className="material-symbols-outlined text-[14px] text-white">check</span>}
                   </div>
                   <div className="flex-1">
                     <span className="text-sm font-semibold">{opt}</span>
-                    {hasSubmitted && !isSelected && isCorrectOpt && (
-                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 font-bold">
-                        *Opsi ini seharusnya dipilih karena bernilai benar.
-                      </p>
-                    )}
+                    {hasSubmitted && !isSelected && isCorrectOpt && <p className="text-xs text-amber-600 mt-1 font-bold">*Seharusnya dipilih</p>}
                   </div>
                 </button>
               );
@@ -116,103 +87,109 @@ export const QuizAljabarInvers: React.FC = () => {
           </div>
 
           {!hasSubmitted && (
-            <button
-              disabled={selectedOptions.length === 0}
-              onClick={handleSubmit}
-              className={`w-full py-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
-                selectedOptions.length > 0 
-                  ? 'bg-[#0F172A] text-white hover:bg-[#1E293B] shadow-md cursor-pointer' 
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
-              }`}
-            >
+            <button disabled={selectedOptions.length === 0} onClick={handleSubmit}
+              className={`w-full py-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${selectedOptions.length > 0 ? 'bg-[#0F172A] text-white hover:bg-rose-700 shadow-md cursor-pointer' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'}`}>
               Submit Jawaban
             </button>
           )}
 
-          {/* RME FEEDBACK SECTION */}
           {hasSubmitted && (
-            <div className="mt-8 pt-8 border-t border-slate-200 dark:border-slate-700 animate-in fade-in slide-in-from-bottom-4">
-              
-              <div className={`p-4 rounded-xl mb-6 flex items-start gap-4 border ${isAllCorrect ? 'bg-[#059669]/10 border-[#059669]/30' : 'bg-amber-500/10 border-amber-500/30'}`}>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm ${isAllCorrect ? 'bg-[#059669]' : 'bg-amber-500'}`}>
+            <div className="mt-8 pt-8 border-t border-slate-200 dark:border-slate-700 space-y-6 animate-in fade-in slide-in-from-bottom-4">
+
+              <div className={`p-4 rounded-xl flex items-start gap-4 border ${isAllCorrect ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200' : 'bg-amber-50 dark:bg-amber-900/10 border-amber-200'}`}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0 ${isAllCorrect ? 'bg-emerald-500' : 'bg-amber-500'}`}>
                   <span className="material-symbols-outlined">{isAllCorrect ? 'verified' : 'fact_check'}</span>
                 </div>
                 <div>
-                  <h3 className={`font-bold text-lg mb-1 ${isAllCorrect ? 'text-[#059669]' : 'text-amber-600'}`}>
-                    {isAllCorrect ? 'Tepat Sekali! Kamu menguasai konsep fungsi invers.' : 'Mari kita bedah cara kerja fungsi invers.'}
+                  <h3 className={`font-bold text-lg mb-1 ${isAllCorrect ? 'text-emerald-600' : 'text-amber-600'}`}>
+                    {isAllCorrect ? 'Tepat! Kamu menguasai fungsi invers.' : 'Mari kita balik alur fungsi secara langsung!'}
                   </h3>
-                  <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                    Fungsi invers bekerja dengan membalikkan operasi matematika dari akhir kembali ke awal.
-                  </p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Fungsi invers = membalikkan setiap operasi dari akhir ke awal.</p>
                 </div>
               </div>
 
-              {/* RME: Simulation Card (Proses Invers Berbalik) */}
-              <div className="mb-6 bg-slate-900 rounded-xl border border-slate-700 shadow-inner overflow-hidden p-6 relative">
-                <h4 className="font-bold text-white text-sm mb-6 flex items-center gap-2">
+              {/* Alur Maju / Mundur Visual */}
+              <div className="bg-slate-900 rounded-2xl border border-slate-700 p-5">
+                <h4 className="font-bold text-white text-sm mb-4 flex items-center gap-2">
                   <span className="material-symbols-outlined text-rose-400">swap_horiz</span>
-                  Visualisasi Alur Maju & Mundur (Invers)
+                  Visualisasi Alur Fungsi (Maju & Mundur)
                 </h4>
-
-                <div className="flex flex-col gap-8">
+                <div className="flex flex-col gap-5">
                   {/* Alur Maju */}
-                  <div className="relative">
-                    <div className="absolute top-1/2 left-0 right-0 h-1 bg-slate-700 -translate-y-1/2 z-0"></div>
-                    <div className="flex justify-between items-center relative z-10 text-xs font-bold text-center">
-                      <div className="bg-indigo-500 text-white p-3 rounded-lg w-24 border border-indigo-400 shadow-lg">Harga Awal<br/>(x)</div>
-                      <div className="bg-slate-800 text-slate-300 px-3 py-1 rounded-full border border-slate-600">Dikali 2</div>
-                      <div className="bg-slate-800 text-slate-300 px-3 py-1 rounded-full border border-slate-600">Ditambah 10</div>
-                      <div className="bg-purple-500 text-white p-3 rounded-lg w-24 border border-purple-400 shadow-lg">Harga Akhir<br/>(y)</div>
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-2 font-bold">➡ Alur Maju f(x) = 2x + 10</p>
+                    <div className="flex items-center justify-between gap-1 text-xs font-bold text-center flex-wrap">
+                      <div className="bg-indigo-600 text-white px-3 py-2 rounded-lg">x</div>
+                      <span className="text-slate-500">×2</span>
+                      <div className="bg-slate-700 text-slate-300 px-3 py-2 rounded-lg">2x</div>
+                      <span className="text-slate-500">+10</span>
+                      <div className="bg-purple-600 text-white px-3 py-2 rounded-lg">2x+10</div>
+                      <span className="text-slate-500">=</span>
+                      <div className="bg-rose-600 text-white px-3 py-2 rounded-lg">f(x)</div>
                     </div>
                   </div>
-
                   {/* Alur Mundur */}
-                  <div className="relative mt-4">
-                    <div className="absolute top-1/2 left-0 right-0 h-1 bg-slate-700 -translate-y-1/2 z-0"></div>
-                    <div className="flex justify-between items-center relative z-10 text-xs font-bold text-center flex-row-reverse">
-                      <div className="bg-purple-500 text-white p-3 rounded-lg w-24 border border-purple-400 shadow-lg opacity-80">Harga Akhir<br/>(y = 90)</div>
-                      <div className="bg-rose-900/50 text-rose-300 px-3 py-1 rounded-full border border-rose-700 flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[14px]">arrow_back</span>
-                        Dikurangi 10
-                      </div>
-                      <div className="bg-rose-900/50 text-rose-300 px-3 py-1 rounded-full border border-rose-700 flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[14px]">arrow_back</span>
-                        Dibagi 2
-                      </div>
-                      <div className="bg-emerald-500 text-white p-3 rounded-lg w-24 border border-emerald-400 shadow-lg">Harga Awal<br/>(x = 40)</div>
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-2 font-bold">⬅ Alur Mundur f⁻¹(x) = (x-10)/2</p>
+                    <div className="flex items-center justify-between gap-1 text-xs font-bold text-center flex-wrap flex-row-reverse">
+                      <div className="bg-rose-600 text-white px-3 py-2 rounded-lg">y</div>
+                      <span className="text-rose-500">-10</span>
+                      <div className="bg-slate-700 text-slate-300 px-3 py-2 rounded-lg">y-10</div>
+                      <span className="text-rose-500">÷2</span>
+                      <div className="bg-emerald-600 text-white px-3 py-2 rounded-lg">(y-10)/2</div>
+                      <span className="text-slate-500">=</span>
+                      <div className="bg-emerald-700 text-white px-3 py-2 rounded-lg">x</div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Step-by-Step Option Verification */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-emerald-50 dark:bg-emerald-900/10 p-5 rounded-xl border border-emerald-200 dark:border-emerald-800/50 shadow-sm">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold">A</div>
-                    <h5 className="font-bold text-emerald-800 dark:text-emerald-400 text-sm">Pembuktian Persamaan (Benar)</h5>
-                  </div>
-                  <div className="text-sm text-slate-700 dark:text-slate-300 font-mono space-y-2 bg-white dark:bg-slate-900 p-3 rounded border border-emerald-100 dark:border-emerald-800/50">
-                    <p><InlineMath math="y = 2x + 10" /></p>
-                    <p><InlineMath math="2x = y - 10" /></p>
-                    <p><InlineMath math="x = \frac{y - 10}{2}" /></p>
-                    <p className="text-emerald-600 dark:text-emerald-400 font-bold mt-2"><InlineMath math="f^{-1}(x) = \frac{x - 10}{2}" /></p>
-                  </div>
+              {/* === RME: Interactive Inverse Price Finder === */}
+              <div className="border border-rose-200 dark:border-rose-800/50 rounded-2xl overflow-hidden shadow-md">
+                <div className="bg-gradient-to-r from-rose-600 to-pink-600 p-4">
+                  <h4 className="font-bold text-white text-sm flex items-center gap-2">
+                    <span className="material-symbols-outlined">price_check</span>
+                    Mesin Pencari Harga Awal — Coba Harga Akhir Berapa Pun!
+                  </h4>
+                  <p className="text-rose-100 text-xs mt-1">Masukkan harga akhir (setelah pajak) menggunakan slider, dan mesin akan menghitung harga awal menggunakan fungsi invers secara otomatis.</p>
                 </div>
-
-                <div className="bg-emerald-50 dark:bg-emerald-900/10 p-5 rounded-xl border border-emerald-200 dark:border-emerald-800/50 shadow-sm">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold">C</div>
-                    <h5 className="font-bold text-emerald-800 dark:text-emerald-400 text-sm">Pembuktian Nominal (Benar)</h5>
-                  </div>
-                  <div className="text-sm text-slate-700 dark:text-slate-300 space-y-2">
-                    <p>Masukkan <InlineMath math="y = 90" /> (dalam ribuan) ke dalam fungsi invers:</p>
-                    <div className="font-mono bg-white dark:bg-slate-900 p-3 rounded border border-emerald-100 dark:border-emerald-800/50 mt-2 space-y-1">
-                      <p><InlineMath math="x = \frac{90 - 10}{2}" /></p>
-                      <p><InlineMath math="x = \frac{80}{2} = 40" /></p>
+                <div className="p-5 bg-white dark:bg-slate-900">
+                  <div className="mb-5">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Harga Akhir Setelah Pajak</label>
+                      <span className="text-lg font-black text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20 px-3 py-1 rounded-lg">{formatK(simFinalPrice)}</span>
                     </div>
-                    <p className="font-bold text-emerald-700 dark:text-emerald-500 mt-2">Maka harga awal adalah Rp40.000,00.</p>
+                    <input type="range" min="12" max="120" step="2" value={simFinalPrice}
+                      onChange={(e) => setSimFinalPrice(Number(e.target.value))}
+                      className="w-full accent-rose-500 h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" />
+                    <div className="flex justify-between text-[10px] text-slate-400 mt-1"><span>Rp12.000</span><span>Rp120.000</span></div>
                   </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="bg-rose-50 dark:bg-rose-900/10 p-4 rounded-xl border border-rose-200 dark:border-rose-800/50 text-center">
+                      <div className="text-xs text-rose-500 font-bold mb-1 uppercase">Harga Akhir (y)</div>
+                      <div className="text-2xl font-black text-rose-700 dark:text-rose-400">{formatK(simFinalPrice)}</div>
+                    </div>
+                    <div className="flex items-center justify-center text-slate-500 flex-col">
+                      <div className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-lg text-center">
+                        <InlineMath math={`f^{-1}(y) = \\frac{y - 10}{2}`} />
+                      </div>
+                      <span className="text-3xl mt-2">⬇</span>
+                    </div>
+                    <div className={`p-4 rounded-xl border text-center ${simOriginalPrice > 0 ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800/50' : 'bg-slate-100 dark:bg-slate-800 border-slate-300'}`}>
+                      <div className="text-xs text-emerald-600 dark:text-emerald-400 font-bold mb-1 uppercase">Harga Awal (x)</div>
+                      <div className={`text-2xl font-black ${simOriginalPrice > 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-500'}`}>
+                        {simOriginalPrice > 0 ? formatK(simOriginalPrice) : 'Tidak Valid'}
+                      </div>
+                      {simOriginalPrice > 0 && <div className="text-[10px] text-slate-500 mt-1 font-mono">({simFinalPrice} - 10) ÷ 2 = {simOriginalPrice}</div>}
+                    </div>
+                  </div>
+
+                  {simFinalPrice === 90 && (
+                    <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-300 rounded-lg text-xs font-bold text-amber-700 dark:text-amber-400 text-center">
+                      ✨ Ini adalah nilai soal aslinya! f⁻¹(90) = (90-10)/2 = 40 → Harga Awal = Rp40.000
+                    </div>
+                  )}
                 </div>
               </div>
 

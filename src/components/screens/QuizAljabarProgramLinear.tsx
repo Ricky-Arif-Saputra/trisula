@@ -2,231 +2,262 @@ import React, { useState } from 'react';
 import { InlineMath } from 'react-katex';
 
 export const QuizAljabarProgramLinear: React.FC = () => {
-  // Store true/false for each of the 5 statements
-  // true = 'Benar', false = 'Salah', null = unanswered
   const [answers, setAnswers] = useState<(boolean | null)[]>([null, null, null, null, null]);
   const [hasSubmitted, setHasSubmitted] = useState<boolean>(false);
 
+  // RME: Interactive Production Planner
+  const [simKaos, setSimKaos] = useState<number>(60);
+  const [simJaket, setSimJaket] = useState<number>(30);
+
   const questionData = {
-    context: "Sebuah usaha konveksi memproduksi dua jenis pakaian, yaitu kaos (x) dan jaket (y). Untuk membuat satu kaos diperlukan 2 jam kerja dan 1 meter kain, sedangkan untuk membuat satu jaket diperlukan 4 jam kerja dan 3 meter kain. Dalam satu bulan tersedia paling banyak 240 jam kerja dan 180 meter kain. Setiap kaos yang terjual memberikan keuntungan sebesar Rp25.000,00, sedangkan setiap jaket memberikan keuntungan sebesar Rp60.000,00. Seorang siswa diminta menganalisis permasalahan tersebut.",
+    context: "Sebuah usaha konveksi memproduksi dua jenis pakaian, yaitu kaos (x) dan jaket (y). Untuk membuat satu kaos diperlukan 2 jam kerja dan 1 meter kain, sedangkan untuk membuat satu jaket diperlukan 4 jam kerja dan 3 meter kain. Dalam satu bulan tersedia paling banyak 240 jam kerja dan 180 meter kain. Setiap kaos memberikan keuntungan Rp25.000 dan setiap jaket Rp60.000.",
     statements: [
-      "1. Jika x menyatakan kaos dan y jaket, kendala jam kerja adalah 2x + 4y ≤ 240.",
-      "2. Fungsi keuntungan yang dimaksimalkan: Z = 25.000x + 60.000y.",
-      "3. Titik (120, 0) memenuhi semua kendala sehingga merupakan salah satu alternatif produksi.",
-      "4. Produksi yang menghasilkan keuntungan maksimum adalah 120 kaos dan 0 jaket.",
-      "5. Keuntungan maksimum diperoleh dengan memproduksi 60 jaket dan tidak memproduksi kaos (0, 60)."
+      { text: "1. Kendala jam kerja adalah 2x + 4y ≤ 240.", correct: true },
+      { text: "2. Fungsi keuntungan: Z = 25.000x + 60.000y.", correct: true },
+      { text: "3. Titik (120, 0) memenuhi semua kendala (merupakan alternatif produksi).", correct: true },
+      { text: "4. Keuntungan maksimum adalah 120 kaos dan 0 jaket.", correct: false },
+      { text: "5. Keuntungan maksimum diperoleh dengan 60 jaket dan 0 kaos (titik (0,60)).", correct: true },
     ],
-    // Correct answers: B, B, B, S, B
-    correctAnswers: [true, true, true, false, true]
   };
 
-  const handleAnswerChange = (idx: number, val: boolean) => {
+  const handleAnswer = (idx: number, val: boolean) => {
     if (hasSubmitted) return;
-    const newAnswers = [...answers];
-    newAnswers[idx] = val;
-    setAnswers(newAnswers);
+    const next = [...answers];
+    next[idx] = val;
+    setAnswers(next);
   };
 
   const isAllAnswered = answers.every(a => a !== null);
-  
   let score = 0;
-  if (hasSubmitted) {
-    score = answers.reduce((acc, curr, idx) => acc + (curr === questionData.correctAnswers[idx] ? 1 : 0), 0);
-  }
-
+  if (hasSubmitted) score = answers.reduce((acc, a, i) => acc + (a === questionData.statements[i].correct ? 1 : 0), 0);
   const isAllCorrect = score === 5;
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
-  };
+  const formatCurrency = (n: number) =>
+    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
+
+  // Constraint checks for simulator
+  const simJam = 2 * simKaos + 4 * simJaket;
+  const simKain = 1 * simKaos + 3 * simJaket;
+  const simProfit = 25000 * simKaos + 60000 * simJaket;
+  const jamOK = simJam <= 240;
+  const kainOK = simKain <= 180;
+  const feasible = jamOK && kainOK;
+
+  // SVG Feasible Region
+  // Constraint 1: 2x + 4y ≤ 240 → x + 2y ≤ 120 → (120,0), (0,60)
+  // Constraint 2: x + 3y ≤ 180 → (180,0), (0,60)
+  // Intersection of C1 and C2: x + 2y = 120, x + 3y = 180 → y = 60, x = 0
+  // Vertices: (0,0), (120,0), (0,60)
+  const scale = 1.5; // 1 unit = 1.5 px, max x=120, max y=80 → 180×120 viewBox
+  const vX = (x: number) => 20 + x * scale;
+  const vY = (y: number) => 140 - y * scale;
 
   return (
     <div className="w-full max-w-4xl mx-auto p-4 md:p-6 font-sans">
       <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-slate-200 dark:border-slate-700 shadow-lg overflow-hidden">
-        
         <div className="bg-slate-50 dark:bg-slate-800/50 p-5 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#0F172A] text-white flex items-center justify-center shadow-md">
               <span className="material-symbols-outlined text-yellow-400">format_list_numbered</span>
             </div>
             <div>
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">
-                Topik: Aljabar - Program Linear
-              </span>
-              <h2 className="text-base font-bold text-slate-800 dark:text-white capitalize font-serif leading-tight">
-                Tabel Benar-Salah (Sulit)
-              </h2>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Topik: Aljabar - Program Linear</span>
+              <h2 className="text-base font-bold text-slate-800 dark:text-white font-serif leading-tight">Tabel Benar-Salah (Sulit)</h2>
             </div>
           </div>
-          <span className="px-3 py-1 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-full">
-            Soal 3 / 3
-          </span>
+          <span className="px-3 py-1 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-full">Soal 3/3</span>
         </div>
 
         <div className="p-6">
-          <div className="callout-example mb-6">
-            <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300 mb-4">
-              {questionData.context}
-            </p>
-          </div>
-          
-          <h3 className="text-base font-bold text-slate-800 dark:text-white mb-4 leading-relaxed">
-            Pilih "Benar" atau "Salah" untuk setiap pernyataan di bawah ini berdasarkan analisis matematika.
-          </h3>
+          <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300 mb-6">{questionData.context}</p>
+          <h3 className="text-base font-bold text-slate-800 dark:text-white mb-4">Tentukan Benar atau Salah setiap pernyataan berikut.</h3>
 
-          <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden mb-6 shadow-sm">
-            <div className="hidden md:grid grid-cols-12 gap-4 p-4 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 font-bold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">
+          {/* Statement Table */}
+          <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden mb-6 shadow-sm">
+            <div className="hidden md:grid grid-cols-12 p-3 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-xs font-bold uppercase tracking-wider text-slate-500">
               <div className="col-span-8">Pernyataan</div>
               <div className="col-span-2 text-center">Benar</div>
               <div className="col-span-2 text-center">Salah</div>
             </div>
-
-            <div className="flex flex-col">
-              {questionData.statements.map((stmt, idx) => {
-                const ans = answers[idx];
-                const isCorrect = ans === questionData.correctAnswers[idx];
-
-                return (
-                  <div key={idx} className="border-b border-slate-100 dark:border-slate-800/50 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors relative">
-                    <div className="flex flex-col md:grid md:grid-cols-12 gap-4 items-start md:items-center">
-                      <div className="col-span-8 text-sm text-slate-700 dark:text-slate-300 font-medium">
-                        {stmt}
-                      </div>
-                      <div className="col-span-4 flex w-full md:w-auto gap-2 justify-between md:justify-around self-end">
-                        <button
-                          onClick={() => handleAnswerChange(idx, true)}
-                          disabled={hasSubmitted}
-                          className={`flex-1 md:w-16 py-2 rounded-lg font-bold text-xs transition-all border-2 ${
-                            ans === true 
-                              ? 'bg-emerald-500 border-emerald-500 text-white shadow-md' 
-                              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 hover:border-emerald-500 hover:text-emerald-500'
-                          } ${hasSubmitted ? 'opacity-90 cursor-not-allowed' : 'cursor-pointer'}`}
-                        >
-                          BENAR
+            {questionData.statements.map((stmt, idx) => {
+              const ans = answers[idx];
+              const isCorrectAns = ans === stmt.correct;
+              return (
+                <div key={idx} className={`border-b border-slate-100 dark:border-slate-800/50 p-4 transition-colors ${hasSubmitted ? (isCorrectAns ? 'bg-emerald-50/30 dark:bg-emerald-900/5' : 'bg-rose-50/30 dark:bg-rose-900/5') : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'}`}>
+                  <div className="flex flex-col md:grid md:grid-cols-12 gap-3 items-start md:items-center">
+                    <div className="col-span-8 text-sm text-slate-700 dark:text-slate-300 font-medium">{stmt.text}</div>
+                    <div className="col-span-4 flex gap-2 w-full md:w-auto justify-start">
+                      {[{ val: true, label: 'BENAR', color: 'emerald' }, { val: false, label: 'SALAH', color: 'rose' }].map(({ val, label, color }) => (
+                        <button key={label} disabled={hasSubmitted} onClick={() => handleAnswer(idx, val)}
+                          className={`flex-1 md:flex-none md:w-20 py-2 rounded-lg font-bold text-xs border-2 transition-all ${ans === val ? `bg-${color}-500 border-${color}-500 text-white shadow-md` : `bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 hover:border-${color}-400 hover:text-${color}-500`} ${hasSubmitted ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                          {label}
                         </button>
-                        <button
-                          onClick={() => handleAnswerChange(idx, false)}
-                          disabled={hasSubmitted}
-                          className={`flex-1 md:w-16 py-2 rounded-lg font-bold text-xs transition-all border-2 ${
-                            ans === false 
-                              ? 'bg-rose-500 border-rose-500 text-white shadow-md' 
-                              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 hover:border-rose-500 hover:text-rose-500'
-                          } ${hasSubmitted ? 'opacity-90 cursor-not-allowed' : 'cursor-pointer'}`}
-                        >
-                          SALAH
-                        </button>
-                      </div>
+                      ))}
                     </div>
-                    {/* Inline feedback after submit */}
-                    {hasSubmitted && (
-                      <div className={`mt-3 p-2 rounded text-xs font-bold flex items-center gap-2 ${isCorrect ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' : 'bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400'}`}>
-                        <span className="material-symbols-outlined text-[14px]">{isCorrect ? 'check_circle' : 'cancel'}</span>
-                        {isCorrect ? 'Jawaban Anda Tepat!' : `Jawaban Seharusnya: ${questionData.correctAnswers[idx] ? 'BENAR' : 'SALAH'}`}
-                      </div>
-                    )}
                   </div>
-                );
-              })}
-            </div>
+                  {hasSubmitted && (
+                    <div className={`mt-2 p-2 rounded text-xs font-bold flex items-center gap-1.5 ${isCorrectAns ? 'bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' : 'bg-rose-100 dark:bg-rose-900/20 text-rose-700 dark:text-rose-400'}`}>
+                      <span className="material-symbols-outlined text-[14px]">{isCorrectAns ? 'check_circle' : 'cancel'}</span>
+                      {isCorrectAns ? 'Tepat!' : `Jawaban seharusnya: ${stmt.correct ? 'BENAR' : 'SALAH'}`}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {!hasSubmitted && (
-            <button
-              disabled={!isAllAnswered}
-              onClick={() => setHasSubmitted(true)}
-              className={`w-full py-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
-                isAllAnswered 
-                  ? 'bg-[#0F172A] text-white hover:bg-[#1E293B] shadow-md cursor-pointer' 
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
-              }`}
-            >
+            <button disabled={!isAllAnswered} onClick={() => setHasSubmitted(true)}
+              className={`w-full py-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${isAllAnswered ? 'bg-[#0F172A] text-white hover:bg-yellow-600 shadow-md cursor-pointer' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'}`}>
               Submit Analisis
             </button>
           )}
 
-          {/* RME FEEDBACK SECTION */}
           {hasSubmitted && (
-            <div className="mt-8 pt-8 border-t border-slate-200 dark:border-slate-700 animate-in fade-in slide-in-from-bottom-4">
-              
-              <div className={`p-4 rounded-xl mb-6 flex items-start gap-4 border ${isAllCorrect ? 'bg-[#10B981]/10 border-[#10B981]/30' : 'bg-amber-500/10 border-amber-500/30'}`}>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm ${isAllCorrect ? 'bg-[#10B981]' : 'bg-amber-500'}`}>
+            <div className="mt-8 pt-8 border-t border-slate-200 dark:border-slate-700 space-y-6 animate-in fade-in slide-in-from-bottom-4">
+
+              <div className={`p-4 rounded-xl flex items-start gap-4 border ${isAllCorrect ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200' : 'bg-amber-50 dark:bg-amber-900/10 border-amber-200'}`}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0 ${isAllCorrect ? 'bg-emerald-500' : 'bg-amber-500'}`}>
                   <span className="material-symbols-outlined">{isAllCorrect ? 'verified' : 'analytics'}</span>
                 </div>
                 <div>
-                  <h3 className={`font-bold text-lg mb-1 ${isAllCorrect ? 'text-[#10B981]' : 'text-amber-600'}`}>
-                    {isAllCorrect ? 'Luar Biasa! Semua pernyataan dianalisis dengan sempurna.' : `Kamu berhasil menjawab benar ${score} dari 5 pernyataan.`}
+                  <h3 className={`font-bold text-lg mb-1 ${isAllCorrect ? 'text-emerald-600' : 'text-amber-600'}`}>
+                    {isAllCorrect ? 'Semua pernyataan dianalisis dengan sempurna!' : `${score}/5 pernyataan benar — Coba simulasi berikut!`}
                   </h3>
-                  <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                    Mari kita bedah Daerah Penyelesaian (Feasible Region) untuk membuktikan pernyataan 4 dan 5 terkait nilai keuntungan.
-                  </p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Titik (0,60) memberikan profit Rp3.600.000, lebih tinggi dari (120,0) = Rp3.000.000.</p>
                 </div>
               </div>
 
-              {/* RME: Resource Feasibility Gauge & SVG Graph */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                
-                {/* SVG Graph */}
-                <div className="bg-slate-800 dark:bg-slate-900 rounded-xl p-5 border border-slate-700 shadow-inner flex flex-col items-center">
-                  <h4 className="font-bold text-white text-sm mb-4">Grafik Daerah Penyelesaian</h4>
-                  <div className="relative w-full max-w-[300px] aspect-square bg-slate-100 dark:bg-slate-800 rounded-lg border-2 border-slate-300 dark:border-slate-600 overflow-hidden">
-                    <svg viewBox="0 0 200 200" className="w-full h-full">
-                      {/* Axes */}
-                      <line x1="20" y1="180" x2="20" y2="20" stroke="#475569" strokeWidth="2" />
-                      <line x1="20" y1="180" x2="180" y2="180" stroke="#475569" strokeWidth="2" />
-                      
-                      {/* Line 1: 2x + 4y = 240 => (120,0) to (0,60) */}
-                      {/* Map (120,0) to SVG (180, 180) -- Wait, let's say max X is 200, mapped to 180 */}
-                      {/* Let's scale: 1 unit = 1 pixel. max x=150, max y=150 */}
-                      {/* x: 0->20, 120->140. y: 0->180, 60->120 */}
-                      {/* Poly: (0,60)=>(20,120), (120,0)=>(140,180), (180,0)=>(200,180) => (0,0)=>(20,180) */}
-                      
-                      {/* Actual polygon for feasible region */}
-                      <polygon points="20,180 20,120 140,180" fill="rgba(16, 185, 129, 0.3)" stroke="#10B981" strokeWidth="2" />
-                      
-                      {/* Line 2 (Kain): x + 3y <= 180 (Not explicitly used in the vertex analysis for brevity but it's part of the constraints) */}
-                      
-                      <circle cx="20" cy="120" r="4" fill="#3B82F6" />
-                      <text x="25" y="115" fontSize="8" fill="#3B82F6" fontWeight="bold">(0, 60)</text>
+              {/* Feasible Region SVG */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-slate-800 rounded-xl p-5 border border-slate-700 flex flex-col items-center">
+                  <h4 className="font-bold text-white text-sm mb-4 self-start flex items-center gap-2">
+                    <span className="material-symbols-outlined text-yellow-400">area_chart</span>
+                    Daerah Penyelesaian (Feasible Region)
+                  </h4>
+                  <svg viewBox="0 0 200 160" className="w-full max-w-[280px]">
+                    {/* Axes */}
+                    <line x1="20" y1="10" x2="20" y2="145" stroke="#475569" strokeWidth="1.5" />
+                    <line x1="15" y1="140" x2="195" y2="140" stroke="#475569" strokeWidth="1.5" />
 
-                      <circle cx="140" cy="180" r="4" fill="#F59E0B" />
-                      <text x="135" y="175" fontSize="8" fill="#F59E0B" fontWeight="bold">(120, 0)</text>
+                    {/* Feasible Region Polygon: (0,0)→(120,0)→(0,60) */}
+                    <polygon points={`${vX(0)},${vY(0)} ${vX(120)},${vY(0)} ${vX(0)},${vY(60)}`} fill="rgba(16,185,129,0.25)" stroke="#10B981" strokeWidth="2" />
 
-                      <circle cx="20" cy="180" r="4" fill="#94A3B8" />
-                      
-                      <text x="160" y="195" fontSize="8" fill="#475569">x (Kaos)</text>
-                      <text x="5" y="30" fontSize="8" fill="#475569" transform="rotate(-90, 5, 30)">y (Jaket)</text>
-                    </svg>
-                  </div>
+                    {/* Constraint lines dashed */}
+                    <line x1={vX(0)} y1={vY(60)} x2={vX(120)} y2={vY(0)} stroke="#818CF8" strokeWidth="1.5" strokeDasharray="4" />
+
+                    {/* Axis labels */}
+                    <text x="175" y="152" fontSize="9" fill="#94A3B8">x (Kaos)</text>
+                    <text x="22" y="14" fontSize="9" fill="#94A3B8">y (Jaket)</text>
+                    <text x={vX(120)+3} y={vY(0)+4} fontSize="9" fill="#94A3B8">(120,0)</text>
+                    <text x={vX(0)+3} y={vY(60)-3} fontSize="9" fill="#94A3B8">(0,60)</text>
+                    <text x={vX(0)+3} y={vY(0)-3} fontSize="9" fill="#94A3B8">(0,0)</text>
+
+                    {/* Vertex Circles */}
+                    <circle cx={vX(0)} cy={vY(0)} r="4" fill="#64748B" />
+                    <circle cx={vX(120)} cy={vY(0)} r="6" fill="#F59E0B" stroke="white" strokeWidth="2" />
+                    <circle cx={vX(0)} cy={vY(60)} r="6" fill="#3B82F6" stroke="white" strokeWidth="2" />
+
+                    {/* Profit labels */}
+                    <text x={vX(120)+3} y={vY(0)+14} fontSize="8" fill="#F59E0B" fontWeight="bold">Rp3jt</text>
+                    <text x={vX(0)+3} y={vY(60)-12} fontSize="8" fill="#3B82F6" fontWeight="bold">Rp3,6jt ★</text>
+                  </svg>
                 </div>
 
-                {/* Profit Analysis */}
+                {/* Profit Comparison */}
                 <div className="flex flex-col justify-center gap-4">
-                  <div className="bg-amber-50 dark:bg-amber-900/10 p-4 rounded-xl border border-amber-200 dark:border-amber-800/50 shadow-sm relative overflow-hidden">
-                    <div className="absolute top-0 right-0 px-2 py-1 bg-amber-500 text-white text-[10px] font-bold rounded-bl-lg">UJI TITIK A</div>
-                    <h5 className="font-bold text-amber-800 dark:text-amber-400 text-sm mb-2">Produksi (120, 0)</h5>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">120 Kaos & 0 Jaket</p>
-                    <div className="font-mono text-sm bg-white dark:bg-slate-900 p-2 rounded text-slate-700 dark:text-slate-300">
-                      <InlineMath math="Z = 25.000(120) + 60.000(0)" /><br/>
-                      <span className="font-bold">Z = Rp3.000.000</span>
-                    </div>
+                  <h4 className="font-bold text-slate-700 dark:text-slate-300 text-sm">Perbandingan Keuntungan di Titik Uji:</h4>
+                  {[
+                    { label: "Titik (120, 0)", kaos: 120, jaket: 0, color: "amber" },
+                    { label: "Titik (0, 60) ★", kaos: 0, jaket: 60, color: "blue" },
+                  ].map((t) => {
+                    const profit = 25000 * t.kaos + 60000 * t.jaket;
+                    return (
+                      <div key={t.label} className={`p-4 rounded-xl border bg-${t.color}-50 dark:bg-${t.color}-900/10 border-${t.color}-200 dark:border-${t.color}-800/50`}>
+                        <div className={`font-bold text-${t.color}-700 dark:text-${t.color}-400 text-sm mb-1`}>{t.label}</div>
+                        <div className="text-xs text-slate-600 dark:text-slate-400 font-mono mb-2">
+                          {t.kaos} kaos × Rp25.000 + {t.jaket} jaket × Rp60.000
+                        </div>
+                        <div className={`font-black text-lg text-${t.color}-600 dark:text-${t.color}-400`}>{formatCurrency(profit)}</div>
+                        {profit === 3600000 && <div className="text-xs text-emerald-600 font-bold mt-1">🏆 KEUNTUNGAN MAKSIMUM!</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* === RME: Interactive Production Planner === */}
+              <div className="border border-yellow-200 dark:border-yellow-800/50 rounded-2xl overflow-hidden shadow-md">
+                <div className="bg-gradient-to-r from-yellow-500 to-amber-500 p-4">
+                  <h4 className="font-bold text-white text-sm flex items-center gap-2">
+                    <span className="material-symbols-outlined">factory</span>
+                    Perencana Produksi Konveksi — Coba Sendiri!
+                  </h4>
+                  <p className="text-yellow-100 text-xs mt-1">Atur jumlah produksi Kaos dan Jaket. Sistem akan mengecek apakah kendala terpenuhi dan menghitung keuntunganmu secara real-time.</p>
+                </div>
+                <div className="p-5 bg-white dark:bg-slate-900">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
+                    {[
+                      { label: "👕 Kaos (x)", value: simKaos, setter: setSimKaos, max: 120, jam: 2, kain: 1, color: "sky" },
+                      { label: "🧥 Jaket (y)", value: simJaket, setter: setSimJaket, max: 60, jam: 4, kain: 3, color: "purple" },
+                    ].map((item) => (
+                      <div key={item.label} className={`bg-${item.color}-50 dark:bg-${item.color}-900/10 p-4 rounded-xl border border-${item.color}-200 dark:border-${item.color}-800/50`}>
+                        <div className={`flex items-center justify-between mb-2 text-${item.color}-700 dark:text-${item.color}-400`}>
+                          <span className="font-bold text-sm">{item.label}</span>
+                          <span className="text-2xl font-black">{item.value}</span>
+                        </div>
+                        <input type="range" min="0" max={item.max} step="5" value={item.value}
+                          onChange={(e) => item.setter(Number(e.target.value))}
+                          className={`w-full accent-yellow-500 h-2 bg-${item.color}-200 dark:bg-${item.color}-800 rounded-lg appearance-none cursor-pointer mb-2`} />
+                        <div className={`text-[10px] text-${item.color}-600 dark:text-${item.color}-500 font-mono`}>
+                          Butuh: {item.value * item.jam} jam & {item.value * item.kain}m kain
+                        </div>
+                      </div>
+                    ))}
                   </div>
 
-                  <div className="bg-sky-50 dark:bg-sky-900/10 p-4 rounded-xl border border-sky-200 dark:border-sky-800/50 shadow-sm relative overflow-hidden">
-                    <div className="absolute top-0 right-0 px-2 py-1 bg-sky-500 text-white text-[10px] font-bold rounded-bl-lg">UJI TITIK B</div>
-                    <h5 className="font-bold text-sky-800 dark:text-sky-400 text-sm mb-2">Produksi (0, 60)</h5>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">0 Kaos & 60 Jaket</p>
-                    <div className="font-mono text-sm bg-white dark:bg-slate-900 p-2 rounded text-slate-700 dark:text-slate-300">
-                      <InlineMath math="Z = 25.000(0) + 60.000(60)" /><br/>
-                      <span className="font-bold text-emerald-600 dark:text-emerald-400">Z = Rp3.600.000 (MAKSIMUM!)</span>
-                    </div>
+                  {/* Constraint Gauges */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                    {[
+                      { label: "Jam Kerja", used: simJam, max: 240, ok: jamOK },
+                      { label: "Kain", used: simKain, max: 180, ok: kainOK, unit: "m" },
+                    ].map((c) => (
+                      <div key={c.label} className={`p-3 rounded-xl border ${c.ok ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200' : 'bg-rose-50 dark:bg-rose-900/10 border-rose-200'}`}>
+                        <div className="flex justify-between text-xs font-bold mb-1">
+                          <span className={c.ok ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}>
+                            {c.label} {c.ok ? '✓' : '✗ MELEBIHI!'}
+                          </span>
+                          <span className="text-slate-500">{c.used}/{c.max} {c.unit || 'jam'}</span>
+                        </div>
+                        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                          <div className={`h-2 rounded-full transition-all ${c.ok ? 'bg-emerald-500' : 'bg-rose-500'}`}
+                            style={{ width: `${Math.min(100, (c.used / c.max) * 100)}%` }}></div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
 
-                  <div className="text-sm text-slate-700 dark:text-slate-300 p-2 border-l-4 border-emerald-500 bg-slate-50 dark:bg-slate-800 rounded-r">
-                    <strong>Kesimpulan:</strong> Pernyataan 4 <strong>SALAH</strong> karena Rp3.000.000 bukanlah nilai tertinggi. Sebaliknya, pernyataan 5 <strong>BENAR</strong> karena (0,60) memberikan profit tertinggi.
+                  {/* Result */}
+                  <div className={`p-4 rounded-xl font-mono flex items-center justify-between ${feasible ? 'bg-slate-900' : 'bg-rose-900/20 border border-rose-700'}`}>
+                    <div>
+                      <div className={`text-xs mb-1 ${feasible ? 'text-slate-400' : 'text-rose-400'}`}>
+                        {feasible ? 'Z = 25.000×' + simKaos + ' + 60.000×' + simJaket + ' =' : '⚠️ Kendala dilanggar! Kurangi produksi.'}
+                      </div>
+                      {feasible && <div className="text-emerald-400 font-black text-xl">{formatCurrency(simProfit)}</div>}
+                    </div>
+                    {feasible && (
+                      <div className="text-right">
+                        <div className="text-slate-400 text-[10px] mb-1">vs Maksimum</div>
+                        <div className="text-blue-400 font-bold">Rp3.600.000</div>
+                        <div className={`text-[10px] font-bold ${simProfit === 3600000 ? 'text-yellow-400' : 'text-slate-500'}`}>
+                          {simProfit === 3600000 ? '🏆 MAKS!' : `Selisih ${formatCurrency(3600000 - simProfit)}`}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-
               </div>
+
             </div>
           )}
         </div>

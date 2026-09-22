@@ -36,7 +36,7 @@ export const QuizAljabarSPLTV: React.FC = () => {
   return (
     <div className="w-full max-w-4xl mx-auto p-4 md:p-6 font-sans">
       <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-slate-200 dark:border-slate-700 shadow-lg overflow-hidden">
-        
+
         <div className="bg-slate-50 dark:bg-slate-800/50 p-5 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#0F172A] text-white flex items-center justify-center shadow-md">
@@ -62,7 +62,7 @@ export const QuizAljabarSPLTV: React.FC = () => {
               {questionData.context}
             </p>
           </div>
-          
+
           <h3 className="text-base font-bold text-slate-800 dark:text-white mb-4 leading-relaxed">
             {questionData.question}
           </h3>
@@ -71,7 +71,7 @@ export const QuizAljabarSPLTV: React.FC = () => {
             {questionData.options.map((opt, idx) => {
               const isSelected = selectedOption === idx;
               let btnClass = "border-slate-200 dark:border-slate-700 hover:border-[#0F172A] dark:hover:border-slate-500 text-slate-700 dark:text-slate-300";
-              
+
               if (hasSubmitted) {
                 const isCorrectOpt = idx === questionData.correctOptionIdx;
                 if (isSelected && isCorrectOpt) btnClass = "border-[#10B981] bg-[#10B981]/10 text-[#10B981]";
@@ -101,11 +101,10 @@ export const QuizAljabarSPLTV: React.FC = () => {
             <button
               disabled={selectedOption === null}
               onClick={handleSubmit}
-              className={`w-full py-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
-                selectedOption !== null 
-                  ? 'bg-[#0F172A] text-white hover:bg-[#1E293B] shadow-md cursor-pointer' 
+              className={`w-full py-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${selectedOption !== null
+                  ? 'bg-[#0F172A] text-white hover:bg-[#1E293B] shadow-md cursor-pointer'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
-              }`}
+                }`}
             >
               Submit Jawaban
             </button>
@@ -114,7 +113,7 @@ export const QuizAljabarSPLTV: React.FC = () => {
           {/* RME FEEDBACK SECTION */}
           {hasSubmitted && (
             <div className="mt-8 pt-8 border-t border-slate-200 dark:border-slate-700 animate-in fade-in slide-in-from-bottom-4">
-              
+
               <div className={`p-4 rounded-xl mb-6 flex items-start gap-4 border ${isCorrect ? 'bg-[#10B981]/10 border-[#10B981]/30' : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600'}`}>
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm ${isCorrect ? 'bg-[#10B981]' : 'bg-slate-500'}`}>
                   <span className="material-symbols-outlined">{isCorrect ? 'celebration' : 'receipt_long'}</span>
@@ -198,7 +197,7 @@ export const QuizAljabarSPLTV: React.FC = () => {
               {/* Guided Scaffolding */}
               <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                 <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm mb-4">Guided Eliminasi Step-by-Step</h4>
-                
+
                 <div className="space-y-4">
                   <div className={`p-4 rounded-lg border transition-all duration-500 ${stepVisualizer >= 1 ? 'border-emerald-300 bg-emerald-50 dark:bg-emerald-900/10' : 'border-slate-200 opacity-50 bg-slate-50'}`}>
                     <h5 className="font-bold text-sm text-slate-700 dark:text-slate-300 mb-2">Langkah 1: Selesaikan Sistem Persamaan</h5>
