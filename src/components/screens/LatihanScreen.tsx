@@ -5,6 +5,11 @@ import { QuizQuestionRMESedang } from './QuizQuestionRMESedang';
 import { QuizQuestionRMESulit } from './QuizQuestionRMESulit';
 import { QuizQuestionRMEDiskon } from './QuizQuestionRMEDiskon';
 import { QuizQuestionRMEInflasi } from './QuizQuestionRMEInflasi';
+import { QuizAljabarMudah } from './QuizAljabarMudah';
+import { QuizAljabarSPLTV } from './QuizAljabarSPLTV';
+import { QuizAljabarInvers } from './QuizAljabarInvers';
+import { QuizAljabarKuadrat } from './QuizAljabarKuadrat';
+import { QuizAljabarProgramLinear } from './QuizAljabarProgramLinear';
 
 interface LatihanScreenProps {
   initialCategory?: MathCategory | null;
@@ -271,6 +276,55 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
                       Soal 3 (Segera Hadir)
                     </button>
                   </>
+                ) : selectedCategory === 'aljabar' ? (
+                  <>
+                    {/* Aljabar Mudah: 1 soal */}
+                    {quizLevel === 'mudah' && (
+                      <button
+                        onClick={() => setSelectedQuestion(1)}
+                        className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest hover:bg-surface-container-high transition-colors font-bold text-on-surface flex items-center justify-between cursor-pointer"
+                      >
+                        <span>Soal 1: Komposisi Fungsi</span>
+                        <span className="material-symbols-outlined text-primary">arrow_forward</span>
+                      </button>
+                    )}
+                    {/* Aljabar Sedang: 1 soal */}
+                    {quizLevel === 'sedang' && (
+                      <button
+                        onClick={() => setSelectedQuestion(1)}
+                        className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest hover:bg-surface-container-high transition-colors font-bold text-on-surface flex items-center justify-between cursor-pointer"
+                      >
+                        <span>Soal 1: SPLTV Aritmetika</span>
+                        <span className="material-symbols-outlined text-primary">arrow_forward</span>
+                      </button>
+                    )}
+                    {/* Aljabar Sulit: 3 soal */}
+                    {quizLevel === 'sulit' && (
+                      <>
+                        <button
+                          onClick={() => setSelectedQuestion(1)}
+                          className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest hover:bg-surface-container-high transition-colors font-bold text-on-surface flex items-center justify-between cursor-pointer"
+                        >
+                          <span>Soal 1: Fungsi Invers (Multi-Select)</span>
+                          <span className="material-symbols-outlined text-primary">arrow_forward</span>
+                        </button>
+                        <button
+                          onClick={() => setSelectedQuestion(2)}
+                          className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest hover:bg-surface-container-high transition-colors font-bold text-on-surface flex items-center justify-between cursor-pointer"
+                        >
+                          <span>Soal 2: Fungsi Kuadrat & Grafik (Multi-Select)</span>
+                          <span className="material-symbols-outlined text-primary">arrow_forward</span>
+                        </button>
+                        <button
+                          onClick={() => setSelectedQuestion(3)}
+                          className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest hover:bg-surface-container-high transition-colors font-bold text-on-surface flex items-center justify-between cursor-pointer"
+                        >
+                          <span>Soal 3: Program Linear (Tabel Benar/Salah)</span>
+                          <span className="material-symbols-outlined text-primary">arrow_forward</span>
+                        </button>
+                      </>
+                    )}
+                  </>
                 ) : (
                   <div className="text-center p-8 border border-dashed border-outline-variant/30 rounded-xl bg-surface-container-lowest">
                     <span className="material-symbols-outlined text-3xl text-on-surface-variant mb-2">construction</span>
@@ -282,17 +336,27 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
           </div>
         );
       } else if (selectedQuestion === 1) {
+        const backBtn = (
+          <button
+            onClick={() => setSelectedQuestion(null)}
+            className="mx-margin-mobile mb-4 px-4 py-2 rounded-xl bg-surface-container-high text-on-surface font-bold text-xs flex items-center gap-2 self-start hover:bg-surface-container-highest cursor-pointer transition-colors"
+          >
+            <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+            Kembali ke Daftar Soal
+          </button>
+        );
         if (selectedCategory === 'bilangan') {
           return (
             <div className="flex flex-col w-full pb-16 font-sans animate-in fade-in pt-4 relative">
-               <button
-                 onClick={() => setSelectedQuestion(null)}
-                 className="mx-margin-mobile mb-4 px-4 py-2 rounded-xl bg-surface-container-high text-on-surface font-bold text-xs flex items-center gap-2 self-start hover:bg-surface-container-highest cursor-pointer transition-colors"
-               >
-                 <span className="material-symbols-outlined text-[16px]">arrow_back</span>
-                 Kembali ke Daftar Soal
-               </button>
+               {backBtn}
                {quizLevel === 'mudah' ? <QuizQuestionRME /> : quizLevel === 'sedang' ? <QuizQuestionRMESedang /> : <QuizQuestionRMESulit />}
+            </div>
+          );
+        } else if (selectedCategory === 'aljabar') {
+          return (
+            <div className="flex flex-col w-full pb-16 font-sans animate-in fade-in pt-4 relative">
+               {backBtn}
+               {quizLevel === 'mudah' ? <QuizAljabarMudah /> : quizLevel === 'sedang' ? <QuizAljabarSPLTV /> : <QuizAljabarInvers />}
             </div>
           );
         } else {
@@ -314,17 +378,27 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
           );
         }
       } else if (selectedQuestion === 2) {
+        const backBtn2 = (
+          <button
+            onClick={() => setSelectedQuestion(null)}
+            className="mx-margin-mobile mb-4 px-4 py-2 rounded-xl bg-surface-container-high text-on-surface font-bold text-xs flex items-center gap-2 self-start hover:bg-surface-container-highest cursor-pointer transition-colors"
+          >
+            <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+            Kembali ke Daftar Soal
+          </button>
+        );
         if (selectedCategory === 'bilangan' && (quizLevel === 'sedang' || quizLevel === 'sulit')) {
           return (
             <div className="flex flex-col w-full pb-16 font-sans animate-in fade-in pt-4 relative">
-               <button
-                 onClick={() => setSelectedQuestion(null)}
-                 className="mx-margin-mobile mb-4 px-4 py-2 rounded-xl bg-surface-container-high text-on-surface font-bold text-xs flex items-center gap-2 self-start hover:bg-surface-container-highest cursor-pointer transition-colors"
-               >
-                 <span className="material-symbols-outlined text-[16px]">arrow_back</span>
-                 Kembali ke Daftar Soal
-               </button>
+               {backBtn2}
                {quizLevel === 'sedang' ? <QuizQuestionRMEDiskon /> : <QuizQuestionRMEInflasi />}
+            </div>
+          );
+        } else if (selectedCategory === 'aljabar' && quizLevel === 'sulit') {
+          return (
+            <div className="flex flex-col w-full pb-16 font-sans animate-in fade-in pt-4 relative">
+               {backBtn2}
+               <QuizAljabarKuadrat />
             </div>
           );
         } else {
@@ -342,6 +416,21 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
                   <h3 className="font-bold text-lg">Soal Segera Hadir</h3>
                   <p className="text-sm text-on-surface-variant mt-2">Soal interaktif untuk kategori ini masih dalam tahap pengembangan.</p>
                </div>
+            </div>
+          );
+        }
+      } else if (selectedQuestion === 3) {
+        if (selectedCategory === 'aljabar' && quizLevel === 'sulit') {
+          return (
+            <div className="flex flex-col w-full pb-16 font-sans animate-in fade-in pt-4 relative">
+               <button
+                 onClick={() => setSelectedQuestion(null)}
+                 className="mx-margin-mobile mb-4 px-4 py-2 rounded-xl bg-surface-container-high text-on-surface font-bold text-xs flex items-center gap-2 self-start hover:bg-surface-container-highest cursor-pointer transition-colors"
+               >
+                 <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                 Kembali ke Daftar Soal
+               </button>
+               <QuizAljabarProgramLinear />
             </div>
           );
         }
