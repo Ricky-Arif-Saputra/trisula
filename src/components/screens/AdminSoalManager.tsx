@@ -25,6 +25,7 @@ interface AnswerOption {
 
 interface QuestionRow {
   id: string;
+  title: string;
   test_type: TestType;
   strand: Strand;
   category: Difficulty;
@@ -311,7 +312,10 @@ const QuestionList: React.FC<{ refresh: number }> = ({ refresh }) => {
               <span className="material-symbols-outlined text-[16px]">delete</span>
             </button>
           </div>
-          <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 line-clamp-2">
+          {q.title && (
+            <h3 className="text-sm font-bold text-slate-800 dark:text-white mt-2">{q.title}</h3>
+          )}
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">
             {q.content_blocks?.find(b => b.type === 'text')?.value || '(Hanya berisi persamaan/gambar)'}
           </p>
           <div className="mt-2 text-[10px] text-slate-400 dark:text-slate-500 font-mono">
@@ -333,6 +337,7 @@ export const AdminSoalManager: React.FC = () => {
   const [testType, setTestType] = useState<TestType>('latihan');
   const [strand, setStrand] = useState<Strand>('bilangan');
   const [difficulty, setDifficulty] = useState<Difficulty>('mudah');
+  const [title, setTitle] = useState('');
   const [contentBlocks, setContentBlocks] = useState<ContentBlock[]>([
     { id: newId('blk'), type: 'text', value: '' },
   ]);
@@ -427,6 +432,7 @@ export const AdminSoalManager: React.FC = () => {
     setTestType('latihan');
     setStrand('bilangan');
     setDifficulty('mudah');
+    setTitle('');
     setContentBlocks([{ id: newId('blk'), type: 'text', value: '' }]);
     setOptions([
       { id: newId('opt'), text: '', isCorrect: false },
@@ -464,6 +470,7 @@ export const AdminSoalManager: React.FC = () => {
     setIsSaving(true);
 
     const payload = {
+      title: title || 'Soal Tanpa Judul',
       test_type: testType,
       strand,
       category: difficulty,
@@ -607,6 +614,21 @@ export const AdminSoalManager: React.FC = () => {
                     ))}
                   </div>
                 </div>
+              </div>
+
+              {/* ===== 2B. METADATA: Judul ===== */}
+              <div>
+                <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest block mb-2">
+                  <span className="material-symbols-outlined text-[12px] align-middle mr-1">title</span>
+                  Judul / Topik Soal
+                </label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Contoh: Literasi Keuangan, Persamaan Linier, dll."
+                  className="w-full p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white font-semibold text-sm focus:border-indigo-500 outline-none placeholder:text-slate-400"
+                />
               </div>
 
               {/* ===== 3. BLOK KONTEN DINAMIS ===== */}

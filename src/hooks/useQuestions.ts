@@ -22,6 +22,7 @@ export interface QuestionOption {
 
 export interface Question {
   id: string;
+  title: string;
   test_type: TestType;
   strand: Strand;
   category: Difficulty;

@@ -10,6 +10,7 @@ import { QuizAljabarSPLTV } from './QuizAljabarSPLTV';
 import { QuizAljabarInvers } from './QuizAljabarInvers';
 import { QuizAljabarKuadrat } from './QuizAljabarKuadrat';
 import { QuizAljabarProgramLinear } from './QuizAljabarProgramLinear';
+import { QuizQuestionDynamic } from './QuizQuestionDynamic';
 import { useQuestions, type Question, type Difficulty } from '../../hooks/useQuestions';
 
 interface LatihanScreenProps {
@@ -253,6 +254,21 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
           />
         );
       } else if (selectedQuestion === 1) {
+        if (selectedQuestion >= 9000) {
+          return (
+            <div className="flex flex-col w-full pb-16 font-sans px-margin-mobile animate-in fade-in pt-4 relative">
+               <button
+                 onClick={() => setSelectedQuestion(null)}
+                 className="mb-4 px-4 py-2 rounded-xl bg-surface-container-high text-on-surface font-bold text-xs flex items-center gap-2 self-start hover:bg-surface-container-highest cursor-pointer transition-colors"
+               >
+                 <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                 Kembali ke Daftar Soal
+               </button>
+               <QuizQuestionDynamic questionId={localStorage.getItem('trisula_active_db_question') || ''} onFinish={() => setIsQuizFinished(true)} />
+            </div>
+          );
+        }
+
         const backBtn = (
           <button
             onClick={() => setSelectedQuestion(null)}
@@ -539,32 +555,30 @@ const QuizListView: React.FC<QuizListViewProps> = ({
                 return (
                   <div
                     key={q.id}
-                    className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest dark:bg-surface-container hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors flex items-start justify-between gap-3 cursor-pointer group"
+                    className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest dark:bg-surface-container hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors flex items-center justify-between cursor-pointer group"
                     onClick={() => {
-                      // Simpan ID soal DB ke localStorage untuk dibuka di viewer
                       localStorage.setItem('trisula_active_db_question', q.id);
-                      // Gunakan index 9000+ sebagai penanda soal dari DB
                       onSelectQuestion(9000 + idx);
                     }}
                   >
-                    <div className="flex items-start gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-black text-sm shrink-0">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black text-sm shrink-0">
                         {staticQuestions.length + idx + 1}
                       </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${diffBadge.cls}`}>
+                      <div>
+                        <div className="font-bold text-sm text-on-surface group-hover:text-primary transition-colors">
+                          {q.title || 'Soal Tanpa Judul'}
+                        </div>
+                        <div className="text-[10px] text-on-surface-variant mt-0.5 flex items-center gap-2 flex-wrap">
+                          <span className={`font-bold px-1.5 py-0.5 rounded uppercase ${diffBadge.cls}`}>
                             {diffBadge.label}
                           </span>
                           {q.has_simulation && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 uppercase flex items-center gap-0.5">
-                              <span className="material-symbols-outlined text-[10px]">science</span> Simulasi RME
+                            <span className="font-bold px-1.5 py-0.5 rounded bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 uppercase flex items-center gap-0.5">
+                              <span className="material-symbols-outlined text-[10px]">science</span> RME
                             </span>
                           )}
-                        </div>
-                        <div className="text-xs text-on-surface-variant line-clamp-2">{preview}…</div>
-                        <div className="text-[10px] text-slate-400 mt-1">
-                          {q.options?.length || 0} pilihan jawaban · {q.content_blocks?.length || 0} blok konten
+                          <span>· {q.options?.length || 0} Opsi</span>
                         </div>
                       </div>
                     </div>
