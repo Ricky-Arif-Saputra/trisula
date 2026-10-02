@@ -55,33 +55,36 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
     );
   }
 
-  if (error || !question) {
+  if (error) {
     return (
       <div className="w-full max-w-4xl mx-auto p-4 flex flex-col gap-4">
         <div className="bg-rose-50 text-rose-600 p-4 rounded-xl border border-rose-200 flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
           <span className="material-symbols-outlined text-3xl">error</span>
           <div>
             <h3 className="font-bold text-sm">Gagal memuat soal</h3>
-            <p className="text-xs">{error || 'Data soal tidak ditemukan di database.'}</p>
+            <p className="text-xs">{error}</p>
           </div>
         </div>
       </div>
     );
   }
 
-  // Parsing aman untuk JSONB yang mungkin ter-stringify menjadi string
-  let parsedBlocks = question.content_blocks;
-  if (typeof parsedBlocks === 'string') {
-    try { parsedBlocks = JSON.parse(parsedBlocks); } catch (e) {}
-  }
-  let parsedOptions = question.options;
-  if (typeof parsedOptions === 'string') {
-    try { parsedOptions = JSON.parse(parsedOptions); } catch (e) {}
+  if (!question) {
+    return null; // Fallback jika tidak ada question namun tidak loading dan tidak ada error
   }
 
+  // Safe JSON Parser Helper
+  const safeParse = (data: any) => {
+    if (!data) return [];
+    if (typeof data === 'string') {
+      try { return JSON.parse(data); } catch (e) { return []; }
+    }
+    return Array.isArray(data) ? data : [];
+  };
+
   // Defensive array checks
-  const safeContentBlocks = Array.isArray(parsedBlocks) ? parsedBlocks : [];
-  const safeOptions = Array.isArray(parsedOptions) ? parsedOptions : [];
+  const safeContentBlocks = safeParse(question.content_blocks);
+  const safeOptions = safeParse(question.options);
 
   const handleToggleOption = (optId: string) => {
     if (hasSubmitted) return;

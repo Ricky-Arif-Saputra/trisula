@@ -11,6 +11,7 @@ import { QuizAljabarInvers } from './QuizAljabarInvers';
 import { QuizAljabarKuadrat } from './QuizAljabarKuadrat';
 import { QuizAljabarProgramLinear } from './QuizAljabarProgramLinear';
 import { QuizQuestionDynamic } from './QuizQuestionDynamic';
+import { ErrorBoundary } from '../ErrorBoundary';
 import { useQuestions, type Question, type Difficulty } from '../../hooks/useQuestions';
 
 interface LatihanScreenProps {
@@ -264,7 +265,9 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
                  <span className="material-symbols-outlined text-[16px]">arrow_back</span>
                  Kembali ke Daftar Soal
                </button>
-               <QuizQuestionDynamic questionId={localStorage.getItem('trisula_active_db_question') || ''} onFinish={() => setIsQuizFinished(true)} />
+               <ErrorBoundary>
+                 <QuizQuestionDynamic questionId={localStorage.getItem('trisula_active_db_question') || ''} onFinish={() => setIsQuizFinished(true)} />
+               </ErrorBoundary>
             </div>
           );
         }
