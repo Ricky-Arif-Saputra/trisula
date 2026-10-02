@@ -8,6 +8,7 @@ import { LatihanScreen } from './components/screens/LatihanScreen';
 import { SimulasiScreen } from './components/screens/SimulasiScreen';
 import { DashboardScreen } from './components/screens/DashboardScreen';
 import { AdminSoalManager } from './components/screens/AdminSoalManager';
+import { ExamViewer } from './components/screens/ExamViewer';
 import { useAuth } from './components/Auth/AuthProvider';
 import AuthLayout from './components/Auth/AuthLayout';
 import AuthTabs from './components/Auth/AuthTabs';
@@ -18,6 +19,7 @@ export default function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('beranda');
   const [materiCategory, setMateriCategory] = useState<MathCategory | null>(null);
   const [latihanCategory, setLatihanCategory] = useState<MathCategory | null>(null);
+  const [activeExamId, setActiveExamId] = useState<string | null>(null);
   const [isDark, setIsDark] = useState<boolean>(false);
   const [userXp, setUserXp] = useState<number>(4850);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -58,13 +60,16 @@ export default function App() {
     showToast(`Selamat! +${amount} XP berhasil ditambahkan ke profil Anda.`);
   };
 
-  const handleNavigate = (screen: ScreenType, category?: MathCategory | null) => {
+  const handleNavigate = (screen: ScreenType, category?: MathCategory | null, examId?: string) => {
     if (category !== undefined) {
       if (screen === 'materi') setMateriCategory(category);
       if (screen === 'latihan') setLatihanCategory(category);
     } else {
-      if (screen === 'materi') setMateriCategory(null); // Reset ke 5 Kartu Utama
-      if (screen === 'latihan') setLatihanCategory(null); // Reset ke 5 Topik Latihan
+      if (screen === 'materi') setMateriCategory(null);
+      if (screen === 'latihan') setLatihanCategory(null);
+    }
+    if (screen === 'ujian' && examId) {
+      setActiveExamId(examId);
     }
     setCurrentScreen(screen);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -178,12 +183,15 @@ export default function App() {
           )}
           {currentScreen === 'simulasi' && <SimulasiScreen />}
           {currentScreen === 'dashboard' && (
-            <DashboardScreen onNavigate={(screen, cat) => handleNavigate(screen, cat)} />
+            <DashboardScreen onNavigate={(screen, cat, examId) => handleNavigate(screen, cat, examId)} />
           )}
           {currentScreen === 'admin' && (
             <div className="flex flex-col w-full pb-16 font-sans px-margin-mobile animate-in fade-in pt-4">
               <AdminSoalManager />
             </div>
+          )}
+          {currentScreen === 'ujian' && activeExamId && (
+            <ExamViewer examId={activeExamId} onBack={() => handleNavigate('dashboard')} />
           )}
 
           {/* Floating Admin Button — hanya tampil untuk Admin/Guru */}

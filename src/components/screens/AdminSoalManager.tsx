@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../Auth/AuthProvider';
 import { supabase } from '../../lib/supabaseClient';
 import { InlineMath } from 'react-katex';
+import { ExamPackageBuilder } from './ExamPackageBuilder';
 
 // =====================================================
 // Types
@@ -334,6 +335,8 @@ export const AdminSoalManager: React.FC = () => {
   const { user, isAdmin } = useAuth();
 
   // Form state
+  const [viewMode, setViewMode] = useState<'dashboard' | 'pretest' | 'postest'>('dashboard');
+
   const [testType, setTestType] = useState<TestType>('latihan');
   const [strand, setStrand] = useState<Strand>('bilangan');
   const [difficulty, setDifficulty] = useState<Difficulty>('mudah');
@@ -503,19 +506,62 @@ export const AdminSoalManager: React.FC = () => {
 
   const activeTab = TEST_TABS.find(t => t.value === testType)!;
 
+  if (viewMode === 'pretest' || viewMode === 'postest') {
+    return (
+      <ExamPackageBuilder
+        testType={viewMode}
+        onBack={() => setViewMode('dashboard')}
+        onSaved={() => {
+          setViewMode('dashboard');
+          setRefreshKey(k => k + 1);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="w-full font-sans space-y-6">
+
+      {/* ===== 3 Kartu Mode Pembuatan ===== */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div onClick={() => { setTestType('latihan'); setShowModal(true); }}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl p-6 cursor-pointer shadow-lg transition-all hover:scale-[1.02] flex flex-col items-center text-center gap-3">
+          <span className="material-symbols-outlined text-5xl opacity-90">quiz</span>
+          <div>
+            <h3 className="font-extrabold text-lg">Latihan Soal</h3>
+            <p className="text-indigo-200 text-xs mt-1">Editor Tunggal (Bank Soal Harian)</p>
+          </div>
+        </div>
+
+        <div onClick={() => setViewMode('pretest')}
+          className="bg-amber-500 hover:bg-amber-600 text-white rounded-2xl p-6 cursor-pointer shadow-lg transition-all hover:scale-[1.02] flex flex-col items-center text-center gap-3">
+          <span className="material-symbols-outlined text-5xl opacity-90">assignment</span>
+          <div>
+            <h3 className="font-extrabold text-lg">Pretest</h3>
+            <p className="text-amber-100 text-xs mt-1">Paket Ujian Diagnostik Awal</p>
+          </div>
+        </div>
+
+        <div onClick={() => setViewMode('postest')}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl p-6 cursor-pointer shadow-lg transition-all hover:scale-[1.02] flex flex-col items-center text-center gap-3">
+          <span className="material-symbols-outlined text-5xl opacity-90">assignment_turned_in</span>
+          <div>
+            <h3 className="font-extrabold text-lg">Postest</h3>
+            <p className="text-emerald-100 text-xs mt-1">Paket Ujian Evaluasi Akhir</p>
+          </div>
+        </div>
+      </div>
 
       {/* ===== Header Panel ===== */}
       <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-slate-200 dark:border-slate-700 shadow-lg overflow-hidden">
         <div className="bg-gradient-to-r from-[#0F172A] to-[#1a3050] p-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shadow-md">
-              <span className="material-symbols-outlined text-white">admin_panel_settings</span>
+            <div className="w-10 h-10 rounded-xl bg-slate-700 flex items-center justify-center shadow-md">
+              <span className="material-symbols-outlined text-white">dns</span>
             </div>
             <div>
-              <h1 className="text-white font-black text-lg">Panel Manajemen Soal</h1>
-              <p className="text-slate-300 text-xs">TRISULA EduMath — Admin/Guru</p>
+              <h1 className="text-white font-black text-lg">Database Soal Latihan</h1>
+              <p className="text-slate-300 text-xs">TRISULA EduMath — Bank Soal Harian</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -524,9 +570,9 @@ export const AdminSoalManager: React.FC = () => {
               <span className="text-emerald-300 text-[10px] font-bold uppercase">Realtime Aktif</span>
             </div>
             <button onClick={() => { resetForm(); setShowModal(true); }}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm shadow-md transition-all cursor-pointer active:scale-95">
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-sm shadow-md transition-all cursor-pointer active:scale-95">
               <span className="material-symbols-outlined text-[18px]">add_circle</span>
-              Tambah Soal
+              Tambah Latihan
             </button>
           </div>
         </div>
@@ -536,7 +582,7 @@ export const AdminSoalManager: React.FC = () => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
               <span className="material-symbols-outlined text-[16px] text-indigo-500">list</span>
-              Daftar Soal Tersimpan
+              Daftar Soal Latihan Tersimpan
             </h2>
             <span className="text-[10px] text-slate-400 font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
               20 terbaru · auto-sync
@@ -576,14 +622,9 @@ export const AdminSoalManager: React.FC = () => {
                 <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest block mb-3">
                   Jenis Soal
                 </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {TEST_TABS.map(tab => (
-                    <button key={tab.value} onClick={() => setTestType(tab.value)}
-                      className={`p-3 rounded-xl border-2 font-bold text-xs flex flex-col items-center gap-1.5 transition-all cursor-pointer ${testType === tab.value ? `border-${tab.color}-500 bg-${tab.color}-50 dark:bg-${tab.color}-900/10 text-${tab.color}-700 dark:text-${tab.color}-400` : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300'}`}>
-                      <span className={`material-symbols-outlined text-[22px] ${testType === tab.value ? `text-${tab.color}-500` : 'text-slate-400'}`}>{tab.icon}</span>
-                      {tab.label.replace('Tambahkan ', '')}
-                    </button>
-                  ))}
+                <div className="p-3 rounded-xl border-2 border-indigo-500 bg-indigo-50 dark:bg-indigo-900/10 text-indigo-700 dark:text-indigo-400 font-bold text-xs flex items-center justify-center gap-2">
+                  <span className="material-symbols-outlined text-[20px]">quiz</span>
+                  Latihan Soal Tunggal (Bank Soal)
                 </div>
               </div>
 

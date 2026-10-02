@@ -1,11 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ASSETS, COGNITIVE_ASPECTS, STRANDS_DATA, TRISULA_BADGES, INITIAL_STUDENT_PROFILE } from '../../data';
 import { ScreenType, MathCategory } from '../../types';
 import { useAuth } from '../Auth/AuthProvider';
+import { supabase } from '../../lib/supabaseClient';
+
+interface ExamPackage {
+  id: string;
+  title: string;
+  test_type: 'pretest' | 'postest';
+  strand: string;
+  duration_minutes: number;
+}
 
 interface DashboardScreenProps {
   initialPerspective?: 'siswa' | 'guru';
-  onNavigate?: (screen: ScreenType, category?: MathCategory) => void;
+  onNavigate?: (screen: ScreenType, category?: MathCategory | null, examId?: string) => void;
 }
 
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({
@@ -16,6 +25,16 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const [perspective, setPerspective] = useState<'siswa' | 'guru'>(initialPerspective);
   const [taskAssigned, setTaskAssigned] = useState<boolean>(false);
   const [bookmarked, setBookmarked] = useState<boolean>(false);
+
+  const [exams, setExams] = useState<ExamPackage[]>([]);
+
+  useEffect(() => {
+    const fetchExams = async () => {
+      const { data } = await supabase.from('exam_packages').select('id, title, test_type, strand, duration_minutes').order('created_at', { ascending: false }).limit(5);
+      if (data) setExams(data as ExamPackage[]);
+    };
+    fetchExams();
+  }, []);
 
   const profile = INITIAL_STUDENT_PROFILE;
 
@@ -217,6 +236,45 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               >
                 {taskAssigned ? 'Terkirim' : 'Tugaskan'}
               </button>
+            </div>
+          </section>
+        )}
+
+        {/* --- DAFTAR UJIAN TERSEDIA --- */}
+        {exams.length > 0 && (
+          <section className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm space-y-space-sm">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <span className="text-xs text-primary-container dark:text-primary-fixed font-bold uppercase tracking-wider">
+                  Uji Kompetensi
+                </span>
+                <h3 className="text-base font-bold text-on-surface">Ujian Tersedia</h3>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {exams.map(exam => (
+                <div key={exam.id} onClick={() => onNavigate && onNavigate('ujian', null, exam.id)}
+                  className="bg-surface-container-low hover:bg-surface-container p-4 rounded-xl border border-outline-variant/30 cursor-pointer transition-colors shadow-sm flex items-start gap-4">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-inner flex-shrink-0 ${exam.test_type === 'pretest' ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                    <span className="material-symbols-outlined text-[24px]">{exam.test_type === 'pretest' ? 'assignment' : 'assignment_turned_in'}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${exam.test_type === 'pretest' ? 'bg-amber-200 text-amber-800' : 'bg-emerald-200 text-emerald-800'}`}>
+                        {exam.test_type}
+                      </span>
+                      <span className="text-[10px] font-medium text-on-surface-variant capitalize">{exam.strand}</span>
+                    </div>
+                    <h4 className="text-sm font-bold text-on-surface truncate">{exam.title}</h4>
+                    <p className="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">timer</span> {exam.duration_minutes} Menit
+                    </p>
+                  </div>
+                  <button className="self-center w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center hover:opacity-80 transition-opacity flex-shrink-0">
+                    <span className="material-symbols-outlined text-[18px]">play_arrow</span>
+                  </button>
+                </div>
+              ))}
             </div>
           </section>
         )}

@@ -1,4 +1,4 @@
-export type ScreenType = 'beranda' | 'materi' | 'latihan' | 'latihan-rme' | 'simulasi' | 'dashboard' | 'admin';
+export type ScreenType = 'beranda' | 'materi' | 'latihan' | 'latihan-rme' | 'simulasi' | 'dashboard' | 'admin' | 'ujian';
 
 export type MathCategory = 'bilangan' | 'aljabar' | 'geometri' | 'trigonometri' | 'peluang';
 
