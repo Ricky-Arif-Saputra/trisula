@@ -69,9 +69,19 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
     );
   }
 
+  // Parsing aman untuk JSONB yang mungkin ter-stringify menjadi string
+  let parsedBlocks = question.content_blocks;
+  if (typeof parsedBlocks === 'string') {
+    try { parsedBlocks = JSON.parse(parsedBlocks); } catch (e) {}
+  }
+  let parsedOptions = question.options;
+  if (typeof parsedOptions === 'string') {
+    try { parsedOptions = JSON.parse(parsedOptions); } catch (e) {}
+  }
+
   // Defensive array checks
-  const safeContentBlocks = Array.isArray(question.content_blocks) ? question.content_blocks : [];
-  const safeOptions = Array.isArray(question.options) ? question.options : [];
+  const safeContentBlocks = Array.isArray(parsedBlocks) ? parsedBlocks : [];
+  const safeOptions = Array.isArray(parsedOptions) ? parsedOptions : [];
 
   const handleToggleOption = (optId: string) => {
     if (hasSubmitted) return;
@@ -124,27 +134,27 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
             {safeContentBlocks.length === 0 && (
               <p className="text-xs text-on-surface-variant italic">Konten soal kosong.</p>
             )}
-            {safeContentBlocks.map(block => {
-              if (block.type === 'text') {
+            {safeContentBlocks.map((block: any) => {
+              if (block?.type === 'text') {
                 return (
-                  <p key={block.id} className="text-sm leading-relaxed text-on-surface whitespace-pre-wrap">
-                    {block.value}
+                  <p key={block?.id} className="text-sm leading-relaxed text-on-surface whitespace-pre-wrap">
+                    {block?.value}
                   </p>
                 );
-              } else if (block.type === 'latex') {
+              } else if (block?.type === 'latex') {
                 return (
-                  <div key={block.id} className="text-base text-on-surface overflow-x-auto my-2 p-2 bg-surface-container-low rounded-lg inline-block">
-                    <InlineMath math={block.value} renderError={(err) => (
+                  <div key={block?.id} className="text-base text-on-surface overflow-x-auto my-2 p-2 bg-surface-container-low rounded-lg inline-block">
+                    <InlineMath math={block?.value || ''} renderError={(err) => (
                       <span className="text-rose-500 bg-rose-50 px-2 py-1 rounded text-xs font-mono">
                         Error Render LaTeX: {err.name}
                       </span>
                     )} />
                   </div>
                 );
-              } else if (block.type === 'image') {
+              } else if (block?.type === 'image') {
                 return (
-                  <div key={block.id} className="my-4 flex justify-center">
-                    <img src={block.value} alt="Ilustrasi soal" className="max-h-64 rounded-xl border border-outline-variant/30 shadow-sm" />
+                  <div key={block?.id} className="my-4 flex justify-center">
+                    <img src={block?.value} alt="Ilustrasi soal" className="max-h-64 rounded-xl border border-outline-variant/30 shadow-sm" />
                   </div>
                 );
               }
