@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { InlineMath } from 'react-katex';
 import type { Question } from '../../hooks/useQuestions';
 
 interface QuizQuestionDynamicProps {
@@ -27,12 +26,16 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
           .from('questions')
           .select('*')
           .eq('id', questionId)
-          .single();
+          .maybeSingle(); // maybeSingle() aman: tidak throws jika data null
           
         if (fetchErr) {
           throw fetchErr;
         }
-        setQuestion(data as Question);
+        if (!data) {
+          setError('Soal tidak ditemukan. Pastikan ID soal valid.');
+        } else {
+          setQuestion(data as Question);
+        }
       } catch (err: any) {
         console.error('Failed to fetch dynamic question:', err);
         setError(err.message || 'Gagal memuat soal dari database.');
@@ -146,12 +149,10 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
                 );
               } else if (block?.type === 'latex') {
                 return (
-                  <div key={block?.id} className="text-base text-on-surface overflow-x-auto my-2 p-2 bg-surface-container-low rounded-lg inline-block">
-                    <InlineMath math={block?.value || ''} renderError={(err) => (
-                      <span className="text-rose-500 bg-rose-50 px-2 py-1 rounded text-xs font-mono">
-                        Error Render LaTeX: {err.name}
-                      </span>
-                    )} />
+                  <div key={block?.id ?? Math.random()} className="my-2 p-3 bg-slate-100 dark:bg-slate-800 rounded-lg overflow-x-auto">
+                    <code className="text-emerald-700 dark:text-emerald-400 font-mono text-sm whitespace-pre-wrap">
+                      {block?.value || ''}
+                    </code>
                   </div>
                 );
               } else if (block?.type === 'image') {

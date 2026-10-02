@@ -42,6 +42,8 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
   const [score, setScore] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [selectedQuestion, setSelectedQuestion] = useState<number | null>(null);
+  // ID soal dinamis dari Supabase — disimpan eksplisit di state, bukan localStorage
+  const [dbQuestionId, setDbQuestionId] = useState<string>('');
   
   // Sync prop
   useEffect(() => {
@@ -245,33 +247,41 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
   // ==============================================================
   if (isQuizActive) {
     if (quizMode === 'mandiri') {
+
+      // ── Prioritas tertinggi: soal dinamis dari Supabase (idx 9000+) ──
+      if (selectedQuestion !== null && selectedQuestion >= 9000) {
+        return (
+          <div className="flex flex-col w-full pb-16 font-sans px-margin-mobile animate-in fade-in pt-4 relative">
+            <button
+              onClick={() => setSelectedQuestion(null)}
+              className="mb-4 px-4 py-2 rounded-xl bg-surface-container-high text-on-surface font-bold text-xs flex items-center gap-2 self-start hover:bg-surface-container-highest cursor-pointer transition-colors"
+            >
+              <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+              Kembali ke Daftar Soal
+            </button>
+            <ErrorBoundary>
+              <QuizQuestionDynamic
+                questionId={dbQuestionId}
+                onFinish={() => setIsQuizFinished(true)}
+              />
+            </ErrorBoundary>
+          </div>
+        );
+      }
+
       if (selectedQuestion === null) {
         return (
           <QuizListView
             selectedCategory={selectedCategory as MathCategory}
             quizLevel={quizLevel}
-            onSelectQuestion={setSelectedQuestion}
+            onSelectQuestion={(idx, id) => {
+              if (id) setDbQuestionId(id);
+              setSelectedQuestion(idx);
+            }}
             onBack={() => setIsQuizActive(false)}
           />
         );
       } else if (selectedQuestion === 1) {
-        if (selectedQuestion >= 9000) {
-          return (
-            <div className="flex flex-col w-full pb-16 font-sans px-margin-mobile animate-in fade-in pt-4 relative">
-               <button
-                 onClick={() => setSelectedQuestion(null)}
-                 className="mb-4 px-4 py-2 rounded-xl bg-surface-container-high text-on-surface font-bold text-xs flex items-center gap-2 self-start hover:bg-surface-container-highest cursor-pointer transition-colors"
-               >
-                 <span className="material-symbols-outlined text-[16px]">arrow_back</span>
-                 Kembali ke Daftar Soal
-               </button>
-               <ErrorBoundary>
-                 <QuizQuestionDynamic questionId={localStorage.getItem('trisula_active_db_question') || ''} onFinish={() => setIsQuizFinished(true)} />
-               </ErrorBoundary>
-            </div>
-          );
-        }
-
         const backBtn = (
           <button
             onClick={() => setSelectedQuestion(null)}
@@ -282,6 +292,7 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
           </button>
         );
         if (selectedCategory === 'bilangan') {
+
           return (
             <div className="flex flex-col w-full pb-16 font-sans animate-in fade-in pt-4 relative">
                {backBtn}
@@ -415,7 +426,7 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
 interface QuizListViewProps {
   selectedCategory: MathCategory;
   quizLevel: 'mudah' | 'sedang' | 'sulit';
-  onSelectQuestion: (q: number) => void;
+  onSelectQuestion: (idx: number, id?: string) => void;
   onBack: () => void;
 }
 
@@ -518,8 +529,7 @@ const QuizListView: React.FC<QuizListViewProps> = ({
                     key={q.id}
                     className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest dark:bg-surface-container hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors flex items-center justify-between cursor-pointer group"
                     onClick={() => {
-                      localStorage.setItem('trisula_active_db_question', q.id);
-                      onSelectQuestion(9000 + idx);
+                      onSelectQuestion(9000 + idx, q.id);
                     }}
                   >
                     <div className="flex items-center gap-3">
