@@ -6,6 +6,7 @@ import type { Question } from '../../hooks/useQuestions';
 interface QuizQuestionDynamicProps {
   questionId: string;
   onFinish: () => void;
+  onBack?: () => void;
 }
 
 export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questionId, onFinish }) => {
@@ -20,18 +21,24 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
   useEffect(() => {
     const fetchQ = async () => {
       setLoading(true);
-      const { data, error: fetchErr } = await supabase
-        .from('questions')
-        .select('*')
-        .eq('id', questionId)
-        .single();
-        
-      if (fetchErr) {
-        setError(fetchErr.message);
-      } else {
+      setError(null);
+      try {
+        const { data, error: fetchErr } = await supabase
+          .from('questions')
+          .select('*')
+          .eq('id', questionId)
+          .single();
+          
+        if (fetchErr) {
+          throw fetchErr;
+        }
         setQuestion(data as Question);
+      } catch (err: any) {
+        console.error('Failed to fetch dynamic question:', err);
+        setError(err.message || 'Gagal memuat soal dari database.');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     if (questionId) fetchQ();
@@ -50,14 +57,21 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
 
   if (error || !question) {
     return (
-      <div className="w-full max-w-4xl mx-auto p-4">
-        <div className="bg-rose-50 text-rose-600 p-4 rounded-xl border border-rose-200 flex items-center gap-2">
-          <span className="material-symbols-outlined">error</span>
-          <span>Gagal memuat soal: {error || 'Data tidak ditemukan'}</span>
+      <div className="w-full max-w-4xl mx-auto p-4 flex flex-col gap-4">
+        <div className="bg-rose-50 text-rose-600 p-4 rounded-xl border border-rose-200 flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
+          <span className="material-symbols-outlined text-3xl">error</span>
+          <div>
+            <h3 className="font-bold text-sm">Gagal memuat soal</h3>
+            <p className="text-xs">{error || 'Data soal tidak ditemukan di database.'}</p>
+          </div>
         </div>
       </div>
     );
   }
+
+  // Defensive array checks
+  const safeContentBlocks = Array.isArray(question.content_blocks) ? question.content_blocks : [];
+  const safeOptions = Array.isArray(question.options) ? question.options : [];
 
   const handleToggleOption = (optId: string) => {
     if (hasSubmitted) return;
@@ -71,7 +85,7 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
   };
 
   // Evaluate correctness
-  const correctOptionIds = question.options.filter(o => o.is_correct).map(o => o.id);
+  const correctOptionIds = safeOptions.filter(o => o.is_correct).map(o => o.id);
   const isAllCorrect = 
     selectedOptions.length === correctOptionIds.length && 
     correctOptionIds.every(id => selectedOptions.includes(id));
@@ -107,7 +121,10 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
         <div className="p-6">
           {/* Dynamic Content Blocks */}
           <div className="space-y-4 mb-6">
-            {question.content_blocks.map(block => {
+            {safeContentBlocks.length === 0 && (
+              <p className="text-xs text-on-surface-variant italic">Konten soal kosong.</p>
+            )}
+            {safeContentBlocks.map(block => {
               if (block.type === 'text') {
                 return (
                   <p key={block.id} className="text-sm leading-relaxed text-on-surface whitespace-pre-wrap">
@@ -117,7 +134,11 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
               } else if (block.type === 'latex') {
                 return (
                   <div key={block.id} className="text-base text-on-surface overflow-x-auto my-2 p-2 bg-surface-container-low rounded-lg inline-block">
-                    <InlineMath math={block.value} />
+                    <InlineMath math={block.value} renderError={(err) => (
+                      <span className="text-rose-500 bg-rose-50 px-2 py-1 rounded text-xs font-mono">
+                        Error Render LaTeX: {err.name}
+                      </span>
+                    )} />
                   </div>
                 );
               } else if (block.type === 'image') {
@@ -135,7 +156,10 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
 
           {/* Options */}
           <div className="flex flex-col gap-3 mb-6">
-            {question.options.map((opt) => {
+            {safeOptions.length === 0 && (
+              <p className="text-xs text-on-surface-variant italic">Pilihan jawaban belum tersedia.</p>
+            )}
+            {safeOptions.map((opt) => {
               const isSelected = selectedOptions.includes(opt.id);
               const isCorrectOpt = opt.is_correct;
               
