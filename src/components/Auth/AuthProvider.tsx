@@ -2,11 +2,22 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { supabase } from '../../lib/supabaseClient';
 import type { Session, User } from '@supabase/supabase-js';
 
+// =============================================
+// Daftar email yang diotorisasi sebagai Admin/Guru
+// Tambahkan email Admin/Guru di sini
+// =============================================
+const ADMIN_EMAILS: string[] = [
+  'admin@trisula.edu',
+  'guru@trisula.edu',
+  // Tambahkan email admin/guru lainnya di bawah ini:
+];
+
 interface AuthContextProps {
   user: User | null;
   session: Session | null;
   loading: boolean;
   userName: string;
+  isAdmin: boolean;
   signOut: () => Promise<void>;
 }
 
@@ -17,6 +28,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [userName, setUserName] = useState<string>('Siswa TRISULA');
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+
+  const checkAdminStatus = async (currentUser: User | null) => {
+    if (!currentUser?.email) {
+      setIsAdmin(false);
+      return;
+    }
+
+    // 1. Cek apakah email ada di daftar ADMIN_EMAILS
+    if (ADMIN_EMAILS.includes(currentUser.email.toLowerCase())) {
+      setIsAdmin(true);
+      return;
+    }
+
+    // 2. Cek dari tabel profiles di Supabase (kolom role)
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', currentUser.id)
+        .maybeSingle();
+
+      if (data?.role === 'admin' || data?.role === 'guru') {
+        setIsAdmin(true);
+        return;
+      }
+    } catch (err) {
+      console.error('Admin role check error:', err);
+    }
+
+    setIsAdmin(false);
+  };
 
   const fetchProfileName = async (currentUser: User | null) => {
     if (!currentUser) {
@@ -36,7 +79,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // 2. Coba fetch dari tabel profiles di Supabase
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('profiles')
         .select('nama_lengkap')
         .eq('id', currentUser.id)
@@ -65,6 +108,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(sess?.user ?? null);
         setSession(sess);
         fetchProfileName(sess?.user ?? null);
+        checkAdminStatus(sess?.user ?? null);
       })
       .catch((err) => {
         console.error('Gagal mengambil sesi Supabase:', err);
@@ -79,6 +123,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(currentUser);
       setSession(sess);
       fetchProfileName(currentUser);
+      checkAdminStatus(currentUser);
       setLoading(false);
     });
 
@@ -92,7 +137,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, userName, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, userName, isAdmin, signOut }}>
       {children}
     </AuthContext.Provider>
   );

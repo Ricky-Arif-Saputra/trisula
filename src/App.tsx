@@ -7,12 +7,13 @@ import { MateriScreen } from './components/screens/MateriScreen';
 import { LatihanScreen } from './components/screens/LatihanScreen';
 import { SimulasiScreen } from './components/screens/SimulasiScreen';
 import { DashboardScreen } from './components/screens/DashboardScreen';
+import { AdminSoalManager } from './components/screens/AdminSoalManager';
 import { useAuth } from './components/Auth/AuthProvider';
 import AuthLayout from './components/Auth/AuthLayout';
 import AuthTabs from './components/Auth/AuthTabs';
 
 export default function App() {
-  const { user, loading } = useAuth();
+  const { user, loading, isAdmin } = useAuth();
 
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('beranda');
   const [materiCategory, setMateriCategory] = useState<MathCategory | null>(null);
@@ -96,6 +97,7 @@ export default function App() {
     if (currentScreen === 'beranda') return 'TRISULA EduMath';
     if (currentScreen === 'simulasi') return 'Laboratorium Simulasi 3D';
     if (currentScreen === 'dashboard') return 'Dasbor Analyst & Profil';
+    if (currentScreen === 'admin') return 'Manajemen Soal (Admin)';
     return 'TRISULA EduMath';
   };
 
@@ -177,6 +179,22 @@ export default function App() {
           {currentScreen === 'simulasi' && <SimulasiScreen />}
           {currentScreen === 'dashboard' && (
             <DashboardScreen onNavigate={(screen, cat) => handleNavigate(screen, cat)} />
+          )}
+          {currentScreen === 'admin' && (
+            <div className="flex flex-col w-full pb-16 font-sans px-margin-mobile animate-in fade-in pt-4">
+              <AdminSoalManager />
+            </div>
+          )}
+
+          {/* Floating Admin Button — hanya tampil untuk Admin/Guru */}
+          {isAdmin && currentScreen !== 'admin' && (
+            <button
+              onClick={() => handleNavigate('admin')}
+              className="fixed bottom-24 right-4 z-50 w-14 h-14 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-600/40 flex items-center justify-center cursor-pointer transition-all active:scale-90 animate-in fade-in zoom-in"
+              title="Manajemen Soal (Admin)"
+            >
+              <span className="material-symbols-outlined text-2xl">admin_panel_settings</span>
+            </button>
           )}
         </main>
 
