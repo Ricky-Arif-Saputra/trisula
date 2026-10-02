@@ -10,6 +10,7 @@ import { QuizAljabarSPLTV } from './QuizAljabarSPLTV';
 import { QuizAljabarInvers } from './QuizAljabarInvers';
 import { QuizAljabarKuadrat } from './QuizAljabarKuadrat';
 import { QuizAljabarProgramLinear } from './QuizAljabarProgramLinear';
+import { useQuestions, type Question, type Difficulty } from '../../hooks/useQuestions';
 
 interface LatihanScreenProps {
   initialCategory?: MathCategory | null;
@@ -244,96 +245,12 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
     if (quizMode === 'mandiri') {
       if (selectedQuestion === null) {
         return (
-          <div className="flex flex-col w-full pb-16 font-sans px-margin-mobile animate-in fade-in pt-4">
-            <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30 shadow-md">
-              <h3 className="text-lg font-bold text-on-surface mb-2">Daftar Soal Latihan: {selectedCategory}</h3>
-              <p className="text-sm text-on-surface-variant mb-6">Pilih soal untuk mulai mengerjakan latihan mandiri.</p>
-              
-              <div className="flex flex-col gap-3">
-                {selectedCategory === 'bilangan' && (quizLevel === 'mudah' || quizLevel === 'sedang' || quizLevel === 'sulit') ? (
-                  <>
-                    <button
-                      onClick={() => setSelectedQuestion(1)}
-                      className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest hover:bg-surface-container-high transition-colors font-bold text-on-surface flex items-center justify-between cursor-pointer"
-                    >
-                      <span>Soal 1: {quizLevel === 'mudah' ? 'Literasi Keuangan' : quizLevel === 'sedang' ? 'Aritmetika Sosial (Bunga Majemuk)' : 'Pilihan Ganda Kompleks'}</span>
-                      <span className="material-symbols-outlined text-primary">arrow_forward</span>
-                    </button>
-                    {quizLevel === 'sedang' || quizLevel === 'sulit' ? (
-                      <button
-                        onClick={() => setSelectedQuestion(2)}
-                        className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest hover:bg-surface-container-high transition-colors font-bold text-on-surface flex items-center justify-between cursor-pointer"
-                      >
-                        <span>Soal 2: {quizLevel === 'sedang' ? 'Diskon Bertingkat' : 'Literasi Finansial & Inflasi'}</span>
-                        <span className="material-symbols-outlined text-primary">arrow_forward</span>
-                      </button>
-                    ) : (
-                      <button className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest opacity-50 cursor-not-allowed font-bold text-on-surface">
-                        Soal 2 (Segera Hadir)
-                      </button>
-                    )}
-                    <button className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest opacity-50 cursor-not-allowed font-bold text-on-surface">
-                      Soal 3 (Segera Hadir)
-                    </button>
-                  </>
-                ) : selectedCategory === 'aljabar' ? (
-                  <>
-                    {/* Aljabar Mudah: 1 soal */}
-                    {quizLevel === 'mudah' && (
-                      <button
-                        onClick={() => setSelectedQuestion(1)}
-                        className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest hover:bg-surface-container-high transition-colors font-bold text-on-surface flex items-center justify-between cursor-pointer"
-                      >
-                        <span>Soal 1: Komposisi Fungsi</span>
-                        <span className="material-symbols-outlined text-primary">arrow_forward</span>
-                      </button>
-                    )}
-                    {/* Aljabar Sedang: 1 soal */}
-                    {quizLevel === 'sedang' && (
-                      <button
-                        onClick={() => setSelectedQuestion(1)}
-                        className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest hover:bg-surface-container-high transition-colors font-bold text-on-surface flex items-center justify-between cursor-pointer"
-                      >
-                        <span>Soal 1: SPLTV Aritmetika</span>
-                        <span className="material-symbols-outlined text-primary">arrow_forward</span>
-                      </button>
-                    )}
-                    {/* Aljabar Sulit: 3 soal */}
-                    {quizLevel === 'sulit' && (
-                      <>
-                        <button
-                          onClick={() => setSelectedQuestion(1)}
-                          className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest hover:bg-surface-container-high transition-colors font-bold text-on-surface flex items-center justify-between cursor-pointer"
-                        >
-                          <span>Soal 1: Fungsi Invers (Multi-Select)</span>
-                          <span className="material-symbols-outlined text-primary">arrow_forward</span>
-                        </button>
-                        <button
-                          onClick={() => setSelectedQuestion(2)}
-                          className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest hover:bg-surface-container-high transition-colors font-bold text-on-surface flex items-center justify-between cursor-pointer"
-                        >
-                          <span>Soal 2: Fungsi Kuadrat & Grafik (Multi-Select)</span>
-                          <span className="material-symbols-outlined text-primary">arrow_forward</span>
-                        </button>
-                        <button
-                          onClick={() => setSelectedQuestion(3)}
-                          className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest hover:bg-surface-container-high transition-colors font-bold text-on-surface flex items-center justify-between cursor-pointer"
-                        >
-                          <span>Soal 3: Program Linear (Tabel Benar/Salah)</span>
-                          <span className="material-symbols-outlined text-primary">arrow_forward</span>
-                        </button>
-                      </>
-                    )}
-                  </>
-                ) : (
-                  <div className="text-center p-8 border border-dashed border-outline-variant/30 rounded-xl bg-surface-container-lowest">
-                    <span className="material-symbols-outlined text-3xl text-on-surface-variant mb-2">construction</span>
-                    <p className="text-sm text-on-surface-variant">Daftar soal untuk kategori dan level ini belum tersedia (Segera Hadir).</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          <QuizListView
+            selectedCategory={selectedCategory as MathCategory}
+            quizLevel={quizLevel}
+            onSelectQuestion={setSelectedQuestion}
+            onBack={() => setIsQuizActive(false)}
+          />
         );
       } else if (selectedQuestion === 1) {
         const backBtn = (
@@ -509,5 +426,204 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
     );
   }
 
+
   return null;
 };
+
+// ==============================================================
+// QuizListView — Komponen Daftar Soal dengan Supabase Realtime
+// Menampilkan soal statis (bilangan/aljabar) + soal dinamis dari DB
+// ==============================================================
+
+interface QuizListViewProps {
+  selectedCategory: MathCategory;
+  quizLevel: 'mudah' | 'sedang' | 'sulit';
+  onSelectQuestion: (q: number) => void;
+  onBack: () => void;
+}
+
+const DIFF_BADGE: Record<string, { label: string; cls: string }> = {
+  mudah:  { label: 'Mudah',  cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
+  sedang: { label: 'Sedang', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
+  sulit:  { label: 'Sulit',  cls: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' },
+};
+
+const QuizListView: React.FC<QuizListViewProps> = ({
+  selectedCategory, quizLevel, onSelectQuestion, onBack,
+}) => {
+  // Fetch soal dari Supabase sesuai strand & level
+  const { questions, loading, error } = useQuestions(
+    selectedCategory as any,
+    'latihan',
+    quizLevel as Difficulty,
+  );
+
+  // ---- Soal Statis (bilangan & aljabar) ----
+  const staticQuestions = getStaticQuestions(selectedCategory, quizLevel);
+
+  return (
+    <div className="flex flex-col w-full pb-16 font-sans px-margin-mobile animate-in fade-in pt-4">
+      <div className="bg-surface-container-lowest dark:bg-surface-container-low p-6 rounded-2xl border border-outline-variant/30 shadow-md">
+
+        {/* Header */}
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-lg font-bold text-on-surface capitalize">
+            Latihan {selectedCategory} — <span className="capitalize">{quizLevel}</span>
+          </h3>
+          {/* Realtime indicator */}
+          <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-full px-2.5 py-1">
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">Live</span>
+          </div>
+        </div>
+        <p className="text-sm text-on-surface-variant mb-5">Pilih soal untuk mulai mengerjakan latihan mandiri.</p>
+
+        <div className="flex flex-col gap-3">
+
+          {/* ---- SOAL STATIS ---- */}
+          {staticQuestions.length > 0 && (
+            <div className="space-y-2">
+              <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                <span className="material-symbols-outlined text-[12px]">library_books</span>
+                Soal Kurikulum Tetap
+              </div>
+              {staticQuestions.map((sq) => (
+                <button
+                  key={sq.idx}
+                  onClick={() => onSelectQuestion(sq.idx)}
+                  className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest dark:bg-surface-container hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors flex items-center justify-between cursor-pointer group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black text-sm">
+                      {sq.idx}
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-on-surface group-hover:text-primary transition-colors">{sq.title}</div>
+                      <div className="text-[10px] text-on-surface-variant mt-0.5">{sq.subtitle}</div>
+                    </div>
+                  </div>
+                  <span className="material-symbols-outlined text-primary text-[20px]">arrow_forward</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* ---- SOAL DARI SUPABASE (DINAMIS) ---- */}
+          {loading && (
+            <div className="space-y-2 mt-2">
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Memuat dari Database...</div>
+              {[1, 2].map(i => (
+                <div key={i} className="w-full h-16 rounded-xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
+              ))}
+            </div>
+          )}
+
+          {error && (
+            <div className="p-4 rounded-xl border border-rose-200 bg-rose-50 dark:bg-rose-900/10 text-xs text-rose-600 dark:text-rose-400 flex items-center gap-2">
+              <span className="material-symbols-outlined text-[16px]">error</span>
+              Gagal memuat soal dari database: {error}
+            </div>
+          )}
+
+          {!loading && !error && questions.length > 0 && (
+            <div className="space-y-2 mt-2">
+              <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                <span className="material-symbols-outlined text-[12px]">cloud_sync</span>
+                Soal dari Database ({questions.length})
+              </div>
+              {questions.map((q: Question, idx: number) => {
+                const diffBadge = DIFF_BADGE[q.category] || DIFF_BADGE.sedang;
+                const narasiBlok = q.content_blocks?.find(b => b.type === 'text');
+                const preview = narasiBlok?.value?.slice(0, 80) || '(Berisi persamaan matematika / gambar)';
+
+                return (
+                  <div
+                    key={q.id}
+                    className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest dark:bg-surface-container hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors flex items-start justify-between gap-3 cursor-pointer group"
+                    onClick={() => {
+                      // Simpan ID soal DB ke localStorage untuk dibuka di viewer
+                      localStorage.setItem('trisula_active_db_question', q.id);
+                      // Gunakan index 9000+ sebagai penanda soal dari DB
+                      onSelectQuestion(9000 + idx);
+                    }}
+                  >
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-black text-sm shrink-0">
+                        {staticQuestions.length + idx + 1}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${diffBadge.cls}`}>
+                            {diffBadge.label}
+                          </span>
+                          {q.has_simulation && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 uppercase flex items-center gap-0.5">
+                              <span className="material-symbols-outlined text-[10px]">science</span> Simulasi RME
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-on-surface-variant line-clamp-2">{preview}…</div>
+                        <div className="text-[10px] text-slate-400 mt-1">
+                          {q.options?.length || 0} pilihan jawaban · {q.content_blocks?.length || 0} blok konten
+                        </div>
+                      </div>
+                    </div>
+                    <span className="material-symbols-outlined text-primary text-[20px] shrink-0 mt-1 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Empty state jika tidak ada soal sama sekali */}
+          {!loading && !error && questions.length === 0 && staticQuestions.length === 0 && (
+            <div className="text-center p-10 border-2 border-dashed border-outline-variant/30 rounded-xl bg-surface-container-lowest">
+              <span className="material-symbols-outlined text-4xl text-slate-300 block mb-2">construction</span>
+              <p className="text-sm font-semibold text-on-surface-variant">
+                Belum ada soal untuk {selectedCategory} — {quizLevel}.
+              </p>
+              <p className="text-xs text-slate-400 mt-1">
+                Admin dapat menambahkan soal melalui Panel Manajemen Soal.
+              </p>
+            </div>
+          )}
+
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ---- Helper: soal statis hardcoded (bilangan & aljabar) ----
+function getStaticQuestions(cat: MathCategory, lvl: 'mudah' | 'sedang' | 'sulit') {
+  const list: { idx: number; title: string; subtitle: string }[] = [];
+
+  if (cat === 'bilangan') {
+    list.push({
+      idx: 1,
+      title: lvl === 'mudah' ? 'Literasi Keuangan' : lvl === 'sedang' ? 'Aritmetika Sosial — Bunga Majemuk' : 'Pilihan Ganda Kompleks',
+      subtitle: 'Kurikulum Bilangan · Soal Interaktif RME',
+    });
+    if (lvl === 'sedang') {
+      list.push({ idx: 2, title: 'Diskon Bertingkat', subtitle: 'Kurikulum Bilangan · Simulasi Belanja' });
+    }
+    if (lvl === 'sulit') {
+      list.push({ idx: 2, title: 'Literasi Finansial & Inflasi BPS', subtitle: 'Kurikulum Bilangan · Multi-Select' });
+    }
+  } else if (cat === 'aljabar') {
+    if (lvl === 'mudah') {
+      list.push({ idx: 1, title: 'Komposisi Fungsi', subtitle: 'Pabrik Ban Berjalan · Simulasi Interaktif' });
+    }
+    if (lvl === 'sedang') {
+      list.push({ idx: 1, title: 'SPLTV Aritmetika', subtitle: 'Struk Belanja Digital · Eliminasi/Substitusi' });
+    }
+    if (lvl === 'sulit') {
+      list.push({ idx: 1, title: 'Fungsi Invers', subtitle: 'Multi-Select · Alur Maju & Mundur' });
+      list.push({ idx: 2, title: 'Fungsi Kuadrat & Grafik', subtitle: 'Multi-Select · Grafik SVG Interaktif' });
+      list.push({ idx: 3, title: 'Program Linear', subtitle: 'Tabel Benar/Salah · Feasible Region' });
+    }
+  }
+
+  return list;
+}
+
