@@ -293,22 +293,7 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
             </div>
           );
         } else {
-          return (
-            <div className="flex flex-col w-full pb-16 font-sans px-margin-mobile animate-in fade-in pt-4">
-               <button
-                 onClick={() => setSelectedQuestion(null)}
-                 className="mb-4 px-4 py-2 rounded-xl bg-surface-container-high text-on-surface font-bold text-xs flex items-center gap-2 self-start hover:bg-surface-container-highest cursor-pointer transition-colors"
-               >
-                 <span className="material-symbols-outlined text-[16px]">arrow_back</span>
-                 Kembali ke Daftar Soal
-               </button>
-               <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30 shadow-md text-center py-12">
-                  <span className="material-symbols-outlined text-4xl text-on-surface-variant mb-2">construction</span>
-                  <h3 className="font-bold text-lg">Soal Segera Hadir</h3>
-                  <p className="text-sm text-on-surface-variant mt-2">Soal interaktif untuk kategori ini masih dalam tahap pengembangan.</p>
-               </div>
-            </div>
-          );
+          return null; // Tidak ada soal statis untuk kategori ini
         }
       } else if (selectedQuestion === 2) {
         const backBtn2 = (
@@ -335,22 +320,7 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
             </div>
           );
         } else {
-          return (
-            <div className="flex flex-col w-full pb-16 font-sans px-margin-mobile animate-in fade-in pt-4">
-               <button
-                 onClick={() => setSelectedQuestion(null)}
-                 className="mb-4 px-4 py-2 rounded-xl bg-surface-container-high text-on-surface font-bold text-xs flex items-center gap-2 self-start hover:bg-surface-container-highest cursor-pointer transition-colors"
-               >
-                 <span className="material-symbols-outlined text-[16px]">arrow_back</span>
-                 Kembali ke Daftar Soal
-               </button>
-               <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30 shadow-md text-center py-12">
-                  <span className="material-symbols-outlined text-4xl text-on-surface-variant mb-2">construction</span>
-                  <h3 className="font-bold text-lg">Soal Segera Hadir</h3>
-                  <p className="text-sm text-on-surface-variant mt-2">Soal interaktif untuk kategori ini masih dalam tahap pengembangan.</p>
-               </div>
-            </div>
-          );
+          return null; // Tidak ada soal statis untuk kategori ini
         }
       } else if (selectedQuestion === 3) {
         if (selectedCategory === 'aljabar' && quizLevel === 'sulit') {
@@ -371,19 +341,7 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
     }
     
     // Fallback if other mode (like time attack if somehow accessed)
-    return (
-       <div className="flex flex-col w-full pb-16 font-sans px-margin-mobile animate-in fade-in pt-4">
-         <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30 shadow-md text-center">
-            <h3 className="font-bold text-lg">Fitur Segera Hadir</h3>
-            <button 
-              onClick={() => setIsQuizActive(false)}
-              className="mt-6 px-6 py-2 bg-primary text-on-primary font-bold rounded-lg cursor-pointer"
-            >
-              Kembali
-            </button>
-         </div>
-       </div>
-    );
+    return null;
   }
 
   // ==============================================================
