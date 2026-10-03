@@ -433,32 +433,39 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
 
   // ---- PHASE: RESULT ----
   if (phase === 'result' && results) {
-    const scoreColor = results.score >= 75 ? 'text-emerald-600' : results.score >= 50 ? 'text-amber-500' : 'text-rose-600';
-    const scoreBg = results.score >= 75 ? 'from-emerald-50 to-teal-50 border-emerald-300' : results.score >= 50 ? 'from-amber-50 to-yellow-50 border-amber-300' : 'from-rose-50 to-pink-50 border-rose-300';
+    const scoreColor = results.score >= 75 ? '#16a34a' : results.score >= 50 ? '#d97706' : '#dc2626';
+    const displayName = pastAttempt
+      ? (pastAttempt.student_name || user?.email?.split('@')[0] || 'Peserta Ujian')
+      : (studentName || 'Peserta Ujian');
+    const displayNisn = pastAttempt
+      ? (pastAttempt.student_nisn || user?.id?.substring(0, 10).toUpperCase() || '-')
+      : (studentNisn || '-');
+    const tanggal = (startTime || new Date()).toLocaleDateString('id-ID', {
+      weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
+    });
+    const waktuMulai = (startTime || new Date()).toLocaleTimeString('id-ID');
+    const waktuSelesai = endTime ? endTime.toLocaleTimeString('id-ID') : '-';
+    const durasi = startTime && endTime
+      ? (() => { const s = Math.floor((endTime.getTime() - startTime.getTime()) / 1000); return `${Math.floor(s/60)} menit ${s%60} detik`; })()
+      : '-';
 
     const handleDownloadPDF = async () => {
       setIsDownloading(true);
       try {
-        const element = document.getElementById('pdf-report-content');
-        if (!element) throw new Error("Content element not found");
-        
-        const nisnVal = pastAttempt ? user?.id.substring(0, 10).toUpperCase() : studentNisn || '0012345678';
+        const element = document.getElementById('pdf-certificate-template');
+        if (!element) throw new Error('Template PDF tidak ditemukan.');
         const opt = {
-          margin:       10,
-          filename:     `Bukti_Ujian_${nisnVal}_${Date.now()}.pdf`,
-          image:        { type: 'jpeg', quality: 0.98 },
-          html2canvas:  { scale: 2, useCORS: true, logging: false },
-          jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+          margin:      0,
+          filename:    `Bukti_Ujian_${displayNisn}_${Date.now()}.pdf`,
+          image:       { type: 'jpeg' as const, quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, logging: false },
+          jsPDF:       { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const },
+          pagebreak:   { mode: 'avoid-all' }
         };
-
-        if (html2pdf) {
-          await html2pdf().set(opt).from(element).save();
-        } else {
-          window.print();
-        }
+        await html2pdf().set(opt).from(element).save();
       } catch (err) {
-        console.error("PDF Download Error:", err);
-        window.print();
+        console.error('PDF Error:', err);
+        alert('Gagal mengunduh PDF. Silakan coba lagi.');
       } finally {
         setIsDownloading(false);
       }
@@ -466,79 +473,192 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
 
     return (
       <div className="flex flex-col w-full pb-16 font-sans px-4 pt-4 animate-in zoom-in-95">
-        {/* The PDF wrapper */}
-        <div id="pdf-report-content" className="bg-white dark:bg-slate-900 rounded-2xl p-4 md:p-6 mb-4">
-          {/* Result Header */}
-          <div className="bg-gradient-to-br from-[#1e1b4b] to-[#4338ca] rounded-2xl p-6 text-white text-center shadow-xl mb-5 relative overflow-hidden">
-            <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
-              <span className="material-symbols-outlined text-[150px] transform -rotate-12">workspace_premium</span>
-            </div>
-            <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3 relative z-10 backdrop-blur-sm">
-              <span className="material-symbols-outlined text-3xl">workspace_premium</span>
-            </div>
-            <h2 className="text-xl font-extrabold relative z-10">Ujian Selesai!</h2>
-            <p className="text-indigo-200 text-sm mt-1 relative z-10">{exam.title}</p>
-          </div>
 
-          {/* Identity & Score Box */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl mb-4 overflow-hidden shadow-sm">
-            <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex flex-col gap-1">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Identitas Peserta</span>
-              <span className="text-base font-extrabold text-slate-800 dark:text-white">
-                {pastAttempt ? (user?.email?.split('@')[0] || 'Peserta Ujian') : (studentName || 'Peserta Ujian')}
-              </span>
-              <span className="text-sm font-medium text-slate-500">
-                NISN: {pastAttempt ? (user?.id.substring(0, 10).toUpperCase() || '0012345678') : (studentNisn || '0012345678')}
-              </span>
-            </div>
-            
-            <div className={`p-6 bg-gradient-to-br ${scoreBg} text-center relative`}>
-              {/* Watermark Logo behind score */}
-              <div className="absolute inset-0 flex items-center justify-center opacity-[0.15] pointer-events-none">
-                 <span className="font-black text-6xl text-slate-900 transform -rotate-12 whitespace-nowrap">TRISULA</span>
+        {/* ── HIDDEN A4 PDF CERTIFICATE TEMPLATE ── */}
+        <div
+          id="pdf-certificate-template"
+          style={{
+            position: 'absolute',
+            left: '-9999px',
+            top: 0,
+            width: '794px',
+            minHeight: '1123px',
+            background: '#ffffff',
+            padding: '40px 48px',
+            fontFamily: "'Segoe UI', Arial, sans-serif",
+            color: '#1e293b',
+            boxSizing: 'border-box',
+          }}
+        >
+          {/* KOP HEADER */}
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '8px' }}>
+              <div style={{ width: '44px', height: '44px', background: 'linear-gradient(135deg,#4338ca,#7c3aed)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ color: '#fff', fontWeight: 900, fontSize: '18px', letterSpacing: '1px' }}>T</span>
               </div>
-              <div className={`text-7xl font-black ${scoreColor} relative z-10`}>{results.score}</div>
-              <div className="text-sm font-bold text-slate-500 mt-1 relative z-10">Nilai Akhir (Skala 0 – 100)</div>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontWeight: 900, fontSize: '22px', letterSpacing: '3px', color: '#4338ca' }}>TRISULA</div>
+                <div style={{ fontSize: '10px', color: '#64748b', letterSpacing: '1px', textTransform: 'uppercase' }}>EduMath — Platform Pembelajaran Matematika</div>
+              </div>
+            </div>
+            <div style={{ fontWeight: 700, fontSize: '14px', color: '#1e293b', textTransform: 'uppercase', letterSpacing: '2px', marginTop: '4px' }}>
+              Bukti Hasil Ujian Kompetensi
+            </div>
+            <div style={{ height: '3px', background: 'linear-gradient(90deg,#4338ca,#7c3aed)', borderRadius: '2px', marginTop: '12px' }}></div>
+          </div>
+
+          {/* IDENTITAS PESERTA */}
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', marginBottom: '24px', overflow: 'hidden' }}>
+            <div style={{ background: '#f8fafc', padding: '10px 16px', borderBottom: '1px solid #e2e8f0' }}>
+              <span style={{ fontSize: '10px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Identitas Peserta</span>
+            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <tbody>
+                {[
+                  ['Nama Lengkap', displayName],
+                  ['NISN', displayNisn],
+                  ['Mata Pelajaran', exam.strand.charAt(0).toUpperCase() + exam.strand.slice(1)],
+                  ['Jenis Ujian', exam.test_type === 'pretest' ? 'Pretest Diagnostik' : 'Postest Evaluasi'],
+                  ['Tanggal Ujian', tanggal],
+                ].map(([label, value]) => (
+                  <tr key={label} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '9px 16px', fontWeight: 700, color: '#475569', width: '180px', background: '#fafafa' }}>{label}</td>
+                    <td style={{ padding: '9px 16px', color: '#1e293b', fontWeight: 500 }}>{value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* NILAI AKHIR */}
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', marginBottom: '24px', overflow: 'hidden' }}>
+            <div style={{ background: '#f8fafc', padding: '10px 16px', borderBottom: '1px solid #e2e8f0' }}>
+              <span style={{ fontSize: '10px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Nilai Akhir</span>
+            </div>
+            <div style={{ padding: '32px 24px', textAlign: 'center', position: 'relative', background: '#fff' }}>
+              {/* Watermark */}
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                <span style={{ fontSize: '80px', fontWeight: 900, color: '#4338ca', opacity: 0.07, transform: 'rotate(-15deg)', whiteSpace: 'nowrap', userSelect: 'none' }}>TRISULA</span>
+              </div>
+              <div style={{ fontSize: '80px', fontWeight: 900, color: scoreColor, lineHeight: 1, position: 'relative', zIndex: 1 }}>{results.score}</div>
+              <div style={{ fontSize: '13px', color: '#64748b', marginTop: '6px', fontWeight: 600, position: 'relative', zIndex: 1 }}>Nilai Akhir (Skala 0 – 100)</div>
+            </div>
+            {/* Stats */}
+            <div style={{ display: 'flex', borderTop: '1px solid #e2e8f0' }}>
+              {[
+                { label: 'Jawaban Benar', value: results.correct, color: '#16a34a', bg: '#f0fdf4' },
+                { label: 'Jawaban Salah', value: results.wrong, color: '#dc2626', bg: '#fff1f2' },
+                { label: 'Tidak Dijawab', value: results.unanswered, color: '#64748b', bg: '#f8fafc' },
+              ].map((s, i) => (
+                <div key={i} style={{ flex: 1, textAlign: 'center', padding: '16px', background: s.bg, borderRight: i < 2 ? '1px solid #e2e8f0' : 'none' }}>
+                  <div style={{ fontSize: '28px', fontWeight: 900, color: s.color }}>{s.value}</div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginTop: '4px' }}>{s.label}</div>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 rounded-xl p-4 text-center">
-              <div className="text-3xl font-black text-emerald-600">{results.correct}</div>
-              <div className="text-[10px] font-bold text-emerald-500 uppercase mt-1">Benar</div>
+          {/* WAKTU */}
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', marginBottom: '32px', overflow: 'hidden' }}>
+            <div style={{ background: '#f8fafc', padding: '10px 16px', borderBottom: '1px solid #e2e8f0' }}>
+              <span style={{ fontSize: '10px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Rincian Waktu Pengerjaan</span>
             </div>
-            <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 rounded-xl p-4 text-center">
-              <div className="text-3xl font-black text-rose-600">{results.wrong}</div>
-              <div className="text-[10px] font-bold text-rose-500 uppercase mt-1">Salah</div>
-            </div>
-            <div className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-center">
-              <div className="text-3xl font-black text-slate-500">{results.unanswered}</div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase mt-1">Kosong</div>
-            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <tbody>
+                {[
+                  ['Waktu Mulai', waktuMulai],
+                  ['Waktu Selesai', waktuSelesai],
+                  ['Durasi Pengerjaan', durasi],
+                  ['Jumlah Soal', `${results.total} Soal`],
+                ].map(([label, value]) => (
+                  <tr key={label} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '9px 16px', fontWeight: 700, color: '#475569', width: '180px', background: '#fafafa' }}>{label}</td>
+                    <td style={{ padding: '9px 16px', color: '#1e293b' }}>{value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
-          {/* Metadata */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 mb-4 space-y-2">
-            <div className="flex justify-between text-sm"><span className="text-slate-500">Tanggal</span><span className="font-bold">{startTime?.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-slate-500">Waktu Mulai</span><span className="font-bold">{startTime?.toLocaleTimeString('id-ID')}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-slate-500">Waktu Selesai</span><span className="font-bold">{endTime?.toLocaleTimeString('id-ID')}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-slate-500">Total Soal</span><span className="font-bold">{results.total} Soal</span></div>
+          {/* FOOTER */}
+          <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '16px', textAlign: 'center' }}>
+            <p style={{ fontSize: '11px', color: '#94a3b8', margin: 0 }}>
+              Dokumen ini diterbitkan secara resmi oleh sistem <strong style={{ color: '#4338ca' }}>TRISULA EduMath</strong>.
+              Sah tanpa tanda tangan basah. Diterbitkan pada {tanggal}.
+            </p>
           </div>
+        </div>
+
+        {/* ── TAMPILAN LAYAR (WEB UI) ── */}
+        <div className="bg-gradient-to-br from-[#1e1b4b] to-[#4338ca] rounded-2xl p-6 text-white text-center shadow-xl mb-4 relative overflow-hidden">
+          <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
+            <span className="material-symbols-outlined text-[150px] transform -rotate-12">workspace_premium</span>
+          </div>
+          <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3 relative z-10 backdrop-blur-sm">
+            <span className="material-symbols-outlined text-3xl">workspace_premium</span>
+          </div>
+          <h2 className="text-xl font-extrabold relative z-10">Ujian Selesai!</h2>
+          <p className="text-indigo-200 text-sm mt-1 relative z-10">{exam.title}</p>
+        </div>
+
+        {/* Identity box */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl mb-4 overflow-hidden shadow-sm">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex flex-col gap-1">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Identitas Peserta</span>
+            <span className="text-base font-extrabold text-slate-800 dark:text-white">{displayName}</span>
+            <span className="text-sm font-medium text-slate-500">NISN: {displayNisn}</span>
+          </div>
+          <div className="p-6 text-center relative overflow-hidden bg-gradient-to-br from-slate-50 to-indigo-50 dark:from-slate-900 dark:to-indigo-950">
+            <div className="absolute inset-0 flex items-center justify-center opacity-[0.12] pointer-events-none">
+              <span className="font-black text-6xl text-indigo-900 transform -rotate-12 whitespace-nowrap">TRISULA</span>
+            </div>
+            <div className="text-7xl font-black relative z-10" style={{ color: scoreColor }}>{results.score}</div>
+            <div className="text-sm font-bold text-slate-500 mt-1 relative z-10">Nilai Akhir (Skala 0 – 100)</div>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 rounded-xl p-4 text-center">
+            <div className="text-3xl font-black text-emerald-600">{results.correct}</div>
+            <div className="text-[10px] font-bold text-emerald-500 uppercase mt-1">Benar</div>
+          </div>
+          <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 rounded-xl p-4 text-center">
+            <div className="text-3xl font-black text-rose-600">{results.wrong}</div>
+            <div className="text-[10px] font-bold text-rose-500 uppercase mt-1">Salah</div>
+          </div>
+          <div className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-center">
+            <div className="text-3xl font-black text-slate-500">{results.unanswered}</div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase mt-1">Kosong</div>
+          </div>
+        </div>
+
+        {/* Metadata */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 mb-4 space-y-2">
+          <div className="flex justify-between text-sm"><span className="text-slate-500">Tanggal</span><span className="font-bold">{(startTime || new Date()).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}</span></div>
+          <div className="flex justify-between text-sm"><span className="text-slate-500">Waktu Mulai</span><span className="font-bold">{waktuMulai}</span></div>
+          <div className="flex justify-between text-sm"><span className="text-slate-500">Waktu Selesai</span><span className="font-bold">{waktuSelesai}</span></div>
+          <div className="flex justify-between text-sm"><span className="text-slate-500">Durasi</span><span className="font-bold">{durasi}</span></div>
+          <div className="flex justify-between text-sm"><span className="text-slate-500">Total Soal</span><span className="font-bold">{results.total} Soal</span></div>
         </div>
 
         {/* Actions */}
         <div className="space-y-3">
-          <button onClick={handleDownloadPDF} disabled={isDownloading}
-            className="w-full py-4 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-extrabold rounded-2xl shadow-lg hover:opacity-90 cursor-pointer flex items-center justify-center gap-2 transition-opacity disabled:opacity-70">
+          <button
+            onClick={handleDownloadPDF}
+            disabled={isDownloading}
+            className="w-full py-4 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-extrabold rounded-2xl shadow-lg hover:opacity-90 cursor-pointer flex items-center justify-center gap-2 transition-opacity disabled:opacity-70"
+          >
             {isDownloading ? (
-              <><span className="material-symbols-outlined animate-spin">refresh</span> Mengunduh PDF...</>
+              <><span className="material-symbols-outlined" style={{ animation: 'spin 1s linear infinite' }}>refresh</span> Mengunduh PDF...</>
             ) : (
               <><span className="material-symbols-outlined">download</span> Unduh Bukti (PDF)</>
             )}
           </button>
-          <button onClick={onBack}
-            className="w-full py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer transition-colors flex items-center justify-center gap-2">
+          <button
+            onClick={onBack}
+            className="w-full py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer transition-colors flex items-center justify-center gap-2"
+          >
             <span className="material-symbols-outlined text-[18px]">home</span>
             Kembali ke Menu Utama
           </button>
@@ -549,3 +669,4 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
 
   return null;
 };
+
