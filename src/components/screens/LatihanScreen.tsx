@@ -252,7 +252,7 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
             <ErrorBoundary>
               <QuizQuestionDynamic
                 questionId={dbQuestionId}
-                onFinish={() => setIsQuizFinished(true)}
+                onFinish={() => setSelectedQuestion(null)}
               />
             </ErrorBoundary>
           </div>
@@ -404,10 +404,6 @@ const QuizListView: React.FC<QuizListViewProps> = ({
 
           {!loading && !error && questions.length > 0 && (
             <div className="space-y-2 mt-2">
-              <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                <span className="material-symbols-outlined text-[12px]">cloud_sync</span>
-                Soal dari Database ({questions.length})
-              </div>
               {questions.map((q: Question, idx: number) => {
                 const diffBadge = DIFF_BADGE[q.category] || DIFF_BADGE.sedang;
                 const narasiBlok = q.content_blocks?.find(b => b.type === 'text');

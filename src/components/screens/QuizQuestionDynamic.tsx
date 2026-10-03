@@ -166,7 +166,7 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
             })}
           </div>
 
-          <p className="text-xs text-on-surface-variant italic mb-4">*Pilih semua opsi yang benar (Multi-Select).</p>
+
 
           {/* Options */}
           <div className="flex flex-col gap-3 mb-6">
@@ -256,8 +256,8 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
 
               <button onClick={onFinish}
                 className="w-full py-4 rounded-xl font-bold text-sm bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors cursor-pointer flex items-center justify-center gap-2">
-                Selesai & Lanjut
-                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+                Kembali ke Daftar Latihan Soal
               </button>
             </div>
           )}
