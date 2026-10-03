@@ -193,7 +193,7 @@ export default function App() {
             </div>
           )}
           {currentScreen === 'ujian' && activeExamId && (
-            <ExamViewer examId={activeExamId} onBack={() => handleNavigate('dashboard')} />
+            <ExamViewer examId={activeExamId} onBack={() => { setActiveExamId(null); handleNavigate('ujian'); }} />
           )}
 
           {/* Floating Admin Button — hanya tampil untuk Admin/Guru */}

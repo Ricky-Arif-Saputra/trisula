@@ -452,7 +452,7 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
     const handleDownloadPDF = async () => {
       setIsDownloading(true);
       try {
-        const element = document.getElementById('pdf-certificate-template');
+        const element = document.getElementById('pdf-export-template');
         if (!element) throw new Error('Template PDF tidak ditemukan.');
         const opt = {
           margin:      0,
@@ -474,45 +474,39 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
     return (
       <div className="flex flex-col w-full pb-16 font-sans px-4 pt-4 animate-in zoom-in-95">
 
-        {/* ── HIDDEN A4 PDF CERTIFICATE TEMPLATE ── */}
+        {/* ── HIDDEN A4 PDF EXPORT TEMPLATE (position:fixed off-screen) ── */}
         <div
-          id="pdf-certificate-template"
+          id="pdf-export-template"
           style={{
-            position: 'absolute',
+            position: 'fixed',
             left: '-9999px',
-            top: 0,
+            top: '0',
             width: '794px',
             minHeight: '1123px',
-            background: '#ffffff',
-            padding: '40px 48px',
-            fontFamily: "'Segoe UI', Arial, sans-serif",
-            color: '#1e293b',
+            backgroundColor: '#ffffff',
+            color: '#0f172a',
+            padding: '36px',
             boxSizing: 'border-box',
+            fontFamily: 'sans-serif',
           }}
         >
-          {/* KOP HEADER */}
-          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '8px' }}>
-              <div style={{ width: '44px', height: '44px', background: 'linear-gradient(135deg,#4338ca,#7c3aed)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ color: '#fff', fontWeight: 900, fontSize: '18px', letterSpacing: '1px' }}>T</span>
-              </div>
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontWeight: 900, fontSize: '22px', letterSpacing: '3px', color: '#4338ca' }}>TRISULA</div>
-                <div style={{ fontSize: '10px', color: '#64748b', letterSpacing: '1px', textTransform: 'uppercase' }}>EduMath — Platform Pembelajaran Matematika</div>
-              </div>
+          {/* 1. KOP HEADER */}
+          <div style={{ borderBottom: '3px solid #0284c7', paddingBottom: '12px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h1 style={{ fontSize: '22px', fontWeight: 'bold', margin: 0, color: '#0f172a' }}>TRISULA EduMath</h1>
+              <p style={{ fontSize: '12px', margin: '4px 0 0 0', color: '#64748b' }}>LEMBAR BUKTI HASIL UJIAN KOMPETENSI MATEMATIKA</p>
             </div>
-            <div style={{ fontWeight: 700, fontSize: '14px', color: '#1e293b', textTransform: 'uppercase', letterSpacing: '2px', marginTop: '4px' }}>
-              Bukti Hasil Ujian Kompetensi
+            <div style={{ textAlign: 'right', fontSize: '11px', color: '#64748b' }}>
+              Tanggal Cetak: {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
             </div>
-            <div style={{ height: '3px', background: 'linear-gradient(90deg,#4338ca,#7c3aed)', borderRadius: '2px', marginTop: '12px' }}></div>
           </div>
 
-          {/* IDENTITAS PESERTA */}
-          <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', marginBottom: '24px', overflow: 'hidden' }}>
-            <div style={{ background: '#f8fafc', padding: '10px 16px', borderBottom: '1px solid #e2e8f0' }}>
-              <span style={{ fontSize: '10px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Identitas Peserta</span>
-            </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+          {/* 2. IDENTITAS PESERTA */}
+          <div style={{ backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '16px', marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', color: '#0284c7', marginBottom: '12px', marginTop: 0 }}>
+              Informasi Peserta & Ujian
+            </h3>
+            <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
               <tbody>
                 {[
                   ['Nama Lengkap', displayName],
@@ -521,71 +515,54 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
                   ['Jenis Ujian', exam.test_type === 'pretest' ? 'Pretest Diagnostik' : 'Postest Evaluasi'],
                   ['Tanggal Ujian', tanggal],
                 ].map(([label, value]) => (
-                  <tr key={label} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '9px 16px', fontWeight: 700, color: '#475569', width: '180px', background: '#fafafa' }}>{label}</td>
-                    <td style={{ padding: '9px 16px', color: '#1e293b', fontWeight: 500 }}>{value}</td>
+                  <tr key={label}>
+                    <td style={{ padding: '6px 0', width: '140px', color: '#64748b' }}>{label}</td>
+                    <td style={{ padding: '6px 0', fontWeight: 'bold', color: '#0f172a' }}>: {value}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
-          {/* NILAI AKHIR */}
-          <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', marginBottom: '24px', overflow: 'hidden' }}>
-            <div style={{ background: '#f8fafc', padding: '10px 16px', borderBottom: '1px solid #e2e8f0' }}>
-              <span style={{ fontSize: '10px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Nilai Akhir</span>
+          {/* 3. KOTAK SKOR AKHIR + WATERMARK */}
+          <div style={{ position: 'relative', border: '2px solid #38bdf8', borderRadius: '12px', padding: '28px', textAlign: 'center', marginBottom: '24px', overflow: 'hidden', backgroundColor: '#f0f9ff' }}>
+            {/* Watermark */}
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-12deg)', fontSize: '58px', fontWeight: '900', color: '#0284c7', opacity: 0.1, whiteSpace: 'nowrap', pointerEvents: 'none' }}>
+              TRISULA EDUMATH
             </div>
-            <div style={{ padding: '32px 24px', textAlign: 'center', position: 'relative', background: '#fff' }}>
-              {/* Watermark */}
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-                <span style={{ fontSize: '80px', fontWeight: 900, color: '#4338ca', opacity: 0.07, transform: 'rotate(-15deg)', whiteSpace: 'nowrap', userSelect: 'none' }}>TRISULA</span>
-              </div>
-              <div style={{ fontSize: '80px', fontWeight: 900, color: scoreColor, lineHeight: 1, position: 'relative', zIndex: 1 }}>{results.score}</div>
-              <div style={{ fontSize: '13px', color: '#64748b', marginTop: '6px', fontWeight: 600, position: 'relative', zIndex: 1 }}>Nilai Akhir (Skala 0 – 100)</div>
+            <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#0369a1', textTransform: 'uppercase', margin: 0 }}>NILAI AKHIR</p>
+            <div style={{ fontSize: '64px', fontWeight: '800', color: '#0284c7', margin: '8px 0' }}>
+              {results.score}
             </div>
-            {/* Stats */}
-            <div style={{ display: 'flex', borderTop: '1px solid #e2e8f0' }}>
-              {[
-                { label: 'Jawaban Benar', value: results.correct, color: '#16a34a', bg: '#f0fdf4' },
-                { label: 'Jawaban Salah', value: results.wrong, color: '#dc2626', bg: '#fff1f2' },
-                { label: 'Tidak Dijawab', value: results.unanswered, color: '#64748b', bg: '#f8fafc' },
-              ].map((s, i) => (
-                <div key={i} style={{ flex: 1, textAlign: 'center', padding: '16px', background: s.bg, borderRight: i < 2 ? '1px solid #e2e8f0' : 'none' }}>
-                  <div style={{ fontSize: '28px', fontWeight: 900, color: s.color }}>{s.value}</div>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginTop: '4px' }}>{s.label}</div>
-                </div>
-              ))}
+            <p style={{ fontSize: '11px', color: '#0369a1', margin: 0 }}>Skala Penilaian 0 – 100</p>
+          </div>
+
+          {/* 4. STATISTIK HASIL */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '24px' }}>
+            <div style={{ border: '1px solid #bbf7d0', backgroundColor: '#f0fdf4', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
+              <p style={{ fontSize: '10px', color: '#166534', margin: 0, fontWeight: 'bold' }}>BENAR</p>
+              <p style={{ fontSize: '22px', fontWeight: 'bold', color: '#15803d', margin: '4px 0 0 0' }}>{results.correct}</p>
+            </div>
+            <div style={{ border: '1px solid #fecaca', backgroundColor: '#fef2f2', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
+              <p style={{ fontSize: '10px', color: '#991b1b', margin: 0, fontWeight: 'bold' }}>SALAH</p>
+              <p style={{ fontSize: '22px', fontWeight: 'bold', color: '#b91c1c', margin: '4px 0 0 0' }}>{results.wrong}</p>
+            </div>
+            <div style={{ border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
+              <p style={{ fontSize: '10px', color: '#475569', margin: 0, fontWeight: 'bold' }}>TOTAL SOAL</p>
+              <p style={{ fontSize: '22px', fontWeight: 'bold', color: '#334155', margin: '4px 0 0 0' }}>{results.total}</p>
             </div>
           </div>
 
-          {/* WAKTU */}
-          <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', marginBottom: '32px', overflow: 'hidden' }}>
-            <div style={{ background: '#f8fafc', padding: '10px 16px', borderBottom: '1px solid #e2e8f0' }}>
-              <span style={{ fontSize: '10px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Rincian Waktu Pengerjaan</span>
-            </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-              <tbody>
-                {[
-                  ['Waktu Mulai', waktuMulai],
-                  ['Waktu Selesai', waktuSelesai],
-                  ['Durasi Pengerjaan', durasi],
-                  ['Jumlah Soal', `${results.total} Soal`],
-                ].map(([label, value]) => (
-                  <tr key={label} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '9px 16px', fontWeight: 700, color: '#475569', width: '180px', background: '#fafafa' }}>{label}</td>
-                    <td style={{ padding: '9px 16px', color: '#1e293b' }}>{value}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* 5. RINCIAN WAKTU */}
+          <div style={{ borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', padding: '12px 0', fontSize: '12px', color: '#475569', display: 'flex', justifyContent: 'space-around', marginBottom: '32px' }}>
+            <span>Waktu Mulai: <strong>{waktuMulai}</strong></span>
+            <span>Durasi: <strong>{durasi}</strong></span>
+            <span>Waktu Selesai: <strong>{waktuSelesai}</strong></span>
           </div>
 
-          {/* FOOTER */}
-          <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '16px', textAlign: 'center' }}>
-            <p style={{ fontSize: '11px', color: '#94a3b8', margin: 0 }}>
-              Dokumen ini diterbitkan secara resmi oleh sistem <strong style={{ color: '#4338ca' }}>TRISULA EduMath</strong>.
-              Sah tanpa tanda tangan basah. Diterbitkan pada {tanggal}.
-            </p>
+          {/* 6. FOOTER LEGALITAS */}
+          <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '12px', fontSize: '10px', color: '#94a3b8', textAlign: 'center', fontStyle: 'italic' }}>
+            Dokumen ini diterbitkan secara resmi oleh platform <strong style={{ color: '#0284c7' }}>TRISULA EduMath</strong> sebagai bukti sah pengerjaan ujian.
           </div>
         </div>
 
