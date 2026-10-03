@@ -5,7 +5,7 @@ import { BottomNav } from './components/BottomNav';
 import { BerandaScreen } from './components/screens/BerandaScreen';
 import { MateriScreen } from './components/screens/MateriScreen';
 import { LatihanScreen } from './components/screens/LatihanScreen';
-import { SimulasiScreen } from './components/screens/SimulasiScreen';
+import { UjianScreen } from './components/screens/UjianScreen';
 import { DashboardScreen } from './components/screens/DashboardScreen';
 import { AdminSoalManager } from './components/screens/AdminSoalManager';
 import { ExamViewer } from './components/screens/ExamViewer';
@@ -100,7 +100,7 @@ export default function App() {
       return 'Daftar Topik Latihan';
     }
     if (currentScreen === 'beranda') return 'TRISULA EduMath';
-    if (currentScreen === 'simulasi') return 'Laboratorium Simulasi 3D';
+    if (currentScreen === 'ujian') return 'Uji Kompetensi';
     if (currentScreen === 'dashboard') return 'Dasbor Analyst & Profil';
     if (currentScreen === 'admin') return 'Manajemen Soal (Admin)';
     return 'TRISULA EduMath';
@@ -181,7 +181,9 @@ export default function App() {
               onNavigateToSimulasi={() => handleNavigate('simulasi')} 
             />
           )}
-          {currentScreen === 'simulasi' && <SimulasiScreen />}
+          {currentScreen === 'ujian' && !activeExamId && (
+            <UjianScreen onNavigateToViewer={(examId) => handleNavigate('ujian', null, examId)} />
+          )}
           {currentScreen === 'dashboard' && (
             <DashboardScreen onNavigate={(screen, cat, examId) => handleNavigate(screen, cat, examId)} />
           )}

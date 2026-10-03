@@ -11,7 +11,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentScreen, onSelectScr
     { id: 'beranda', label: 'Beranda', icon: 'home' },
     { id: 'materi', label: 'Materi', icon: 'menu_book' },
     { id: 'latihan', label: 'Latihan', icon: 'ads_click' },
-    { id: 'simulasi', label: 'Simulasi', icon: 'science' },
+    { id: 'ujian', label: 'Ujian', icon: 'quiz' },
     { id: 'dashboard', label: 'Dashboard', icon: 'leaderboard' },
   ];
 

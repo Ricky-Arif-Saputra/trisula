@@ -198,13 +198,43 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
     setAnswers(prev => prev.map(a => a.questionId === questionId ? { ...a, selectedOptionId: optionId } : a));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (timerRef.current) clearInterval(timerRef.current);
+    
+    // Calculate Score
+    let correct = 0, wrong = 0, unanswered = 0;
+    if (exam) {
+      exam.questions.forEach((q: ExamQuestion) => {
+        const answer = answers.find(a => a.questionId === q.id);
+        const opts = safeParse(q.options);
+        if (!answer?.selectedOptionId) { unanswered++; return; }
+        const chosen = opts.find((o: ExamOption) => o.id === answer.selectedOptionId);
+        if (chosen?.is_correct) correct++; else wrong++;
+      });
+      const total = exam.questions.length;
+      const score = total > 0 ? Math.round((correct / total) * 100) : 0;
+      
+      // Attempt to save to Supabase
+      if (user) {
+        try {
+          await supabase.from('exam_attempts').insert({
+            exam_id: exam.id,
+            user_id: user.id,
+            score: score,
+            correct_count: correct,
+            wrong_count: wrong,
+          });
+        } catch (e) {
+          console.error("Failed to save exam attempt", e);
+        }
+      }
+    }
+    
     setEndTime(new Date());
     setPhase('result');
   };
 
-  // Results calculation
+  // Results calculation for display
   const results = React.useMemo(() => {
     if (!exam || phase !== 'result') return null;
     let correct = 0, wrong = 0, unanswered = 0;
