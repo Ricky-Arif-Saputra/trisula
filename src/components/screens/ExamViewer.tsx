@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../Auth/AuthProvider';
+import html2pdf from 'html2pdf.js';
 
 // =====================================================
 // Types
@@ -46,97 +47,6 @@ const formatTime = (seconds: number) => {
 };
 
 // =====================================================
-// PDF Export (pure HTML snapshot via browser print)
-// =====================================================
-const exportPDF = (params: {
-  studentName: string;
-  studentNISN: string;
-  examTitle: string;
-  strand: string;
-  testType: string;
-  startTime: Date;
-  endTime: Date;
-  totalQ: number;
-  correct: number;
-  wrong: number;
-  score: number;
-}) => {
-  const { studentName, studentNISN, examTitle, strand, testType, startTime, endTime, totalQ, correct, wrong, score } = params;
-  const dateStr = startTime.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  const startStr = startTime.toLocaleTimeString('id-ID');
-  const endStr = endTime.toLocaleTimeString('id-ID');
-  const duration = Math.floor((endTime.getTime() - startTime.getTime()) / 1000);
-  const durationStr = `${Math.floor(duration / 60)} menit ${duration % 60} detik`;
-
-  const html = `
-  <!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"/>
-  <title>Hasil ${testType} — TRISULA EduMath</title>
-  <style>
-    body { font-family: 'Georgia', serif; margin: 40px; color: #1e293b; }
-    .header { text-align: center; border-bottom: 3px solid #4338ca; padding-bottom: 20px; margin-bottom: 30px; }
-    .logo { font-size: 28px; font-weight: 900; color: #4338ca; letter-spacing: 4px; }
-    .subtitle { color: #64748b; font-size: 14px; margin-top: 4px; }
-    .badge { display: inline-block; background: #ede9fe; color: #5b21b6; padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; margin-top: 8px; text-transform: uppercase; }
-    h2 { color: #1e1b4b; font-size: 20px; margin-bottom: 4px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    td { padding: 10px 14px; border: 1px solid #e2e8f0; font-size: 14px; }
-    td:first-child { background: #f8fafc; font-weight: 700; width: 200px; }
-    .score-box { text-align: center; margin: 30px 0; padding: 24px; border: 3px solid #4338ca; border-radius: 12px; background: linear-gradient(135deg, #eef2ff, #f5f3ff); }
-    .score-val { font-size: 64px; font-weight: 900; color: #4338ca; }
-    .score-label { font-size: 16px; color: #64748b; margin-top: 4px; }
-    .stat-row { display: flex; gap: 20px; justify-content: center; margin: 20px 0; }
-    .stat { text-align: center; padding: 12px 24px; border-radius: 8px; min-width: 100px; }
-    .stat.correct { background: #dcfce7; }
-    .stat.wrong { background: #fee2e2; }
-    .stat .val { font-size: 28px; font-weight: 800; }
-    .stat .lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; }
-    .footer { margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 16px; text-align: center; color: #94a3b8; font-size: 12px; }
-    .watermark { color: #4338ca; font-weight: 700; }
-    .bg-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 100px; font-weight: 900; color: rgba(67, 56, 202, 0.05); white-space: nowrap; pointer-events: none; z-index: -1; transform-origin: center; transform: translate(-50%, -50%) rotate(-45deg); }
-    @media print { body { margin: 20px; } }
-  </style></head><body>
-  <div class="bg-watermark">TRISULA EduMath</div>
-  <div class="header">
-    <div class="logo">TRISULA</div>
-    <div class="subtitle">EduMath — Platform Pembelajaran Matematika Interaktif</div>
-    <div class="badge">Bukti Pengerjaan Resmi · ${testType.toUpperCase()}</div>
-  </div>
-  <h2>${examTitle}</h2>
-  <p style="color:#64748b;font-size:13px;">Kategori Materi: <strong>${strand.charAt(0).toUpperCase() + strand.slice(1)}</strong></p>
-  <table>
-    <tr><td>Nama Siswa</td><td>${studentName}</td></tr>
-    <tr><td>NISN</td><td>${studentNISN}</td></tr>
-    <tr><td>Tanggal Pengerjaan</td><td>${dateStr}</td></tr>
-    <tr><td>Waktu Mulai</td><td>${startStr}</td></tr>
-    <tr><td>Waktu Selesai</td><td>${endStr}</td></tr>
-    <tr><td>Durasi Digunakan</td><td>${durationStr}</td></tr>
-    <tr><td>Jumlah Soal</td><td>${totalQ} Soal</td></tr>
-  </table>
-  <div class="score-box">
-    <div class="score-val">${score}</div>
-    <div class="score-label">Nilai Akhir (Skala 0 – 100)</div>
-  </div>
-  <div class="stat-row">
-    <div class="stat correct"><div class="val" style="color:#16a34a">${correct}</div><div class="lbl">Jawaban Benar</div></div>
-    <div class="stat wrong"><div class="val" style="color:#dc2626">${wrong}</div><div class="lbl">Jawaban Salah</div></div>
-    <div class="stat" style="background:#f1f5f9"><div class="val" style="color:#64748b">${totalQ - correct - wrong}</div><div class="lbl">Tidak Dijawab</div></div>
-  </div>
-  <div class="footer">
-    <span class="watermark">TRISULA EduMath</span> · Dokumen ini diterbitkan secara otomatis oleh sistem pada ${endStr}, ${dateStr}.<br/>
-    Dokumen ini sah tanpa tanda tangan basah.
-  </div>
-  </body></html>`;
-
-  const win = window.open('', '_blank');
-  if (win) {
-    win.document.write(html);
-    win.document.close();
-    win.focus();
-    setTimeout(() => { win.print(); }, 500);
-  }
-};
-
-// =====================================================
 // Main ExamViewer Component
 // =====================================================
 export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
@@ -151,10 +61,14 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
   const [doubtful, setDoubtful] = useState<Record<string, boolean>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+  const [showIdentityModal, setShowIdentityModal] = useState(false);
+  const [studentName, setStudentName] = useState('');
+  const [studentNisn, setStudentNisn] = useState('');
   const [timeLeft, setTimeLeft] = useState(0);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [endTime, setEndTime] = useState<Date | null>(null);
   const [pastAttempt, setPastAttempt] = useState<any>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Fetch exam package
@@ -218,6 +132,11 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
   }, [phase]);
 
   const handleStart = () => {
+    if (!studentName.trim() || !studentNisn.trim()) {
+      alert("Nama Lengkap dan NISN wajib diisi!");
+      return;
+    }
+    setShowIdentityModal(false);
     setStartTime(new Date());
     setPhase('active');
   };
@@ -268,6 +187,8 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
           await supabase.from('exam_attempts').insert({
             exam_id: exam.id,
             user_id: user.id,
+            student_name: studentName,
+            student_nisn: studentNisn,
             score: score,
             correct_count: correct,
             wrong_count: wrong,
@@ -351,10 +272,40 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
             </div>
           </div>
           <p className="text-sm text-indigo-200 mt-4">Pastikan koneksi internet stabil. Timer akan berjalan setelah tombol Mulai ditekan.</p>
-          <button onClick={handleStart} className="mt-6 w-full py-4 bg-white text-indigo-700 font-extrabold rounded-xl hover:bg-indigo-50 transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-lg">
+          <button onClick={() => setShowIdentityModal(true)} className="mt-6 w-full py-4 bg-white text-indigo-700 font-extrabold rounded-xl hover:bg-indigo-50 transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-lg">
             <span className="material-symbols-outlined">play_arrow</span> Mulai Ujian
           </button>
         </div>
+
+        {/* Modal Identitas */}
+        {showIdentityModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Identitas Peserta Ujian</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">Silakan lengkapi identitas Anda sebelum timer dimulai.</p>
+              
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Nama Lengkap <span className="text-rose-500">*</span></label>
+                  <input type="text" value={studentName} onChange={e => setStudentName(e.target.value)} placeholder="Masukkan nama lengkap" className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">NISN <span className="text-rose-500">*</span></label>
+                  <input type="number" value={studentNisn} onChange={e => setStudentNisn(e.target.value)} placeholder="Masukkan Nomor Induk Siswa" className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button onClick={() => setShowIdentityModal(false)} className="flex-1 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-sm cursor-pointer hover:bg-slate-200">
+                  Batal
+                </button>
+                <button onClick={handleStart} className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm cursor-pointer hover:bg-indigo-700 shadow-md">
+                  Mulai Ujian
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -485,89 +436,111 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
     const scoreColor = results.score >= 75 ? 'text-emerald-600' : results.score >= 50 ? 'text-amber-500' : 'text-rose-600';
     const scoreBg = results.score >= 75 ? 'from-emerald-50 to-teal-50 border-emerald-300' : results.score >= 50 ? 'from-amber-50 to-yellow-50 border-amber-300' : 'from-rose-50 to-pink-50 border-rose-300';
 
-    const handleDownloadPDF = () => {
-      exportPDF({
-        studentName: user?.email?.split('@')[0] || 'Siswa',
-        studentNISN: user?.id.substring(0, 10).toUpperCase() || '0012345678',
-        examTitle: exam.title,
-        strand: exam.strand,
-        testType: exam.test_type,
-        startTime: startTime!,
-        endTime: endTime!,
-        totalQ: results.total,
-        correct: results.correct,
-        wrong: results.wrong,
-        score: results.score,
-      });
+    const handleDownloadPDF = async () => {
+      setIsDownloading(true);
+      try {
+        const element = document.getElementById('pdf-report-content');
+        if (!element) throw new Error("Content element not found");
+        
+        const nisnVal = pastAttempt ? user?.id.substring(0, 10).toUpperCase() : studentNisn || '0012345678';
+        const opt = {
+          margin:       10,
+          filename:     `Bukti_Ujian_${nisnVal}_${Date.now()}.pdf`,
+          image:        { type: 'jpeg', quality: 0.98 },
+          html2canvas:  { scale: 2, useCORS: true, logging: false },
+          jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        if (html2pdf) {
+          await html2pdf().set(opt).from(element).save();
+        } else {
+          window.print();
+        }
+      } catch (err) {
+        console.error("PDF Download Error:", err);
+        window.print();
+      } finally {
+        setIsDownloading(false);
+      }
     };
 
     return (
       <div className="flex flex-col w-full pb-16 font-sans px-4 pt-4 animate-in zoom-in-95">
-        {/* Result Header */}
-        <div className="bg-gradient-to-br from-[#1e1b4b] to-[#4338ca] rounded-2xl p-6 text-white text-center shadow-xl mb-5 relative overflow-hidden">
-          <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
-            <span className="material-symbols-outlined text-[150px] transform -rotate-12">workspace_premium</span>
-          </div>
-          <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3 relative z-10 backdrop-blur-sm">
-            <span className="material-symbols-outlined text-3xl">workspace_premium</span>
-          </div>
-          <h2 className="text-xl font-extrabold relative z-10">Ujian Selesai!</h2>
-          <p className="text-indigo-200 text-sm mt-1 relative z-10">{exam.title}</p>
-        </div>
-
-        {/* Identity & Score Box */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl mb-4 overflow-hidden shadow-sm">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex flex-col gap-1">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Identitas Peserta</span>
-            <span className="text-base font-extrabold text-slate-800 dark:text-white">{user?.email?.split('@')[0] || 'Peserta Ujian'}</span>
-            <span className="text-sm font-medium text-slate-500">NISN: {user?.id.substring(0, 10).toUpperCase() || '0012345678'}</span>
-          </div>
-          
-          <div className={`p-6 bg-gradient-to-br ${scoreBg} text-center relative`}>
-            {/* Watermark Logo behind score */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-[0.15] pointer-events-none">
-               <span className="font-black text-6xl text-slate-900 transform -rotate-12 whitespace-nowrap">TRISULA</span>
+        {/* The PDF wrapper */}
+        <div id="pdf-report-content" className="bg-white dark:bg-slate-900 rounded-2xl p-4 md:p-6 mb-4">
+          {/* Result Header */}
+          <div className="bg-gradient-to-br from-[#1e1b4b] to-[#4338ca] rounded-2xl p-6 text-white text-center shadow-xl mb-5 relative overflow-hidden">
+            <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
+              <span className="material-symbols-outlined text-[150px] transform -rotate-12">workspace_premium</span>
             </div>
-            <div className={`text-7xl font-black ${scoreColor} relative z-10`}>{results.score}</div>
-            <div className="text-sm font-bold text-slate-500 mt-1 relative z-10">Nilai Akhir (Skala 0 – 100)</div>
+            <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3 relative z-10 backdrop-blur-sm">
+              <span className="material-symbols-outlined text-3xl">workspace_premium</span>
+            </div>
+            <h2 className="text-xl font-extrabold relative z-10">Ujian Selesai!</h2>
+            <p className="text-indigo-200 text-sm mt-1 relative z-10">{exam.title}</p>
           </div>
-        </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 rounded-xl p-4 text-center">
-            <div className="text-3xl font-black text-emerald-600">{results.correct}</div>
-            <div className="text-[10px] font-bold text-emerald-500 uppercase mt-1">Benar</div>
+          {/* Identity & Score Box */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl mb-4 overflow-hidden shadow-sm">
+            <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex flex-col gap-1">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Identitas Peserta</span>
+              <span className="text-base font-extrabold text-slate-800 dark:text-white">
+                {pastAttempt ? (user?.email?.split('@')[0] || 'Peserta Ujian') : (studentName || 'Peserta Ujian')}
+              </span>
+              <span className="text-sm font-medium text-slate-500">
+                NISN: {pastAttempt ? (user?.id.substring(0, 10).toUpperCase() || '0012345678') : (studentNisn || '0012345678')}
+              </span>
+            </div>
+            
+            <div className={`p-6 bg-gradient-to-br ${scoreBg} text-center relative`}>
+              {/* Watermark Logo behind score */}
+              <div className="absolute inset-0 flex items-center justify-center opacity-[0.15] pointer-events-none">
+                 <span className="font-black text-6xl text-slate-900 transform -rotate-12 whitespace-nowrap">TRISULA</span>
+              </div>
+              <div className={`text-7xl font-black ${scoreColor} relative z-10`}>{results.score}</div>
+              <div className="text-sm font-bold text-slate-500 mt-1 relative z-10">Nilai Akhir (Skala 0 – 100)</div>
+            </div>
           </div>
-          <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 rounded-xl p-4 text-center">
-            <div className="text-3xl font-black text-rose-600">{results.wrong}</div>
-            <div className="text-[10px] font-bold text-rose-500 uppercase mt-1">Salah</div>
-          </div>
-          <div className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-center">
-            <div className="text-3xl font-black text-slate-500">{results.unanswered}</div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase mt-1">Kosong</div>
-          </div>
-        </div>
 
-        {/* Metadata */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 mb-4 space-y-2">
-          <div className="flex justify-between text-sm"><span className="text-slate-500">Tanggal</span><span className="font-bold">{startTime?.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}</span></div>
-          <div className="flex justify-between text-sm"><span className="text-slate-500">Waktu Mulai</span><span className="font-bold">{startTime?.toLocaleTimeString('id-ID')}</span></div>
-          <div className="flex justify-between text-sm"><span className="text-slate-500">Waktu Selesai</span><span className="font-bold">{endTime?.toLocaleTimeString('id-ID')}</span></div>
-          <div className="flex justify-between text-sm"><span className="text-slate-500">Total Soal</span><span className="font-bold">{results.total} Soal</span></div>
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 rounded-xl p-4 text-center">
+              <div className="text-3xl font-black text-emerald-600">{results.correct}</div>
+              <div className="text-[10px] font-bold text-emerald-500 uppercase mt-1">Benar</div>
+            </div>
+            <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 rounded-xl p-4 text-center">
+              <div className="text-3xl font-black text-rose-600">{results.wrong}</div>
+              <div className="text-[10px] font-bold text-rose-500 uppercase mt-1">Salah</div>
+            </div>
+            <div className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-center">
+              <div className="text-3xl font-black text-slate-500">{results.unanswered}</div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase mt-1">Kosong</div>
+            </div>
+          </div>
+
+          {/* Metadata */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 mb-4 space-y-2">
+            <div className="flex justify-between text-sm"><span className="text-slate-500">Tanggal</span><span className="font-bold">{startTime?.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-slate-500">Waktu Mulai</span><span className="font-bold">{startTime?.toLocaleTimeString('id-ID')}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-slate-500">Waktu Selesai</span><span className="font-bold">{endTime?.toLocaleTimeString('id-ID')}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-slate-500">Total Soal</span><span className="font-bold">{results.total} Soal</span></div>
+          </div>
         </div>
 
         {/* Actions */}
         <div className="space-y-3">
-          <button onClick={handleDownloadPDF}
-            className="w-full py-4 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-extrabold rounded-2xl shadow-lg hover:opacity-90 cursor-pointer flex items-center justify-center gap-2 transition-opacity">
-            <span className="material-symbols-outlined">download</span>
-            Unduh Hasil (PDF)
+          <button onClick={handleDownloadPDF} disabled={isDownloading}
+            className="w-full py-4 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-extrabold rounded-2xl shadow-lg hover:opacity-90 cursor-pointer flex items-center justify-center gap-2 transition-opacity disabled:opacity-70">
+            {isDownloading ? (
+              <><span className="material-symbols-outlined animate-spin">refresh</span> Mengunduh PDF...</>
+            ) : (
+              <><span className="material-symbols-outlined">download</span> Unduh Bukti (PDF)</>
+            )}
           </button>
           <button onClick={onBack}
             className="w-full py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer transition-colors flex items-center justify-center gap-2">
-            <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-            Kembali ke Daftar
+            <span className="material-symbols-outlined text-[18px]">home</span>
+            Kembali ke Menu Utama
           </button>
         </div>
       </div>
