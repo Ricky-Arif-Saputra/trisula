@@ -23,36 +23,17 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         border: '1px solid rgba(255,255,255,0.12)',
       }}>
         {/* Logo & Title */}
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '56px',
-            height: '56px',
-            borderRadius: '16px',
-            background: 'linear-gradient(135deg, #006b5c, #41ddc2)',
-            marginBottom: '16px',
-            boxShadow: '0 4px 12px rgba(0,107,92,0.4)',
-          }}>
-            <span style={{ fontSize: '28px' }}>📐</span>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginBottom: '28px' }}>
+          <img src="/logo.jpeg" alt="Logo TRISULA" style={{ height: '48px', width: 'auto', objectFit: 'contain' }} />
           <h1 style={{
-            fontSize: '22px',
+            fontSize: '28px',
             fontWeight: 800,
             color: '#ffffff',
-            margin: '0 0 6px 0',
-            letterSpacing: '-0.02em',
-          }}>
-            TRISULA EduMath
-          </h1>
-          <p style={{
-            fontSize: '13px',
-            color: 'rgba(255,255,255,0.55)',
             margin: 0,
+            letterSpacing: '2px',
           }}>
-            Pembelajaran Matematika Kelas XII SMA
-          </p>
+            TRISULA
+          </h1>
         </div>
         {children}
       </div>

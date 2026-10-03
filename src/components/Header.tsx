@@ -42,23 +42,15 @@ export const Header: React.FC<HeaderProps> = ({
           )}
 
           <img
-            alt="TRISULA EduMath Logo"
+            alt="TRISULA Logo"
             className="h-8 w-auto object-contain flex-shrink-0"
             src={ASSETS.logo}
           />
 
-          <div className="flex flex-col min-w-0 ml-1">
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-[11px] text-primary-container dark:text-primary-fixed truncate">
-                TRISULA
-              </span>
-              <span className="px-1.5 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-bold text-[10px] uppercase flex-shrink-0">
-                Kelas XII SMA
-              </span>
-            </div>
-            <h1 className="text-sm font-bold text-on-surface truncate leading-tight">
-              {title}
-            </h1>
+          <div className="flex items-center ml-2 min-w-0">
+            <span className="font-bold text-xl text-primary-container dark:text-primary-fixed tracking-wide">
+              TRISULA
+            </span>
           </div>
         </div>
 

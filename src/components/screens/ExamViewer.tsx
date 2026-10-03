@@ -492,13 +492,8 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
         >
           {/* 1. KOP HEADER */}
           <div style={{ borderBottom: '3px solid #0284c7', paddingBottom: '12px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h1 style={{ fontSize: '22px', fontWeight: 'bold', margin: 0, color: '#0f172a' }}>TRISULA EduMath</h1>
-              <p style={{ fontSize: '12px', margin: '4px 0 0 0', color: '#64748b' }}>LEMBAR BUKTI HASIL UJIAN KOMPETENSI MATEMATIKA</p>
-            </div>
-            <div style={{ textAlign: 'right', fontSize: '11px', color: '#64748b' }}>
-              Tanggal Cetak: {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
-            </div>
+            <img src="/logo.jpeg" alt="Logo TRISULA" style={{ height: '44px', width: 'auto', objectFit: 'contain' }} />
+            <h1 style={{ fontSize: '28px', fontWeight: 'bold', margin: 0, color: '#0f172a', letterSpacing: '2px' }}>TRISULA</h1>
           </div>
 
           {/* 2. IDENTITAS PESERTA */}
