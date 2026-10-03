@@ -50,6 +50,7 @@ const formatTime = (seconds: number) => {
 // =====================================================
 const exportPDF = (params: {
   studentName: string;
+  studentNISN: string;
   examTitle: string;
   strand: string;
   testType: string;
@@ -60,7 +61,7 @@ const exportPDF = (params: {
   wrong: number;
   score: number;
 }) => {
-  const { studentName, examTitle, strand, testType, startTime, endTime, totalQ, correct, wrong, score } = params;
+  const { studentName, studentNISN, examTitle, strand, testType, startTime, endTime, totalQ, correct, wrong, score } = params;
   const dateStr = startTime.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const startStr = startTime.toLocaleTimeString('id-ID');
   const endStr = endTime.toLocaleTimeString('id-ID');
@@ -91,8 +92,10 @@ const exportPDF = (params: {
     .stat .lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; }
     .footer { margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 16px; text-align: center; color: #94a3b8; font-size: 12px; }
     .watermark { color: #4338ca; font-weight: 700; }
+    .bg-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 100px; font-weight: 900; color: rgba(67, 56, 202, 0.05); white-space: nowrap; pointer-events: none; z-index: -1; transform-origin: center; transform: translate(-50%, -50%) rotate(-45deg); }
     @media print { body { margin: 20px; } }
   </style></head><body>
+  <div class="bg-watermark">TRISULA EduMath</div>
   <div class="header">
     <div class="logo">TRISULA</div>
     <div class="subtitle">EduMath — Platform Pembelajaran Matematika Interaktif</div>
@@ -102,6 +105,7 @@ const exportPDF = (params: {
   <p style="color:#64748b;font-size:13px;">Kategori Materi: <strong>${strand.charAt(0).toUpperCase() + strand.slice(1)}</strong></p>
   <table>
     <tr><td>Nama Siswa</td><td>${studentName}</td></tr>
+    <tr><td>NISN</td><td>${studentNISN}</td></tr>
     <tr><td>Tanggal Pengerjaan</td><td>${dateStr}</td></tr>
     <tr><td>Waktu Mulai</td><td>${startStr}</td></tr>
     <tr><td>Waktu Selesai</td><td>${endStr}</td></tr>
@@ -144,9 +148,13 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
   // Exam state
   const [phase, setPhase] = useState<'intro' | 'active' | 'result'>('intro');
   const [answers, setAnswers] = useState<StudentAnswer[]>([]);
+  const [doubtful, setDoubtful] = useState<Record<string, boolean>>({});
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [endTime, setEndTime] = useState<Date | null>(null);
+  const [pastAttempt, setPastAttempt] = useState<any>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Fetch exam package
@@ -154,6 +162,7 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
     const fetch = async () => {
       setLoading(true);
       try {
+        // Fetch package
         const { data, error: err } = await supabase
           .from('exam_packages')
           .select('*')
@@ -163,6 +172,25 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
         if (!data) { setError('Paket ujian tidak ditemukan.'); return; }
         const pkg = { ...data, questions: safeParse(data.questions) } as ExamPackage;
         setExam(pkg);
+
+        // Fetch past attempt if any
+        if (user) {
+          const { data: attempt } = await supabase
+            .from('exam_attempts')
+            .select('*')
+            .eq('exam_id', examId)
+            .eq('user_id', user.id)
+            .maybeSingle();
+          if (attempt) {
+            setPastAttempt(attempt);
+            setPhase('result');
+            setStartTime(new Date(attempt.created_at));
+            setEndTime(new Date(attempt.created_at));
+            setLoading(false);
+            return;
+          }
+        }
+
         setTimeLeft((pkg.duration_minutes || 30) * 60);
         setAnswers(pkg.questions.map((q: ExamQuestion) => ({ questionId: q.id, selectedOptionId: null })));
       } catch (e: any) {
@@ -198,7 +226,27 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
     setAnswers(prev => prev.map(a => a.questionId === questionId ? { ...a, selectedOptionId: optionId } : a));
   };
 
+  const toggleDoubtful = () => {
+    if (!exam) return;
+    const qId = exam.questions[currentIndex].id;
+    setDoubtful(prev => ({ ...prev, [qId]: !prev[qId] }));
+  };
+
+  const handleNext = () => {
+    if (!exam) return;
+    if (currentIndex < exam.questions.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+    } else {
+      setShowSubmitConfirm(true);
+    }
+  };
+
+  const handlePrev = () => {
+    if (currentIndex > 0) setCurrentIndex(currentIndex - 1);
+  };
+
   const handleSubmit = async () => {
+    setShowSubmitConfirm(false);
     if (timerRef.current) clearInterval(timerRef.current);
     
     // Calculate Score
@@ -237,6 +285,15 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
   // Results calculation for display
   const results = React.useMemo(() => {
     if (!exam || phase !== 'result') return null;
+    if (pastAttempt) {
+      return {
+        correct: pastAttempt.correct_count || 0,
+        wrong: pastAttempt.wrong_count || 0,
+        unanswered: exam.questions.length - (pastAttempt.correct_count || 0) - (pastAttempt.wrong_count || 0),
+        total: exam.questions.length,
+        score: pastAttempt.score || 0
+      };
+    }
     let correct = 0, wrong = 0, unanswered = 0;
     exam.questions.forEach((q: ExamQuestion) => {
       const answer = answers.find(a => a.questionId === q.id);
@@ -248,7 +305,7 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
     const total = exam.questions.length;
     const score = total > 0 ? Math.round((correct / total) * 100) : 0;
     return { correct, wrong, unanswered, total, score };
-  }, [exam, answers, phase]);
+  }, [exam, answers, phase, pastAttempt]);
 
   // ---- Loading & Error states ----
   if (loading) return (
@@ -319,9 +376,37 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
           </div>
         </div>
 
-        {/* Questions */}
+        {/* Question Grid */}
+        <div className="px-4 pt-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-outline-variant/30 p-4 shadow-sm flex flex-wrap gap-2">
+            {exam.questions.map((q: ExamQuestion, idx: number) => {
+              const qId = q.id;
+              const hasAnswer = !!answers.find(a => a.questionId === qId)?.selectedOptionId;
+              const isDoubtful = doubtful[qId];
+              const isActive = idx === currentIndex;
+              
+              let bgColor = 'bg-slate-100 text-slate-500 border-slate-200';
+              if (isDoubtful) bgColor = 'bg-amber-400 text-slate-900 border-amber-500';
+              else if (hasAnswer) bgColor = 'bg-emerald-500 text-white border-emerald-600';
+              
+              return (
+                <button
+                  key={qId}
+                  onClick={() => setCurrentIndex(idx)}
+                  className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold border-2 transition-all cursor-pointer ${bgColor} ${isActive ? 'ring-2 ring-indigo-500 ring-offset-2' : ''}`}
+                >
+                  {idx + 1}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Current Question */}
         <div className="px-4 pt-4 space-y-6">
-          {exam.questions.map((q: ExamQuestion, qIdx: number) => {
+          {(() => {
+            const q = exam.questions[currentIndex];
+            const qIdx = currentIndex;
             const blocks = safeParse(q.content_blocks);
             const opts = safeParse(q.options);
             const ans = answers.find(a => a.questionId === q.id);
@@ -355,18 +440,42 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
                       );
                     })}
                   </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 mt-6">
+                    <button onClick={handlePrev} disabled={currentIndex === 0} className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1">
+                      <span className="material-symbols-outlined text-[16px]">chevron_left</span> Sebelumnya
+                    </button>
+                    <button onClick={toggleDoubtful} className={`flex-1 py-2.5 rounded-xl font-bold text-xs cursor-pointer flex items-center justify-center gap-1 ${doubtful[q.id] ? 'bg-amber-400 text-slate-900' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'}`}>
+                      <span className="material-symbols-outlined text-[16px]">help</span> Ragu-ragu
+                    </button>
+                    <button onClick={handleNext} className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs cursor-pointer flex items-center justify-center gap-1">
+                      {currentIndex === exam.questions.length - 1 ? 'Submit' : 'Selanjutnya'} <span className="material-symbols-outlined text-[16px]">{currentIndex === exam.questions.length - 1 ? 'send' : 'chevron_right'}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             );
-          })}
+          })()}
         </div>
 
-        {/* Submit */}
-        <div className="fixed bottom-0 left-0 right-0 px-4 py-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 shadow-2xl">
-          <button onClick={handleSubmit} className="w-full py-4 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-extrabold rounded-2xl shadow-lg hover:opacity-90 cursor-pointer flex items-center justify-center gap-2 transition-opacity">
-            <span className="material-symbols-outlined">send</span> Submit & Selesai Ujian
-          </button>
-        </div>
+        {/* Submit Modal Konfirmasi */}
+        {showSubmitConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Konfirmasi Submit Ujian</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">Apakah Anda yakin ingin menyelesaikan dan mengirim jawaban ujian ini? Periksa kembali soal yang masih ditandai ragu-ragu.</p>
+              <div className="flex gap-3">
+                <button onClick={() => setShowSubmitConfirm(false)} className="flex-1 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-sm cursor-pointer hover:bg-slate-200">
+                  Periksa Lagi
+                </button>
+                <button onClick={handleSubmit} className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm cursor-pointer hover:bg-indigo-700 shadow-md">
+                  Ya, Submit
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -379,6 +488,7 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
     const handleDownloadPDF = () => {
       exportPDF({
         studentName: user?.email?.split('@')[0] || 'Siswa',
+        studentNISN: user?.id.substring(0, 10).toUpperCase() || '0012345678',
         examTitle: exam.title,
         strand: exam.strand,
         testType: exam.test_type,
@@ -394,18 +504,33 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
     return (
       <div className="flex flex-col w-full pb-16 font-sans px-4 pt-4 animate-in zoom-in-95">
         {/* Result Header */}
-        <div className="bg-gradient-to-br from-[#1e1b4b] to-[#4338ca] rounded-2xl p-6 text-white text-center shadow-xl mb-5">
-          <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mx-auto mb-3">
+        <div className="bg-gradient-to-br from-[#1e1b4b] to-[#4338ca] rounded-2xl p-6 text-white text-center shadow-xl mb-5 relative overflow-hidden">
+          <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
+            <span className="material-symbols-outlined text-[150px] transform -rotate-12">workspace_premium</span>
+          </div>
+          <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3 relative z-10 backdrop-blur-sm">
             <span className="material-symbols-outlined text-3xl">workspace_premium</span>
           </div>
-          <h2 className="text-xl font-extrabold">Ujian Selesai!</h2>
-          <p className="text-indigo-200 text-sm mt-1">{exam.title}</p>
+          <h2 className="text-xl font-extrabold relative z-10">Ujian Selesai!</h2>
+          <p className="text-indigo-200 text-sm mt-1 relative z-10">{exam.title}</p>
         </div>
 
-        {/* Score Box */}
-        <div className={`border-2 rounded-2xl p-6 bg-gradient-to-br ${scoreBg} text-center mb-4`}>
-          <div className={`text-7xl font-black ${scoreColor}`}>{results.score}</div>
-          <div className="text-sm font-bold text-slate-500 mt-1">Nilai Akhir (Skala 0 – 100)</div>
+        {/* Identity & Score Box */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl mb-4 overflow-hidden shadow-sm">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex flex-col gap-1">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Identitas Peserta</span>
+            <span className="text-base font-extrabold text-slate-800 dark:text-white">{user?.email?.split('@')[0] || 'Peserta Ujian'}</span>
+            <span className="text-sm font-medium text-slate-500">NISN: {user?.id.substring(0, 10).toUpperCase() || '0012345678'}</span>
+          </div>
+          
+          <div className={`p-6 bg-gradient-to-br ${scoreBg} text-center relative`}>
+            {/* Watermark Logo behind score */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-[0.15] pointer-events-none">
+               <span className="font-black text-6xl text-slate-900 transform -rotate-12 whitespace-nowrap">TRISULA</span>
+            </div>
+            <div className={`text-7xl font-black ${scoreColor} relative z-10`}>{results.score}</div>
+            <div className="text-sm font-bold text-slate-500 mt-1 relative z-10">Nilai Akhir (Skala 0 – 100)</div>
+          </div>
         </div>
 
         {/* Stats */}
