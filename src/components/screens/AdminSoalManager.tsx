@@ -3,6 +3,9 @@ import { useAuth } from '../Auth/AuthProvider';
 import { supabase } from '../../lib/supabaseClient';
 import { InlineMath } from 'react-katex';
 import { ExamPackageBuilder } from './ExamPackageBuilder';
+import { RmePosttestBuilder } from './RmePosttestBuilder';
+import JSZip from 'jszip';
+import html2pdf from 'html2pdf.js';
 
 // =====================================================
 // Types
@@ -335,7 +338,8 @@ export const AdminSoalManager: React.FC = () => {
   const { user, isAdmin } = useAuth();
 
   // Form state
-  const [viewMode, setViewMode] = useState<'dashboard' | 'pretest' | 'postest'>('dashboard');
+  const [viewMode, setViewMode] = useState<'dashboard' | 'pretest' | 'postest' | 'rme_postest'>('dashboard');
+  const [isZipping, setIsZipping] = useState(false);
 
   const [testType, setTestType] = useState<TestType>('latihan');
   const [strand, setStrand] = useState<Strand>('bilangan');
@@ -519,6 +523,77 @@ export const AdminSoalManager: React.FC = () => {
     );
   }
 
+  if (viewMode === 'rme_postest') {
+    return (
+      <RmePosttestBuilder
+        onBack={() => setViewMode('dashboard')}
+        onSaved={() => {
+          setViewMode('dashboard');
+          setRefreshKey(k => k + 1);
+        }}
+      />
+    );
+  }
+
+  const handleDownloadAllZip = async () => {
+    setIsZipping(true);
+    try {
+      const { data: attempts } = await supabase
+        .from('exam_attempts')
+        .select('*, exam_packages(title, strand)')
+        .not('essay_answers', 'is', null);
+      if (!attempts || attempts.length === 0) {
+        alert('Belum ada data pengerjaan Postest RME untuk diunduh.');
+        setIsZipping(false);
+        return;
+      }
+      const zip = new JSZip();
+      const folder = zip.folder('Hasil_Postest_RME_TRISULA')!;
+      for (const att of attempts) {
+        const essayAnswers = att.essay_answers || {};
+        const aiScores = att.ai_scores || {};
+        const lines: string[] = [
+          `TRISULA EduMath — Hasil Postest RME`,
+          `=`.repeat(50),
+          `Nama      : ${att.student_name || '-'}`,
+          `NISN      : ${att.student_nisn || '-'}`,
+          `Paket     : ${att.exam_packages?.title || att.exam_id}`,
+          `Strand    : ${att.exam_packages?.strand || '-'}`,
+          `Nilai AI  : ${att.score}`,
+          `Total Poin: ${att.total_essay_score || '-'} / ${att.total_max_points || '-'}`,
+          `Tanggal   : ${new Date(att.created_at).toLocaleString('id-ID')}`,
+          ``,
+          `DETAIL JAWABAN & PENILAIAN:`,
+          `=`.repeat(50),
+        ];
+        const stages = ['diketahui', 'ditanya', 'pengerjaan', 'kesimpulan'];
+        Object.entries(essayAnswers).forEach(([qId, ans]: [string, any], idx) => {
+          lines.push(`\nSoal ${idx + 1}:`);
+          stages.forEach(stage => {
+            const score = aiScores[qId]?.scores?.[stage] ?? '-';
+            const maxPts = aiScores[qId] ? (att.exam_packages?.total_max_points ? '' : '') : '-';
+            const feedback = aiScores[qId]?.feedback?.[stage] || '';
+            lines.push(`  [${stage.toUpperCase()}]`);
+            lines.push(`  Jawaban : ${ans[stage] || '(kosong)'}`);
+            lines.push(`  Skor    : ${score}`);
+            if (feedback) lines.push(`  Feedback: ${feedback}`);
+          });
+        });
+        const filename = `${att.student_nisn || att.student_name || att.id}.txt`;
+        folder.file(filename, lines.join('\n'));
+      }
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `Hasil_Postest_RME_TRISULA_${Date.now()}.zip`;
+      a.click(); URL.revokeObjectURL(url);
+    } catch (e: any) {
+      alert(`Gagal membuat ZIP: ${e.message}`);
+    } finally {
+      setIsZipping(false);
+    }
+  };
+
   return (
     <div className="w-full font-sans space-y-6">
 
@@ -550,6 +625,37 @@ export const AdminSoalManager: React.FC = () => {
             <p className="text-emerald-100 text-xs mt-1">Paket Ujian Evaluasi Akhir</p>
           </div>
         </div>
+
+        <div onClick={() => setViewMode('rme_postest')}
+          className="bg-gradient-to-br from-rose-600 to-orange-500 hover:from-rose-700 hover:to-orange-600 text-white rounded-2xl p-6 cursor-pointer shadow-lg transition-all hover:scale-[1.02] flex flex-col items-center text-center gap-3 relative overflow-hidden">
+          <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-white/20 rounded-full text-[9px] font-bold uppercase tracking-wide">AI Scoring</div>
+          <span className="material-symbols-outlined text-5xl opacity-90">psychology</span>
+          <div>
+            <h3 className="font-extrabold text-lg">Postest RME</h3>
+            <p className="text-rose-100 text-xs mt-1">4 Tahap Essay + Penilaian AI</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Admin ZIP Download */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center">
+            <span className="material-symbols-outlined text-rose-600 text-[20px]">folder_zip</span>
+          </div>
+          <div>
+            <div className="font-bold text-sm text-slate-800 dark:text-white">Unduh Semua Jawaban Siswa (ZIP)</div>
+            <div className="text-xs text-slate-500">Kumpulkan seluruh jawaban & nilai Postest RME dalam satu file ZIP</div>
+          </div>
+        </div>
+        <button onClick={handleDownloadAllZip} disabled={isZipping}
+          className={`px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all cursor-pointer ${isZipping ? 'bg-slate-300 text-slate-500 cursor-wait' : 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/20 active:scale-95'}`}>
+          {isZipping ? (
+            <><div className="w-4 h-4 border-2 border-slate-300 border-t-slate-500 rounded-full animate-spin" />Menyiapkan...</>
+          ) : (
+            <><span className="material-symbols-outlined text-[18px]">download</span>Unduh ZIP</>
+          )}
+        </button>
       </div>
 
       {/* ===== Header Panel ===== */}
