@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../Auth/AuthProvider';
 import html2pdf from 'html2pdf.js';
+import { ExamViewerRme } from './ExamViewerRme';
 
 // =====================================================
 // Types
@@ -227,6 +228,10 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
     const score = total > 0 ? Math.round((correct / total) * 100) : 0;
     return { correct, wrong, unanswered, total, score };
   }, [exam, answers, phase, pastAttempt]);
+
+  if (exam && (exam.exam_type === 'rme_postest' || exam.exam_type === 'posttest' || exam.test_type === 'postest')) {
+    return <ExamViewerRme examId={examId} onBack={onBack} />;
+  }
 
   // ---- Loading & Error states ----
   if (loading) return (
