@@ -547,43 +547,112 @@ export const AdminSoalManager: React.FC = () => {
         setIsZipping(false);
         return;
       }
+      
       const zip = new JSZip();
       const folder = zip.folder('Hasil_Postest_RME_TRISULA')!;
+      const stages = [
+        { key: 'diketahui', label: 'Diketahui' },
+        { key: 'ditanya', label: 'Ditanya' },
+        { key: 'pengerjaan', label: 'Pengerjaan' },
+        { key: 'kesimpulan', label: 'Kesimpulan' }
+      ];
+
       for (const att of attempts) {
         const essayAnswers = att.essay_answers || {};
         const aiScores = att.ai_scores || {};
-        const lines: string[] = [
-          `TRISULA EduMath — Hasil Postest RME`,
-          `=`.repeat(50),
-          `Nama      : ${att.student_name || '-'}`,
-          `NISN      : ${att.student_nisn || '-'}`,
-          `Paket     : ${att.exam_packages?.title || att.exam_id}`,
-          `Strand    : ${att.exam_packages?.strand || '-'}`,
-          `Nilai AI  : ${att.score}`,
-          `Total Poin: ${att.total_essay_score || '-'} / ${att.total_max_points || '-'}`,
-          `Tanggal   : ${new Date(att.created_at).toLocaleString('id-ID')}`,
-          ``,
-          `DETAIL JAWABAN & PENILAIAN:`,
-          `=`.repeat(50),
-        ];
-        const stages = ['diketahui', 'ditanya', 'pengerjaan', 'kesimpulan'];
+        const date = new Date(att.created_at).toLocaleString('id-ID');
+        
+        let questionsHtml = '';
         Object.entries(essayAnswers).forEach(([qId, ans]: [string, any], idx) => {
-          lines.push(`\nSoal ${idx + 1}:`);
-          stages.forEach(stage => {
-            const score = aiScores[qId]?.scores?.[stage] ?? '-';
-            const maxPts = aiScores[qId] ? (att.exam_packages?.total_max_points ? '' : '') : '-';
-            const feedback = aiScores[qId]?.feedback?.[stage] || '';
-            lines.push(`  [${stage.toUpperCase()}]`);
-            lines.push(`  Jawaban : ${ans[stage] || '(kosong)'}`);
-            lines.push(`  Skor    : ${score}`);
-            if (feedback) lines.push(`  Feedback: ${feedback}`);
+          let stageRows = '';
+          stages.forEach(s => {
+            const score = aiScores[qId]?.evaluation?.[s.key]?.score ?? '-';
+            const reason = aiScores[qId]?.evaluation?.[s.key]?.reason || '-';
+            stageRows += `
+              <tr style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 6px 8px; font-weight: bold; color: #475569;">${s.label}</td>
+                <td style="padding: 6px 8px; color: #1e293b;">${ans[s.key] || '-'}</td>
+                <td style="padding: 6px 8px; text-align: center; font-weight: bold; color: #0284c7;">${score}</td>
+                <td style="padding: 6px 8px; color: #64748b; font-size: 10px;">${reason}</td>
+              </tr>
+            `;
           });
+
+          questionsHtml += `
+            <div style="margin-bottom: 16px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+              <p style="font-size: 12px; font-weight: bold; color: #1e293b; margin-bottom: 8px;">Soal ${idx + 1}</p>
+              <table style="width: 100%; font-size: 11px; border-collapse: collapse;">
+                <thead>
+                  <tr style="background-color: #f1f5f9;">
+                    <th style="padding: 6px 8px; text-align: left;">Tahap</th>
+                    <th style="padding: 6px 8px; text-align: left;">Jawaban Siswa</th>
+                    <th style="padding: 6px 8px; text-align: center;">Skor</th>
+                    <th style="padding: 6px 8px; text-align: left;">Feedback AI</th>
+                  </tr>
+                </thead>
+                <tbody>${stageRows}</tbody>
+              </table>
+            </div>
+          `;
         });
-        const filename = `${att.student_nisn || att.student_name || att.id}.txt`;
-        folder.file(filename, lines.join('\n'));
+
+        const htmlContent = `
+          <div style="width: 794px; min-height: 1123px; background-color: #ffffff; color: #0f172a; padding: 36px; box-sizing: border-box; font-family: sans-serif;">
+            <div style="border-bottom: 3px solid #e11d48; padding-bottom: 12px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+              <h1 style="font-size: 24px; font-weight: bold; margin: 0; letter-spacing: 2px;">TRISULA</h1>
+            </div>
+            <div style="text-align: center; margin-bottom: 24px;">
+              <h2 style="font-size: 14px; font-weight: bold; text-transform: uppercase; color: #e11d48; margin: 0;">LEMBAR HASIL POSTEST RME</h2>
+              <p style="font-size: 12px; color: #64748b; margin: 4px 0 0 0;">${att.exam_packages?.title || 'Paket Ujian'}</p>
+            </div>
+            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+              <p style="font-size: 11px; font-weight: bold; color: #e11d48; text-transform: uppercase; margin: 0 0 10px 0;">Identitas Peserta</p>
+              <table style="width: 100%; font-size: 12px; border-collapse: collapse;">
+                <tbody>
+                  <tr><td style="padding: 4px 0; width: 120px; color: #64748b;">Nama</td><td style="padding: 4px 0; font-weight: bold;">: ${att.student_name || '-'}</td></tr>
+                  <tr><td style="padding: 4px 0; width: 120px; color: #64748b;">NISN</td><td style="padding: 4px 0; font-weight: bold;">: ${att.student_nisn || '-'}</td></tr>
+                  <tr><td style="padding: 4px 0; width: 120px; color: #64748b;">Mata Pelajaran</td><td style="padding: 4px 0; font-weight: bold;">: ${att.exam_packages?.strand || '-'}</td></tr>
+                  <tr><td style="padding: 4px 0; width: 120px; color: #64748b;">Tanggal</td><td style="padding: 4px 0; font-weight: bold;">: ${date}</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="border: 2px solid #fca5a5; background-color: #fff7f7; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 20px;">
+              <p style="font-size: 11px; color: #9f1239; font-weight: bold; text-transform: uppercase; margin: 0;">NILAI AKHIR (AI)</p>
+              <div style="font-size: 60px; font-weight: 800; color: ${att.score >= 75 ? '#16a34a' : att.score >= 50 ? '#d97706' : '#dc2626'}; margin: 8px 0;">${att.score}</div>
+              <p style="font-size: 10px; color: #64748b; margin: 0;">Total Poin: ${att.total_essay_score || 0} / ${att.total_max_points || 0}</p>
+            </div>
+            ${questionsHtml}
+            <div style="border-top: 1px dashed #cbd5e1; padding-top: 10px; font-size: 9px; color: #94a3b8; text-align: center; font-style: italic;">
+              Dokumen ini diterbitkan oleh <strong>TRISULA EduMath</strong>. Nilai dihitung oleh Engine AI Penilaian Matematis.
+            </div>
+          </div>
+        `;
+
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = htmlContent;
+        tempDiv.style.position = 'fixed';
+        tempDiv.style.left = '-9999px';
+        document.body.appendChild(tempDiv);
+
+        try {
+          const pdfBlob = await (html2pdf as any)().set({
+            margin: 0,
+            image: { type: 'jpeg', quality: 0.95 },
+            html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          }).from(tempDiv).outputPdf('blob');
+          
+          const filename = `Hasil_${att.student_nisn || att.student_name || att.id}.pdf`;
+          folder.file(filename, pdfBlob);
+        } catch (pdfErr) {
+          console.error("Failed to generate PDF for", att.student_name, pdfErr);
+        } finally {
+          document.body.removeChild(tempDiv);
+        }
       }
-      const blob = await zip.generateAsync({ type: 'blob' });
-      const url = URL.createObjectURL(blob);
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
       a.href = url; a.download = `Hasil_Postest_RME_TRISULA_${Date.now()}.zip`;
       a.click(); URL.revokeObjectURL(url);

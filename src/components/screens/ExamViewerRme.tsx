@@ -174,7 +174,7 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
         const answers = essayAnswers[q.id] || { diketahui: '', ditanya: '', pengerjaan: '', kesimpulan: '' };
         const result = await scoreRmeAnswers(answers, keys as RmeKeys);
         resultsMap[q.id] = result;
-        totalScore += result.scores.total;
+        totalScore += result.total_score;
         totalMaxPoints += (keys.points_diketahui + keys.points_ditanya + keys.points_pengerjaan + keys.points_kesimpulan);
       }
     } catch (e: any) {
@@ -236,7 +236,7 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
     let totalMaxPoints = 0;
     exam?.questions.forEach(q => {
       const r = aiResults[q.id];
-      if (r) totalScore += r.scores.total;
+      if (r) totalScore += r.total_score;
       const k = q.rme_keys;
       if (k) totalMaxPoints += k.points_diketahui + k.points_ditanya + k.points_pengerjaan + k.points_kesimpulan;
     });
@@ -550,9 +550,9 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
                       <td style={{ padding: '4px 8px', fontWeight: 'bold', color: '#475569' }}>{s.label}</td>
                       <td style={{ padding: '4px 8px', color: '#1e293b' }}>{ans?.[s.key] || '-'}</td>
                       <td style={{ padding: '4px 8px', textAlign: 'center', fontWeight: 'bold', color: '#0284c7' }}>
-                        {ai.scores[s.key]} / {(keys as any)[`points_${s.key}`]}
+                        {ai.evaluation[s.key]?.score ?? '-'} / {(keys as any)[`points_${s.key}`]}
                       </td>
-                      <td style={{ padding: '4px 8px', color: '#64748b', fontSize: '10px' }}>{ai.feedback[s.key]}</td>
+                      <td style={{ padding: '4px 8px', color: '#64748b', fontSize: '10px' }}>{ai.evaluation[s.key]?.reason || '-'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -615,9 +615,9 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
             </div>
             <div className="p-4 space-y-3">
               {STAGES.map(stage => {
-                const stageScore = ai?.scores[stage.key] ?? '-';
+                const stageScore = ai?.evaluation[stage.key]?.score ?? '-';
                 const maxPts = keys ? (keys as any)[`points_${stage.key}`] : '-';
-                const feedback = ai?.feedback[stage.key] || '';
+                const feedback = ai?.evaluation[stage.key]?.reason || '';
                 return (
                   <div key={stage.key} className={`rounded-xl border-2 ${stageBg[stage.color]} p-3`}>
                     <div className="flex items-center justify-between mb-2">
