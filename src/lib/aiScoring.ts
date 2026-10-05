@@ -32,8 +32,10 @@ export async function scoreRmeAnswers(
   answers: RmeAnswers,
   keys: RmeKeys
 ): Promise<AiScoreResult> {
-  const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || (import.meta as any).env?.VITE_GOOGLE_AI_KEY || '';
-  if (!apiKey) throw new Error('API Key AI tidak ditemukan. Pastikan VITE_GEMINI_API_KEY sudah diset.');
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('API Key AI tidak terdeteksi. Harap minta Admin untuk mengisi VITE_GEMINI_API_KEY di file .env terlebih dahulu sebelum fitur penilaian AI dapat digunakan.');
+  }
 
   const ai = new GoogleGenAI({ apiKey });
 
