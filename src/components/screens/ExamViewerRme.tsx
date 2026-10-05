@@ -48,10 +48,10 @@ const formatTime = (seconds: number) => {
 };
 
 const STAGES = [
-  { key: 'diketahui' as const, label: 'Diketahui', icon: 'info', color: 'sky', placeholder: 'Tuliskan hal-hal yang diketahui dari soal di sini...' },
-  { key: 'ditanya' as const, label: 'Ditanya', icon: 'help', color: 'violet', placeholder: 'Tuliskan apa yang ditanyakan dalam soal...' },
-  { key: 'pengerjaan' as const, label: 'Pengerjaan / Proses', icon: 'calculate', color: 'amber', placeholder: 'Tuliskan langkah-langkah pengerjaanmu, boleh gunakan LaTeX...' },
-  { key: 'kesimpulan' as const, label: 'Kesimpulan', icon: 'check_circle', color: 'emerald', placeholder: 'Tuliskan kesimpulan akhir dari jawabanmu...' },
+  { key: 'diketahui' as const, label: 'Diketahui', icon: 'info', color: 'sky', placeholder: 'Tuliskan data atau informasi yang diketahui dari soal...' },
+  { key: 'ditanya' as const, label: 'Ditanya', icon: 'help', color: 'violet', placeholder: 'Tuliskan inti permasalahan/pertanyaan...' },
+  { key: 'pengerjaan' as const, label: 'Pengerjaan / Proses', icon: 'calculate', color: 'amber', placeholder: 'Tuliskan kalkulasi, langkah, dan rumus pengerjaan...' },
+  { key: 'kesimpulan' as const, label: 'Kesimpulan', icon: 'check_circle', color: 'emerald', placeholder: 'Tuliskan kesimpulan akhir pengerjaan...' },
 ];
 
 const stageBg: Record<string, string> = {

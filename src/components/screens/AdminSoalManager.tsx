@@ -654,7 +654,9 @@ export const AdminSoalManager: React.FC = () => {
       const zipBlob = await zip.generateAsync({ type: 'blob' });
       const url = URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
-      a.href = url; a.download = `Hasil_Postest_RME_TRISULA_${Date.now()}.zip`;
+      const firstPackage = attempts.length > 0 ? attempts[0].exam_packages?.title : null;
+      const safePackageName = firstPackage ? firstPackage.replace(/[^a-zA-Z0-9_-]/g, '_') : 'Semua_Paket';
+      a.href = url; a.download = `Hasil_Postest_${safePackageName}.zip`;
       a.click(); URL.revokeObjectURL(url);
     } catch (e: any) {
       alert(`Gagal membuat ZIP: ${e.message}`);
