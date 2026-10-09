@@ -109,26 +109,21 @@ export default function App() {
   // Loading state
   if (loading) {
     return (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh',
-        background: '#f8f9fa',
-        fontFamily: 'sans-serif',
-        gap: '16px',
-      }}>
-        <div style={{
-          width: '40px',
-          height: '40px',
-          border: '4px solid #e0e0e0',
-          borderTop: '4px solid #006b5c',
-          borderRadius: '50%',
-          animation: 'spin 0.8s linear infinite',
-        }} />
-        <span style={{ color: '#006b5c', fontSize: '14px', fontWeight: 600 }}>Memuat TRISULA EduMath...</span>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <div className="min-h-screen w-full bg-slate-50 flex flex-col items-center justify-center gap-5 font-sans">
+        <div className="relative w-20 h-20">
+          <div className="absolute inset-0 rounded-full border-4 border-indigo-100" />
+          <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-indigo-600 animate-spin" />
+          <div className="absolute inset-2 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+            <span className="material-symbols-outlined text-white text-[24px]">school</span>
+          </div>
+        </div>
+        <div className="text-center">
+          <p className="text-lg font-black text-indigo-700 tracking-widest uppercase">TRISULA</p>
+          <p className="text-sm text-slate-500 font-medium mt-0.5">Memuat EduMath...</p>
+        </div>
+        <div className="w-48 h-1.5 bg-indigo-100 rounded-full overflow-hidden">
+          <div className="h-full w-2/3 bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full animate-pulse" />
+        </div>
       </div>
     );
   }
@@ -144,8 +139,9 @@ export default function App() {
 
   // Logged in — show main app
   return (
-    <div className="min-h-screen bg-surface text-on-surface flex flex-col font-sans transition-colors duration-300">
-      <div className="w-full max-w-md sm:max-w-2xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl mx-auto flex flex-col min-h-screen bg-surface relative shadow-2xl transition-all duration-300">
+    <div className="min-h-screen w-full bg-slate-50 text-slate-900 flex flex-col font-sans transition-colors duration-300">
+      <div className="w-full flex flex-col min-h-screen relative">
+
         <Header
           currentScreen={currentScreen}
           title={getHeaderTitle()}
@@ -156,15 +152,18 @@ export default function App() {
         />
 
         {toastMessage && (
-          <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl bg-primary text-on-primary shadow-lg text-xs font-bold flex items-center gap-2 animate-in fade-in slide-in-from-top-3">
-            <span className="material-symbols-outlined text-secondary text-[20px]">military_tech</span>
+          <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-xl shadow-indigo-500/25 text-sm font-bold flex items-center gap-2.5 animate-in fade-in slide-in-from-top-3">
+            <span className="material-symbols-outlined text-yellow-300 text-[20px] fill-1">military_tech</span>
             <span>{toastMessage}</span>
           </div>
         )}
 
         <main className="flex-1 flex flex-col pt-16 pb-20 w-full">
           {currentScreen === 'beranda' && (
-            <BerandaScreen onNavigate={(screen, cat) => handleNavigate(screen, cat)} />
+            <BerandaScreen 
+              onNavigate={(screen, cat) => handleNavigate(screen, cat)}
+              onOpenTeacherMode={() => handleNavigate('admin')}
+            />
           )}
           {currentScreen === 'materi' && (
             <MateriScreen
@@ -174,11 +173,11 @@ export default function App() {
             />
           )}
           {currentScreen === 'latihan' && (
-            <LatihanScreen 
+            <LatihanScreen
               initialCategory={latihanCategory}
               onSelectCategory={(cat) => setLatihanCategory(cat)}
-              onClaimXp={handleClaimXp} 
-              onNavigateToSimulasi={() => handleNavigate('simulasi')} 
+              onClaimXp={handleClaimXp}
+              onNavigateToSimulasi={() => handleNavigate('simulasi')}
             />
           )}
           {currentScreen === 'ujian' && !activeExamId && (
@@ -188,7 +187,7 @@ export default function App() {
             <DashboardScreen onNavigate={(screen, cat, examId) => handleNavigate(screen, cat, examId)} />
           )}
           {currentScreen === 'admin' && (
-            <div className="flex flex-col w-full pb-16 font-sans px-margin-mobile animate-in fade-in pt-4">
+            <div className="flex flex-col w-full pb-16 font-sans px-4 lg:px-8 animate-in fade-in pt-4">
               <AdminSoalManager />
             </div>
           )}
@@ -196,11 +195,11 @@ export default function App() {
             <ExamViewer examId={activeExamId} onBack={() => { setActiveExamId(null); handleNavigate('ujian'); }} />
           )}
 
-          {/* Floating Admin Button — hanya tampil untuk Admin/Guru */}
+          {/* Floating Admin Button */}
           {isAdmin && currentScreen !== 'admin' && (
             <button
               onClick={() => handleNavigate('admin')}
-              className="fixed bottom-24 right-4 z-50 w-14 h-14 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-600/40 flex items-center justify-center cursor-pointer transition-all active:scale-90 animate-in fade-in zoom-in"
+              className="fixed bottom-24 right-4 z-50 w-14 h-14 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-600/40 flex items-center justify-center cursor-pointer transition-all duration-200 active:scale-90 animate-in fade-in zoom-in"
               title="Manajemen Soal (Admin)"
             >
               <span className="material-symbols-outlined text-2xl">admin_panel_settings</span>
@@ -211,7 +210,7 @@ export default function App() {
         <BottomNav
           currentScreen={currentScreen}
           onSelectScreen={(screen) => {
-            handleNavigate(screen, null); // Always reset category when using BottomNav
+            handleNavigate(screen, null);
           }}
         />
       </div>

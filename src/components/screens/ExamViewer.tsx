@@ -20,6 +20,7 @@ interface ExamPackage {
   title: string;
   strand: string;
   test_type: 'pretest' | 'postest';
+  exam_type?: string;
   duration_minutes: number;
   questions: ExamQuestion[];
   created_at?: string;
