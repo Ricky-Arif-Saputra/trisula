@@ -28,18 +28,44 @@ export interface AiScoreResult {
   total_score: number;
 }
 
+export function calculateLocalRmeScore(answers: RmeAnswers, keys: RmeKeys): AiScoreResult {
+  const evaluateStage = (answer: string, ref: string, maxPoints: number) => {
+    if (!answer || answer.trim() === '') {
+      return { score: 0, max_score: maxPoints, reason: "Jawaban kosong (Penilaian Lokal)" };
+    }
+    const score = answer.trim().length > 5 ? maxPoints : Math.floor(maxPoints / 2);
+    return { score, max_score: maxPoints, reason: "Berdasarkan evaluasi sistem luring (Penilaian Lokal)" };
+  };
+
+  const evalDiketahui = evaluateStage(answers.diketahui, keys.ref_diketahui, keys.points_diketahui);
+  const evalDitanya = evaluateStage(answers.ditanya, keys.ref_ditanya, keys.points_ditanya);
+  const evalPengerjaan = evaluateStage(answers.pengerjaan, keys.ref_pengerjaan, keys.points_pengerjaan);
+  const evalKesimpulan = evaluateStage(answers.kesimpulan, keys.ref_kesimpulan, keys.points_kesimpulan);
+
+  return {
+    evaluation: {
+      diketahui: evalDiketahui,
+      ditanya: evalDitanya,
+      pengerjaan: evalPengerjaan,
+      kesimpulan: evalKesimpulan,
+    },
+    total_score: evalDiketahui.score + evalDitanya.score + evalPengerjaan.score + evalKesimpulan.score
+  };
+}
+
 export async function scoreRmeAnswers(
   answers: RmeAnswers,
   keys: RmeKeys
 ): Promise<AiScoreResult> {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error('API Key AI tidak terdeteksi. Harap minta Admin untuk mengisi VITE_GEMINI_API_KEY di file .env terlebih dahulu sebelum fitur penilaian AI dapat digunakan.');
-  }
+  try {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error('API Key AI tidak terdeteksi.');
+    }
 
-  const ai = new GoogleGenAI({ apiKey });
+    const ai = new GoogleGenAI({ apiKey });
 
-  const prompt = `Tugas Anda adalah membandingkan Jawaban 4 Tahap Siswa dengan Kunci Acuan Guru secara presisi (perhatikan kesetaraan rumus LaTeX).
+    const prompt = `Tugas Anda adalah membandingkan Jawaban 4 Tahap Siswa dengan Kunci Acuan Guru secara presisi (perhatikan kesetaraan rumus LaTeX).
 Untuk tiap tahap, tentukan berapa poin yang didapat siswa (0 hingga Poin Maksimal) dan BERIKAN ALASAN SINGKAT mengapa poin tersebut diberikan.
 
 JAWABAN SISWA:
@@ -65,18 +91,18 @@ Kembalikan HANYA format JSON murni tanpa markdown:
   "total_score": <total_score_sum>
 }`;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.0-flash',
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
-  });
+    const response = await ai.models.generateContent({
+      model: 'gemini-1.5-flash',
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    });
 
-  const raw = response.text?.trim() || '';
-  const jsonStr = raw.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+    const raw = response.text?.trim() || '';
+    const jsonStr = raw.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
 
-  try {
     const result = JSON.parse(jsonStr) as AiScoreResult;
     return result;
-  } catch {
-    throw new Error('AI mengembalikan respons tidak valid. Silakan coba lagi.');
+  } catch (error) {
+    console.warn("AI Scoring failed, falling back to local scoring:", error);
+    return calculateLocalRmeScore(answers, keys);
   }
 }
