@@ -66,7 +66,7 @@ Kembalikan HANYA format JSON murni tanpa markdown:
 }`;
 
   const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash-preview-04-17',
+    model: 'gemini-2.0-flash',
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
   });
 
