@@ -1,114 +1,63 @@
-import { GoogleGenAI } from '@google/genai';
+import { supabase } from './supabaseClient';
 
-export interface RmeAnswers {
-  diketahui: string;
-  ditanya: string;
-  pengerjaan: string;
-  kesimpulan: string;
+// ── Tipe ──────────────────────────────────────────────────────────────────────
+
+/** Input yang dikirim ke /api/nilai — hanya data, BUKAN rubrik/skorMaks */
+export interface NilaiJawabanInput {
+  soal_id: string;
+  jawaban: string;
 }
 
-export interface RmeKeys {
-  ref_diketahui: string;
-  ref_ditanya: string;
-  ref_pengerjaan: string;
-  ref_kesimpulan: string;
-  points_diketahui: number;
-  points_ditanya: number;
-  points_pengerjaan: number;
-  points_kesimpulan: number;
+export interface NilaiJawabanOutput {
+  skor: number;
+  alasan: string;
 }
 
-export interface AiScoreResult {
-  evaluation: {
-    diketahui: { score: number; max_score: number; reason: string };
-    ditanya: { score: number; max_score: number; reason: string };
-    pengerjaan: { score: number; max_score: number; reason: string };
-    kesimpulan: { score: number; max_score: number; reason: string };
-  };
-  total_score: number;
+// ── Ambil token sesi aktif ────────────────────────────────────────────────────
+async function getAuthToken(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token ?? null;
 }
 
-export function calculateLocalRmeScore(answers: RmeAnswers, keys: RmeKeys): AiScoreResult {
-  const evaluateStage = (answer: string, ref: string, maxPoints: number) => {
-    if (!answer || answer.trim() === '') {
-      return { score: 0, max_score: maxPoints, reason: "Jawaban kosong (Penilaian Lokal)" };
-    }
-    const score = answer.trim().length > 5 ? maxPoints : Math.floor(maxPoints / 2);
-    return { score, max_score: maxPoints, reason: "Berdasarkan evaluasi sistem luring (Penilaian Lokal)" };
-  };
+// ── Panggil Serverless Function /api/nilai ────────────────────────────────────
+// Rubrik dan skorMaks tidak lagi dikirim dari browser — server mengambilnya sendiri.
+export async function nilaiJawaban(input: NilaiJawabanInput): Promise<NilaiJawabanOutput> {
+  const token = await getAuthToken();
+  if (!token) throw new Error('Sesi login tidak ditemukan. Silakan login ulang.');
 
-  const evalDiketahui = evaluateStage(answers.diketahui, keys.ref_diketahui, keys.points_diketahui);
-  const evalDitanya = evaluateStage(answers.ditanya, keys.ref_ditanya, keys.points_ditanya);
-  const evalPengerjaan = evaluateStage(answers.pengerjaan, keys.ref_pengerjaan, keys.points_pengerjaan);
-  const evalKesimpulan = evaluateStage(answers.kesimpulan, keys.ref_kesimpulan, keys.points_kesimpulan);
-
-  return {
-    evaluation: {
-      diketahui: evalDiketahui,
-      ditanya: evalDitanya,
-      pengerjaan: evalPengerjaan,
-      kesimpulan: evalKesimpulan,
+  const response = await fetch('/api/nilai', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
     },
-    total_score: evalDiketahui.score + evalDitanya.score + evalPengerjaan.score + evalKesimpulan.score
-  };
+    body: JSON.stringify({
+      soal_id: input.soal_id,
+      jawaban: input.jawaban,
+    }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data?.error || `Kesalahan server (${response.status})`);
+  }
+  if (data.error) throw new Error(data.error);
+
+  return data as NilaiJawabanOutput;
 }
 
-export async function scoreRmeAnswers(
-  answers: RmeAnswers,
-  keys: RmeKeys
-): Promise<AiScoreResult> {
-  try {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) {
-      // Jika API key tidak ada, langsung gunakan fallback lokal tanpa throw error
-      return calculateLocalRmeScore(answers, keys);
-    }
-
-    const ai = new GoogleGenAI({ apiKey });
-
-    const prompt = `Tugas Anda adalah membandingkan Jawaban 4 Tahap Siswa dengan Kunci Acuan Guru secara presisi (perhatikan kesetaraan rumus LaTeX).
-Untuk tiap tahap, tentukan berapa poin yang didapat siswa (0 hingga Poin Maksimal) dan BERIKAN ALASAN SINGKAT mengapa poin tersebut diberikan.
-
-JAWABAN SISWA:
-1. Diketahui: ${answers.diketahui || '(kosong)'}
-2. Ditanya: ${answers.ditanya || '(kosong)'}
-3. Pengerjaan: ${answers.pengerjaan || '(kosong)'}
-4. Kesimpulan: ${answers.kesimpulan || '(kosong)'}
-
-KUNCI JAWABAN ACUAN ADMIN:
-1. Diketahui: ${keys.ref_diketahui || '(tidak ada kunci)'}  — Poin Maks: ${keys.points_diketahui}
-2. Ditanya: ${keys.ref_ditanya || '(tidak ada kunci)'}  — Poin Maks: ${keys.points_ditanya}
-3. Pengerjaan: ${keys.ref_pengerjaan || '(tidak ada kunci)'}  — Poin Maks: ${keys.points_pengerjaan}
-4. Kesimpulan: ${keys.ref_kesimpulan || '(tidak ada kunci)'}  — Poin Maks: ${keys.points_kesimpulan}
-
-Kembalikan HANYA format JSON murni tanpa markdown:
-{
-  "evaluation": {
-    "diketahui": { "score": <number>, "max_score": ${keys.points_diketahui}, "reason": "<alasan>" },
-    "ditanya": { "score": <number>, "max_score": ${keys.points_ditanya}, "reason": "<alasan>" },
-    "pengerjaan": { "score": <number>, "max_score": ${keys.points_pengerjaan}, "reason": "<alasan>" },
-    "kesimpulan": { "score": <number>, "max_score": ${keys.points_kesimpulan}, "reason": "<alasan>" }
-  },
-  "total_score": <total_score_sum>
-}`;
-
-    // Memanggil API Gemini
-    const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    });
-
-    const raw = response.text?.trim() || '';
-    const jsonStr = raw.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
-
-    const result = JSON.parse(jsonStr) as AiScoreResult;
-    return result;
-
-  } catch (error) {
-    // Tangkap SEMUA error (termasuk 404, network error, parsing error, dll)
-    console.warn("AI Scoring failed or encountered an error. Falling back to calculateLocalRmeScore:", error);
-    
-    // Kembalikan penilaian lokal tanpa pernah throw error ke antarmuka aplikasi
-    return calculateLocalRmeScore(answers, keys);
-  }
+// ── simpanJawaban: sekarang dilakukan server-side di /api/nilai ───────────────
+// Fungsi ini dipertahankan sebagai no-op agar kode pemanggil tidak perlu diubah.
+// Klien tidak lagi menyimpan langsung ke Supabase.
+export async function simpanJawaban(_input: {
+  soal_id: string;
+  jawaban: string;
+  skor: number;
+  skor_maks: number;
+  alasan: string;
+}): Promise<string | null> {
+  // Penyimpanan sudah dilakukan oleh server (/api/nilai).
+  // Fungsi ini sengaja dikosongkan agar tidak ada double-write.
+  return null;
 }

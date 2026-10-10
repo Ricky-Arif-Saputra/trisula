@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { InlineMath } from 'react-katex';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../Auth/AuthProvider';
-import { scoreRmeAnswers, AiScoreResult, RmeAnswers, RmeKeys } from '../../lib/aiScoring';
+import { nilaiJawaban } from '../../lib/aiScoring';
+import { useRiwayat } from '../../hooks/useRiwayat';
 import html2pdf from 'html2pdf.js';
 
 // =====================================================
@@ -30,6 +31,31 @@ interface ExamPackage {
   duration_minutes: number;
   questions: RmeQuestion[];
   total_max_points?: number;
+}
+interface RmeAnswers {
+  diketahui: string;
+  ditanya: string;
+  pengerjaan: string;
+  kesimpulan: string;
+}
+export interface RmeKeys {
+  ref_diketahui: string;
+  ref_ditanya: string;
+  ref_pengerjaan: string;
+  ref_kesimpulan: string;
+  points_diketahui: number;
+  points_ditanya: number;
+  points_pengerjaan: number;
+  points_kesimpulan: number;
+}
+export interface AiScoreResult {
+  evaluation: {
+    diketahui: { score: number; max_score: number; reason: string };
+    ditanya: { score: number; max_score: number; reason: string };
+    pengerjaan: { score: number; max_score: number; reason: string };
+    kesimpulan: { score: number; max_score: number; reason: string };
+  };
+  total_score: number;
 }
 interface ExamViewerRmeProps {
   examId: string;
@@ -107,6 +133,8 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
   const [aiResults, setAiResults] = useState<Record<string, AiScoreResult>>({});
   const [scoringError, setScoringError] = useState<string | null>(null);
 
+  const { riwayat, loading: riwayatLoading, refetch: refetchRiwayat } = useRiwayat();
+
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Fetch exam ──────────────────────────────────────────────────────────────
@@ -181,44 +209,79 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
 
     try {
       for (const q of exam.questions) {
-        const keys = q.rme_keys;
+        const keys = q.rme_keys as unknown as RmeKeys;
         if (!keys) continue;
         const answers = essayAnswers[q.id] || { diketahui: '', ditanya: '', pengerjaan: '', kesimpulan: '' };
-        const result = await scoreRmeAnswers(answers, keys as RmeKeys);
+
+        // Hanya kirim soal_id + jawaban — rubrik & skor_maks diambil server dari DB
+        const STAGE_KEYS = ['diketahui', 'ditanya', 'pengerjaan', 'kesimpulan'] as const;
+        const evalResults = await Promise.all(
+          STAGE_KEYS.map(stage =>
+            nilaiJawaban({
+              soal_id: `${q.id}_${stage}`,
+              jawaban: answers[stage] || '',
+            }).catch((e: Error) => {
+              // 409 = sudah pernah submit — anggap skor penuh agar UI tidak error
+              if (e.message.includes('sudah pernah dikumpulkan')) {
+                return { skor: keys[`points_${stage}` as keyof RmeKeys] as unknown as number, alasan: '(sudah pernah dikumpulkan)' };
+              }
+              throw e;
+            })
+          )
+        );
+
+        const [evalDiketahui, evalDitanya, evalPengerjaan, evalKesimpulan] = evalResults;
+
+        const result: AiScoreResult = {
+          evaluation: {
+            diketahui:  { score: evalDiketahui.skor,  max_score: keys.points_diketahui,  reason: evalDiketahui.alasan  },
+            ditanya:    { score: evalDitanya.skor,    max_score: keys.points_ditanya,    reason: evalDitanya.alasan    },
+            pengerjaan: { score: evalPengerjaan.skor, max_score: keys.points_pengerjaan, reason: evalPengerjaan.alasan },
+            kesimpulan: { score: evalKesimpulan.skor, max_score: keys.points_kesimpulan, reason: evalKesimpulan.alasan },
+          },
+          total_score: evalDiketahui.skor + evalDitanya.skor + evalPengerjaan.skor + evalKesimpulan.skor,
+        };
+
         resultsMap[q.id] = result;
         totalScore += result.total_score;
         totalMaxPoints += (keys.points_diketahui + keys.points_ditanya + keys.points_pengerjaan + keys.points_kesimpulan);
       }
+
+      // Commit hasil ke state dan simpan rekap ke exam_attempts
+      setAiResults(resultsMap);
+
+      const normalizedScore = totalMaxPoints > 0 ? Math.round((totalScore / totalMaxPoints) * 100) : 0;
+
+      if (user) {
+        try {
+          await supabase.from('exam_attempts').insert({
+            exam_id: exam.id,
+            user_id: user.id,
+            student_name: studentName,
+            student_nisn: studentNisn,
+            score: normalizedScore,
+            correct_count: 0,
+            wrong_count: 0,
+            essay_answers: essayAnswers,
+            ai_scores: resultsMap,
+            total_essay_score: totalScore,
+            total_max_points: totalMaxPoints,
+          });
+        } catch (e) {
+          console.error('Failed to save RME exam attempt:', e);
+        }
+      }
+
+      // Refresh riwayat (penyimpanan per-tahap sudah dilakukan server di /api/nilai)
+      refetchRiwayat();
+      setPhase('result');
+
     } catch (e: any) {
-      setScoringError(e.message || 'Gagal menjalankan penilaian AI.');
+      // Error fatal (bukan 409) — tetap tampilkan halaman hasil dengan pesan error
+      setAiResults(resultsMap); // tampilkan hasil parsial yang sudah berhasil
+      setScoringError(e.message || 'Gagal menjalankan penilaian AI. Pastikan koneksi internet stabil.');
       setPhase('result');
     }
-
-    setAiResults(resultsMap);
-
-    const normalizedScore = totalMaxPoints > 0 ? Math.round((totalScore / totalMaxPoints) * 100) : 0;
-
-    if (user) {
-      try {
-        await supabase.from('exam_attempts').insert({
-          exam_id: exam.id,
-          user_id: user.id,
-          student_name: studentName,
-          student_nisn: studentNisn,
-          score: normalizedScore,
-          correct_count: 0,
-          wrong_count: 0,
-          essay_answers: essayAnswers,
-          ai_scores: resultsMap,
-          total_essay_score: totalScore,
-          total_max_points: totalMaxPoints,
-        });
-      } catch (e) {
-        console.error('Failed to save RME exam attempt:', e);
-      }
-    }
-
-    setPhase('result');
   };
 
   // ── PDF Download ─────────────────────────────────────────────────────────
@@ -851,8 +914,61 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
             </button>
           </div>
 
-          {/* RIGHT — Per-question AI feedback (8/12) */}
+          {/* RIGHT — Per-question AI feedback + riwayat (8/12) */}
           <div className="lg:col-span-8 flex flex-col gap-4">
+
+
+            {/* Riwayat jawaban */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+              <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-slate-400 text-[18px]">history</span>
+                  <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Riwayat Jawaban Saya</span>
+                </div>
+                <button
+                  onClick={refetchRiwayat}
+                  className="text-indigo-500 hover:text-indigo-700 transition-colors cursor-pointer"
+                  title="Perbarui riwayat"
+                >
+                  <span className="material-symbols-outlined text-[18px]">refresh</span>
+                </button>
+              </div>
+              <div className="divide-y divide-slate-100 max-h-64 overflow-y-auto">
+                {riwayatLoading ? (
+                  <div className="p-4 flex items-center justify-center gap-2 text-slate-400 text-sm">
+                    <div className="w-4 h-4 border-2 border-slate-200 border-t-indigo-500 rounded-full animate-spin" />
+                    Memuat riwayat...
+                  </div>
+                ) : riwayat.length === 0 ? (
+                  <div className="p-6 text-center text-slate-400 text-sm italic">Belum ada riwayat jawaban.</div>
+                ) : (
+                  riwayat.map((item) => {
+                    const pct = item.skor_maks && item.skor_maks > 0 ? Math.round(((item.skor ?? 0) / item.skor_maks) * 100) : 0;
+                    const badgeColor = pct >= 75 ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                      : pct >= 40 ? 'text-amber-700 bg-amber-50 border-amber-200'
+                      : 'text-rose-700 bg-rose-50 border-rose-200';
+                    return (
+                      <div key={item.id} className="px-4 py-3 flex items-start gap-3 hover:bg-slate-50 transition-colors">
+                        <div className={`flex-shrink-0 px-2 py-0.5 rounded-lg border text-xs font-black tabular-nums ${badgeColor}`}>
+                          {item.skor ?? '-'}/{item.skor_maks ?? '-'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.soal_id}</div>
+                          <div className="text-xs text-slate-600 mt-0.5 truncate">{item.jawaban}</div>
+                          {item.alasan && (
+                            <div className="text-[10px] text-slate-400 mt-0.5 italic line-clamp-1">{item.alasan}</div>
+                          )}
+                        </div>
+                        <div className="flex-shrink-0 text-[9px] text-slate-300 tabular-nums whitespace-nowrap">
+                          {new Date(item.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
             <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Umpan Balik AI per Soal</div>
 
             {exam.questions.map((q, qIdx) => {
