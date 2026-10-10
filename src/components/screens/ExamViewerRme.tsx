@@ -912,36 +912,54 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
 
                         return (
                           <div key={stage.key} className={`p-5 ${d.bg}`}>
-                            <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center justify-between mb-4">
                               <div className="flex items-center gap-2">
                                 <div className={`w-7 h-7 rounded-lg ${d.badge} flex items-center justify-center shadow-sm`}>
                                   <span className="material-symbols-outlined text-white text-[13px]">{stage.icon}</span>
                                 </div>
                                 <span className={`font-black text-sm ${d.label} uppercase tracking-wide`}>{stage.label}</span>
                               </div>
-                              <div className="flex items-center gap-1 px-3 py-1 rounded-xl bg-white border border-slate-200/60 shadow-sm">
-                                <span className="text-base font-black text-indigo-700">{stageScore}</span>
-                                <span className="text-xs text-slate-400">/ {maxPts}</span>
+                              <div className={`flex items-center gap-1 px-3 py-1 rounded-xl border shadow-sm ${
+                                stageScore === 0 
+                                  ? 'bg-rose-50 border-rose-200 text-rose-700' 
+                                  : stageScore === maxPts 
+                                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
+                                  : 'bg-amber-50 border-amber-200 text-amber-700'
+                              }`}>
+                                <span className="text-base font-black">{stageScore}</span>
+                                <span className="text-xs opacity-70 font-bold">/ {maxPts} Poin</span>
                               </div>
                             </div>
 
-                            {studentAnswer ? (
-                              <div className="bg-white rounded-xl border border-slate-200/60 p-3 mb-3 text-xs text-slate-700 leading-relaxed">
-                                <span className="font-bold text-[9px] uppercase text-slate-400 block mb-1">Jawaban Anda:</span>
-                                {studentAnswer}
+                            <div className="flex flex-col gap-3">
+                              {/* 1. Jawaban Anda */}
+                              <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-sm text-sm text-slate-700 leading-relaxed">
+                                <span className="font-black text-[10px] uppercase text-slate-400 tracking-widest block mb-1.5 flex items-center gap-1">
+                                  <span className="material-symbols-outlined text-[14px]">edit_document</span> Jawaban Anda
+                                </span>
+                                {studentAnswer ? (
+                                  <div className="whitespace-pre-wrap">{studentAnswer}</div>
+                                ) : (
+                                  <span className="italic text-slate-400">Tidak ada jawaban</span>
+                                )}
                               </div>
-                            ) : (
-                              <div className="bg-white/60 rounded-xl border border-dashed border-slate-200 p-3 mb-3 text-xs text-slate-400 italic">
-                                Tidak ada jawaban
-                              </div>
-                            )}
 
-                            {feedback && (
-                              <div className="flex gap-2 items-start text-xs text-slate-600 bg-white/70 rounded-xl p-3 border border-slate-200/60">
-                                <span className="material-symbols-outlined text-[14px] text-indigo-400 shrink-0 mt-0.5">smart_toy</span>
-                                <span className="italic leading-relaxed">{feedback}</span>
+                              {/* 2. Kunci Jawaban Acuan */}
+                              <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-3.5 shadow-sm text-sm text-emerald-900 leading-relaxed">
+                                <span className="font-black text-[10px] uppercase text-emerald-600 tracking-widest block mb-1.5 flex items-center gap-1">
+                                  <span className="material-symbols-outlined text-[14px]">key</span> Kunci Jawaban Acuan
+                                </span>
+                                <div className="whitespace-pre-wrap">{keys ? (keys as any)[`ref_${stage.key}`] || 'Tidak ada kunci' : 'Tidak ada kunci'}</div>
                               </div>
-                            )}
+
+                              {/* 3. Alasan & Evaluasi Penilaian */}
+                              <div className="bg-indigo-50 rounded-xl border border-indigo-200 p-3.5 shadow-sm text-sm text-indigo-900 leading-relaxed">
+                                <span className="font-black text-[10px] uppercase text-indigo-600 tracking-widest block mb-1.5 flex items-center gap-1">
+                                  <span className="material-symbols-outlined text-[14px]">smart_toy</span> Alasan & Evaluasi Penilaian
+                                </span>
+                                <div className="whitespace-pre-wrap italic">{feedback || 'Tidak ada evaluasi'}</div>
+                              </div>
+                            </div>
                           </div>
                         );
                       })}
