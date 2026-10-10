@@ -3,21 +3,18 @@ import { motion } from 'framer-motion';
 import { 
   Sparkles, 
   Map, 
-  Network, 
-  Users, 
-  HandHeart, 
-  Waypoints, 
-  BookOpen, 
-  Target, 
-  Brain, 
-  Flag 
+  BrainCircuit, 
+  Lightbulb, 
+  MessageSquareShare, 
+  ArrowRight,
+  Bot
 } from 'lucide-react';
 import { ScreenType, MathCategory } from '../../types';
 import { useAuth } from '../Auth/AuthProvider';
 
 interface BerandaScreenProps {
   onNavigate: (screen: ScreenType, category?: MathCategory) => void;
-  onOpenTeacherMode: () => void; // Keeping prop to avoid breaking router, though not used in UI
+  onOpenTeacherMode: () => void;
 }
 
 export const BerandaScreen: React.FC<BerandaScreenProps> = ({
@@ -30,183 +27,223 @@ export const BerandaScreen: React.FC<BerandaScreenProps> = ({
     show: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.15
+        staggerChildren: 0.1
       }
     }
   };
 
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
+    show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' as const } }
+  };
+
+  const floatingVariants = {
+    animate: {
+      y: [0, -10, 0],
+      transition: {
+        duration: 4,
+        repeat: Infinity,
+        ease: 'easeInOut' as const
+      }
+    }
   };
 
   return (
-    <div className="w-full min-h-screen bg-(--color-beranda-bg) text-(--color-beranda-mauve) font-sans overflow-x-hidden">
+    <div className="w-full min-h-screen bg-linear-to-br from-slate-50 via-white to-rose-50/30 text-slate-900 font-sans overflow-x-hidden selection:bg-indigo-100 selection:text-indigo-900">
       <motion.div 
-        className="max-w-4xl mx-auto px-6 py-16 lg:py-24 flex flex-col gap-24"
+        className="max-w-7xl mx-auto px-6 py-16 lg:py-24 flex flex-col gap-32"
         variants={containerVariants}
         initial="hidden"
         animate="show"
       >
         
-        {/* 1. HERO SECTION */}
-        <motion.section variants={itemVariants} className="flex flex-col items-center text-center gap-8">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-(--color-beranda-blush) border border-(--color-beranda-mauve)/10 text-(--color-beranda-mauve) text-xs font-semibold tracking-widest uppercase">
-            <Sparkles size={14} className="text-(--color-beranda-gold)" />
-            <span>Matematika Realistik</span>
-          </div>
-          
-          <div className="flex flex-col gap-4">
-            <h1 className="font-serif text-5xl lg:text-6xl text-(--color-beranda-mauve) leading-[1.15] tracking-tight">
-              Halo, {userName || 'Pembelajar'}!
-            </h1>
-            <h2 className="font-serif text-3xl lg:text-4xl text-(--color-beranda-mauve-light) font-medium">
-              Selamat datang di ruang berekspresi.
-            </h2>
-          </div>
-          
-          <p className="text-(--color-beranda-mauve-light) text-lg max-w-2xl leading-relaxed">
-            Di sini, matematika dipelajari dari masalah nyata yang bermakna. Tidak sekadar menghafal, 
-            namun membangun nalar untuk menemukan kembali konsep secara bertahap.
-          </p>
-          
-          <button
-            onClick={() => onNavigate('materi')}
-            className="mt-4 px-10 py-4 rounded-full bg-(--color-beranda-mauve) text-(--color-beranda-bg) font-medium tracking-wide hover:bg-(--color-beranda-mauve-light) transition-colors duration-300 shadow-lg shadow-(--color-beranda-mauve)/20 focus:outline-none focus:ring-4 focus:ring-(--color-beranda-gold)/30 cursor-pointer"
-          >
-            Mulai Belajar
-          </button>
-        </motion.section>
-
-        {/* 2. APA ITU RME */}
-        <motion.section variants={itemVariants} className="w-full">
-          <div className="bg-(--color-beranda-blush) rounded-3xl p-10 lg:p-14 border border-(--color-beranda-mauve)/10 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-            <h3 className="font-serif text-3xl text-(--color-beranda-mauve) mb-6 flex items-center gap-3">
-              <BookOpen className="text-(--color-beranda-gold)" size={28} />
-              Apa itu RME?
-            </h3>
-            <p className="text-(--color-beranda-mauve-light) text-lg leading-relaxed">
-              Realistic Mathematics Education (RME) adalah pendekatan yang meyakini bahwa matematika adalah aktivitas manusia. 
-              Pembelajaran dimulai dari situasi atau masalah di dunia nyata yang dapat Anda bayangkan, yang kemudian menjadi 
-              jembatan untuk menyusun pemahaman matematis secara intuitif dan mandiri.
+        {/* 1. HERO SECTION (2 Columns) */}
+        <section className="flex flex-col lg:flex-row items-center justify-between gap-16 w-full">
+          {/* Kolom Kiri */}
+          <motion.div variants={itemVariants} className="flex-1 flex flex-col items-start gap-8">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 text-sm font-semibold tracking-wide shadow-xs">
+              <Sparkles size={16} className="text-indigo-500" />
+              <span>Platform Edukasi Matematika Realistik (RME)</span>
+            </div>
+            
+            <div className="flex flex-col gap-4">
+              <h1 className="text-4xl lg:text-6xl font-bold tracking-tight text-slate-900 leading-[1.15]">
+                {userName ? `Halo ${userName},` : 'Transformasi'} <br className="hidden lg:block"/>
+                <span className="text-transparent bg-clip-text bg-linear-to-r from-indigo-600 via-purple-600 to-rose-500">
+                  Nalar Matematika
+                </span>
+                <br /> Kelas Dunia.
+              </h1>
+            </div>
+            
+            <p className="text-lg text-slate-600 max-w-xl leading-relaxed">
+              Tinggalkan hafalan rumus yang membosankan. TRISULA mengintegrasikan kecerdasan buatan dengan metodologi Realistic Mathematics Education, mengubah studi kasus dunia nyata menjadi pemahaman konsep yang mendalam.
             </p>
+            
+            <div className="flex flex-col sm:flex-row items-center gap-4 mt-2 w-full sm:w-auto">
+              <button
+                onClick={() => onNavigate('latihan-rme')}
+                className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-base transition-all duration-300 shadow-lg shadow-indigo-500/20 active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                Mulai Latihan RME
+                <ArrowRight size={18} />
+              </button>
+              <button
+                onClick={() => document.getElementById('alur-rme')?.scrollIntoView({ behavior: 'smooth' })}
+                className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 font-semibold text-base border border-slate-200 transition-all duration-300 active:scale-95 cursor-pointer"
+              >
+                Pelajari Alur RME
+              </button>
+            </div>
+          </motion.div>
+
+          {/* Kolom Kanan (Visual Mockup) */}
+          <motion.div variants={itemVariants} className="flex-1 w-full relative h-[400px] lg:h-[500px] flex items-center justify-center">
+            {/* Background glowing orb */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-purple-400/20 rounded-full blur-3xl pointer-events-none"></div>
+            
+            <motion.div 
+              variants={floatingVariants}
+              animate="animate"
+              className="relative w-full max-w-md bg-white/80 backdrop-blur-xl border border-slate-200/80 rounded-[2rem] shadow-2xl shadow-indigo-900/5 p-6 flex flex-col gap-4 z-10"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center">
+                    <Bot className="text-indigo-600" size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">AI Scoring Engine</h3>
+                    <p className="text-xs text-slate-500">Evaluasi Real-time</p>
+                  </div>
+                </div>
+                {/* Pulsing dot AI */}
+                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 text-[10px] font-bold uppercase tracking-wider">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  Aktif
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 pt-2">
+                {[
+                  { title: 'Tahap 1: Diketahui', status: 'bg-emerald-500', w: 'w-full' },
+                  { title: 'Tahap 2: Ditanya', status: 'bg-emerald-500', w: 'w-full' },
+                  { title: 'Tahap 3: Pengerjaan', status: 'bg-indigo-500', w: 'w-3/4', pulse: true },
+                  { title: 'Tahap 4: Kesimpulan', status: 'bg-slate-200', w: 'w-1/4' }
+                ].map((item, idx) => (
+                  <div key={idx} className="flex flex-col gap-1.5">
+                    <span className="text-xs font-semibold text-slate-600">{item.title}</span>
+                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <div className={`h-full ${item.status} ${item.w} rounded-full ${item.pulse ? 'animate-pulse' : ''}`}></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="mt-2 p-3 rounded-xl bg-indigo-50/50 border border-indigo-100/50 text-xs text-indigo-800 font-medium">
+                "Analisis matriks siswa sangat baik. Melanjutkan ke evaluasi kesimpulan akhir..."
+              </div>
+            </motion.div>
+          </motion.div>
+        </section>
+
+        {/* 2. BENTO GRID: 4 PILAR RME */}
+        <motion.section id="alur-rme" variants={itemVariants} className="w-full flex flex-col gap-10 scroll-mt-24">
+          <div className="flex flex-col items-start gap-3">
+            <h2 className="text-3xl lg:text-4xl font-bold tracking-tight text-slate-900">Arsitektur Pembelajaran</h2>
+            <p className="text-slate-600 max-w-2xl text-lg">Empat fase esensial RME yang memandu siswa dari kebingungan empiris menuju kejernihan matematis.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[minmax(200px,auto)]">
+            {/* Card 1 (Span 2) */}
+            <div className="md:col-span-2 bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-3xl p-8 lg:p-10 shadow-sm hover:shadow-xl hover:border-indigo-200 transition-all duration-300 flex flex-col justify-between gap-6 group">
+              <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <Map size={28} />
+              </div>
+              <div>
+                <span className="text-sm font-bold text-indigo-600 tracking-wider mb-2 block">01</span>
+                <h3 className="text-2xl font-bold text-slate-900 mb-2">Memahami Konteks Realistis</h3>
+                <p className="text-slate-600 leading-relaxed">
+                  Semuanya bermula dari fenomena dunia nyata yang valid. Mengurai masalah autentik menjadi variabel yang dapat dikuantifikasi, memastikan matematika memiliki makna.
+                </p>
+              </div>
+            </div>
+
+            {/* Card 2 (Span 1) */}
+            <div className="md:col-span-1 bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-3xl p-8 shadow-sm hover:shadow-xl hover:border-purple-200 transition-all duration-300 flex flex-col justify-between gap-6 group">
+              <div className="w-14 h-14 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <BrainCircuit size={28} />
+              </div>
+              <div>
+                <span className="text-sm font-bold text-purple-600 tracking-wider mb-2 block">02</span>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">Matematisasi</h3>
+                <p className="text-slate-600 text-sm leading-relaxed">
+                  Menyaring kerumitan realitas ke dalam bahasa simbolik dan model matematis yang presisi.
+                </p>
+              </div>
+            </div>
+
+            {/* Card 3 (Span 1) */}
+            <div className="md:col-span-1 bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-3xl p-8 shadow-sm hover:shadow-xl hover:border-rose-200 transition-all duration-300 flex flex-col justify-between gap-6 group">
+              <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <Lightbulb size={28} />
+              </div>
+              <div>
+                <span className="text-sm font-bold text-rose-600 tracking-wider mb-2 block">03</span>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">Penemuan Terbimbing</h3>
+                <p className="text-slate-600 text-sm leading-relaxed">
+                  Membangun alur logika dan strategi pemecahan masalah secara mandiri dan organik.
+                </p>
+              </div>
+            </div>
+
+            {/* Card 4 (Span 2) */}
+            <div className="md:col-span-2 bg-linear-to-br from-slate-900 to-indigo-950 rounded-3xl p-8 lg:p-10 shadow-lg hover:shadow-2xl hover:shadow-indigo-900/30 transition-all duration-300 flex flex-col justify-between gap-6 group border border-indigo-800/50">
+              <div className="w-14 h-14 rounded-2xl bg-white/10 text-white flex items-center justify-center group-hover:scale-110 transition-transform duration-300 backdrop-blur-md">
+                <MessageSquareShare size={28} />
+              </div>
+              <div>
+                <span className="text-sm font-bold text-indigo-300 tracking-wider mb-2 block">04</span>
+                <h3 className="text-2xl font-bold text-white mb-2">Re-kontekstualisasi & Refleksi</h3>
+                <p className="text-slate-300 leading-relaxed">
+                  Mengembalikan hasil numerik ke dalam konteks awal untuk membuktikan validitasnya, didukung oleh mesin inferensi AI TRISULA yang memberikan umpan balik korektif instan.
+                </p>
+              </div>
+            </div>
           </div>
         </motion.section>
 
-        {/* 3. 4 TAHAP RME DI TRISULA */}
-        <motion.section variants={itemVariants} className="w-full flex flex-col gap-10">
-          <div className="text-center">
-            <h3 className="font-serif text-4xl text-(--color-beranda-mauve)">4 Tahap RME di TRISULA</h3>
-          </div>
-
-          <div className="relative max-w-2xl mx-auto w-full pt-4 pb-8">
-            {/* Vertical Line */}
-            <div className="absolute left-[27px] lg:left-1/2 lg:-ml-[1px] top-8 bottom-8 w-[2px] bg-(--color-beranda-gold)/30"></div>
-
-            <div className="flex flex-col gap-12">
-              {/* Tahap 1 */}
-              <div className="relative flex flex-col lg:flex-row items-start lg:items-center w-full group">
-                <div className="lg:w-1/2 lg:pr-12 lg:text-right flex flex-col gap-1 pl-20 lg:pl-0 order-2 lg:order-1 mt-1 lg:mt-0">
-                  <h4 className="font-serif text-2xl text-(--color-beranda-mauve)">Diketahui</h4>
-                  <p className="text-(--color-beranda-mauve-light) leading-relaxed">
-                    Memahami konteks dunia nyata, mengidentifikasi informasi penting dari narasi masalah.
-                  </p>
-                </div>
-                <div className="absolute left-0 lg:left-1/2 lg:-translate-x-1/2 w-14 h-14 rounded-full bg-(--color-beranda-bg) border-2 border-(--color-beranda-gold) flex items-center justify-center text-(--color-beranda-gold) z-10 shadow-sm transition-transform duration-500 group-hover:scale-110">
-                  <Map size={24} />
-                </div>
-                <div className="lg:w-1/2 lg:pl-12 order-3 lg:order-2 hidden lg:block"></div>
+        {/* 3. KEUNGGULAN (3 Grid) */}
+        <motion.section variants={itemVariants} className="w-full pb-24">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="flex flex-col gap-4">
+              <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2">
+                <BrainCircuit size={24} />
               </div>
-
-              {/* Tahap 2 */}
-              <div className="relative flex flex-col lg:flex-row items-start lg:items-center w-full group">
-                <div className="lg:w-1/2 lg:pr-12 hidden lg:block order-1"></div>
-                <div className="absolute left-0 lg:left-1/2 lg:-translate-x-1/2 w-14 h-14 rounded-full bg-(--color-beranda-bg) border-2 border-(--color-beranda-gold) flex items-center justify-center text-(--color-beranda-gold) z-10 shadow-sm transition-transform duration-500 group-hover:scale-110">
-                  <Target size={24} />
-                </div>
-                <div className="lg:w-1/2 lg:pl-12 flex flex-col gap-1 pl-20 lg:pl-0 order-2 mt-1 lg:mt-0">
-                  <h4 className="font-serif text-2xl text-(--color-beranda-mauve)">Ditanya</h4>
-                  <p className="text-(--color-beranda-mauve-light) leading-relaxed">
-                    Merumuskan inti permasalahan matematis yang perlu diselesaikan dari konteks tersebut.
-                  </p>
-                </div>
-              </div>
-
-              {/* Tahap 3 */}
-              <div className="relative flex flex-col lg:flex-row items-start lg:items-center w-full group">
-                <div className="lg:w-1/2 lg:pr-12 lg:text-right flex flex-col gap-1 pl-20 lg:pl-0 order-2 lg:order-1 mt-1 lg:mt-0">
-                  <h4 className="font-serif text-2xl text-(--color-beranda-mauve)">Pengerjaan</h4>
-                  <p className="text-(--color-beranda-mauve-light) leading-relaxed">
-                    Menyusun model (matematisasi) dan menghitung solusi dengan strategi mandiri.
-                  </p>
-                </div>
-                <div className="absolute left-0 lg:left-1/2 lg:-translate-x-1/2 w-14 h-14 rounded-full bg-(--color-beranda-bg) border-2 border-(--color-beranda-gold) flex items-center justify-center text-(--color-beranda-gold) z-10 shadow-sm transition-transform duration-500 group-hover:scale-110">
-                  <Brain size={24} />
-                </div>
-                <div className="lg:w-1/2 lg:pl-12 order-3 lg:order-2 hidden lg:block"></div>
-              </div>
-
-              {/* Tahap 4 */}
-              <div className="relative flex flex-col lg:flex-row items-start lg:items-center w-full group">
-                <div className="lg:w-1/2 lg:pr-12 hidden lg:block order-1"></div>
-                <div className="absolute left-0 lg:left-1/2 lg:-translate-x-1/2 w-14 h-14 rounded-full bg-(--color-beranda-bg) border-2 border-(--color-beranda-gold) flex items-center justify-center text-(--color-beranda-gold) z-10 shadow-sm transition-transform duration-500 group-hover:scale-110">
-                  <Flag size={24} />
-                </div>
-                <div className="lg:w-1/2 lg:pl-12 flex flex-col gap-1 pl-20 lg:pl-0 order-2 mt-1 lg:mt-0">
-                  <h4 className="font-serif text-2xl text-(--color-beranda-mauve)">Kesimpulan</h4>
-                  <p className="text-(--color-beranda-mauve-light) leading-relaxed">
-                    Menerjemahkan kembali hasil matematis ke dalam bahasa dunia nyata dan mengevaluasinya.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </motion.section>
-
-        {/* 4. KARAKTERISTIK RME */}
-        <motion.section variants={itemVariants} className="w-full flex flex-col gap-10">
-          <div className="text-center">
-            <h3 className="font-serif text-4xl text-(--color-beranda-mauve)">Karakteristik RME</h3>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-transparent border border-(--color-beranda-mauve)/15 rounded-3xl p-8 hover:bg-(--color-beranda-blush)/50 transition-colors duration-300">
-              <Network className="text-(--color-beranda-gold) mb-4" size={28} />
-              <h4 className="font-serif text-xl text-(--color-beranda-mauve) mb-2">Penggunaan Konteks Nyata</h4>
-              <p className="text-(--color-beranda-mauve-light) text-sm leading-relaxed">
-                Situasi nyata dijadikan titik tolak belajar.
+              <h4 className="text-xl font-bold text-slate-900">Penalar Logis</h4>
+              <p className="text-slate-600 text-sm leading-relaxed">
+                Membentuk pola pikir yang terstruktur dan analitis, menghilangkan kebutuhan untuk menghafal rumus buta.
               </p>
             </div>
-            
-            <div className="bg-transparent border border-(--color-beranda-mauve)/15 rounded-3xl p-8 hover:bg-(--color-beranda-blush)/50 transition-colors duration-300">
-              <Waypoints className="text-(--color-beranda-gold) mb-4" size={28} />
-              <h4 className="font-serif text-xl text-(--color-beranda-mauve) mb-2">Penggunaan Model</h4>
-              <p className="text-(--color-beranda-mauve-light) text-sm leading-relaxed">
-                Menjembatani realitas konkret menuju matematika abstrak secara halus.
+            <div className="flex flex-col gap-4">
+              <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-2">
+                <Bot size={24} />
+              </div>
+              <h4 className="text-xl font-bold text-slate-900">Integrasi AI Ketat</h4>
+              <p className="text-slate-600 text-sm leading-relaxed">
+                Setiap tahap dianalisis secara semantik oleh mesin LLM untuk memberikan panduan yang setara dengan tutor privat.
               </p>
             </div>
-            
-            <div className="bg-transparent border border-(--color-beranda-mauve)/15 rounded-3xl p-8 hover:bg-(--color-beranda-blush)/50 transition-colors duration-300">
-              <HandHeart className="text-(--color-beranda-gold) mb-4" size={28} />
-              <h4 className="font-serif text-xl text-(--color-beranda-mauve) mb-2">Kontribusi Siswa</h4>
-              <p className="text-(--color-beranda-mauve-light) text-sm leading-relaxed">
-                Pemikiran dan konstruksi mandiri siswa sangat dihargai.
-              </p>
-            </div>
-            
-            <div className="bg-transparent border border-(--color-beranda-mauve)/15 rounded-3xl p-8 hover:bg-(--color-beranda-blush)/50 transition-colors duration-300">
-              <Users className="text-(--color-beranda-gold) mb-4" size={28} />
-              <h4 className="font-serif text-xl text-(--color-beranda-mauve) mb-2">Interaktivitas</h4>
-              <p className="text-(--color-beranda-mauve-light) text-sm leading-relaxed">
-                Belajar adalah interaksi sosial yang penuh diskusi dan refleksi.
-              </p>
-            </div>
-
-            <div className="bg-transparent border border-(--color-beranda-mauve)/15 rounded-3xl p-8 hover:bg-(--color-beranda-blush)/50 transition-colors duration-300 md:col-span-2 md:w-1/2 md:mx-auto">
-              <Sparkles className="text-(--color-beranda-gold) mb-4" size={28} />
-              <h4 className="font-serif text-xl text-(--color-beranda-mauve) mb-2">Keterkaitan Antarkonsep</h4>
-              <p className="text-(--color-beranda-mauve-light) text-sm leading-relaxed">
-                Matematika adalah satu kesatuan struktur, bukan bab-bab terpisah.
+            <div className="flex flex-col gap-4">
+              <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mb-2">
+                <Map size={24} />
+              </div>
+              <h4 className="text-xl font-bold text-slate-900">Berbasis Masalah</h4>
+              <p className="text-slate-600 text-sm leading-relaxed">
+                Eksplorasi dari arsitektur jembatan hingga kurva epidemiologi, menjadikan matematika 100% relevan.
               </p>
             </div>
           </div>
