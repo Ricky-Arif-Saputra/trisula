@@ -132,6 +132,7 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
   const [essayAnswers, setEssayAnswers] = useState<Record<string, RmeAnswers>>({});
   const [aiResults, setAiResults] = useState<Record<string, AiScoreResult>>({});
   const [scoringError, setScoringError] = useState<string | null>(null);
+  const [scoringErrorDetail, setScoringErrorDetail] = useState<string | null>(null);
 
   const { riwayat, loading: riwayatLoading, refetch: refetchRiwayat } = useRiwayat();
 
@@ -268,8 +269,8 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
             total_essay_score: totalScore,
             total_max_points: totalMaxPoints,
           });
-        } catch (e) {
-          console.error('Failed to save RME exam attempt:', e);
+        } catch (e: any) {
+          throw new Error(`[Langkah: simpan exam_attempts] Gagal menyimpan rekap. Detail: ${e.name}: ${e.message}`);
         }
       }
 
@@ -278,9 +279,10 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
       setPhase('result');
 
     } catch (e: any) {
-      // Error fatal (bukan 409) — tetap tampilkan halaman hasil dengan pesan error
+      // Error fatal — tetap tampilkan halaman hasil dengan pesan error
       setAiResults(resultsMap); // tampilkan hasil parsial yang sudah berhasil
-      setScoringError(e.message || 'Gagal menjalankan penilaian AI. Pastikan koneksi internet stabil.');
+      setScoringError('Penilaian AI Gagal');
+      setScoringErrorDetail(e.message || 'Terjadi kesalahan tidak dikenal.');
       setPhase('result');
     }
   };
@@ -837,8 +839,10 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
           <div className="mb-6 bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-xl shadow-sm flex gap-3 items-start animate-in fade-in">
             <span className="material-symbols-outlined text-red-500 text-xl flex-shrink-0">warning</span>
             <div>
-              <p className="font-bold text-sm">Penilaian AI Gagal</p>
-              <p className="text-sm text-red-600 mt-0.5">{scoringError}</p>
+              <p className="font-bold text-sm">{scoringError}</p>
+              {scoringErrorDetail && (
+                <p className="text-xs text-red-600/80 mt-1 font-mono whitespace-pre-wrap">{scoringErrorDetail}</p>
+              )}
             </div>
           </div>
         )}

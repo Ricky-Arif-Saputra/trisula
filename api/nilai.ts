@@ -69,6 +69,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (error) {
     const e = error instanceof Error ? error : new Error(String(error));
     console.error('Error di /api/nilai:', e.name, e.message);
-    return res.status(500).json({ error: 'Terjadi kesalahan pada server. Silakan coba lagi.' });
+    return res.status(500).json({ error: `Terjadi kesalahan pada server. Detail: ${e.name}: ${e.message}` });
   }
 }
