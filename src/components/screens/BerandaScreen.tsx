@@ -21,6 +21,7 @@ import {
   Instagram,
   Github,
   Mail,
+  ChevronDown
 } from 'lucide-react';
 import { ScreenType, MathCategory } from '../../types';
 import { useAuth } from '../Auth/AuthProvider';
@@ -53,6 +54,7 @@ export const BerandaScreen: React.FC<BerandaScreenProps> = ({ onNavigate }) => {
   const { userName } = useAuth();
   const [activeFeature, setActiveFeature] = useState(0);
   const [activeProblem, setActiveProblem] = useState<'rme' | 'traditional'>('rme');
+  const [activePillar, setActivePillar] = useState<number | null>(null);
 
   const fadeUp = {
     hidden: { opacity: 0, y: 32 },
@@ -128,36 +130,15 @@ export const BerandaScreen: React.FC<BerandaScreenProps> = ({ onNavigate }) => {
   ];
 
   return (
-    <div className="w-full min-h-screen bg-[#0F172A] text-slate-100 font-sans antialiased overflow-x-hidden">
+    <div className="w-full min-h-screen bg-gradient-to-b from-[#0F172A] via-[#1E293B] to-slate-50 font-sans antialiased overflow-x-hidden">
 
-      {/* Ambient blurs */}
+      {/* Ambient blurs - only at the top */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden z-0">
         <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-blue-600/[0.08] blur-[120px]" />
-        <div className="absolute top-1/2 right-[-200px] w-[500px] h-[500px] rounded-full bg-violet-600/[0.06] blur-[100px]" />
-        <div className="absolute bottom-0 left-1/3 w-[400px] h-[400px] rounded-full bg-blue-500/[0.05] blur-[80px]" />
+        <div className="absolute top-1/4 right-[-200px] w-[500px] h-[500px] rounded-full bg-violet-600/[0.06] blur-[100px]" />
       </div>
 
-      <div className="relative z-10">
-
-        {/* NAV */}
-        <nav className="sticky top-0 z-50 w-full border-b border-white/[0.06] bg-[#0F172A]/80 backdrop-blur-xl">
-          <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                <Triangle size={18} className="text-white" fill="white" />
-              </div>
-              <span className="text-base font-extrabold text-white tracking-tight">TRISULA <span className="font-light text-blue-400">EDUMATH</span></span>
-            </div>
-            <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
-              {['Beranda', 'Metode RME', 'Modul Interaktif', 'Keunggulan', 'Kontak'].map(link => (
-                <a key={link} href="#" className="hover:text-white transition-colors duration-200">{link}</a>
-              ))}
-            </div>
-            <button onClick={() => onNavigate('latihan-rme')} className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold transition-all duration-300 hover:bg-blue-500 hover:shadow-lg hover:shadow-blue-500/30 active:scale-95 cursor-pointer">
-              Mulai Belajar <ArrowRight size={15} className="group-hover:translate-x-0.5 transition-transform" />
-            </button>
-          </div>
-        </nav>
+      <div className="relative z-10 text-white">
 
         {/* HERO */}
         <section className="max-w-7xl mx-auto px-6 pt-24 pb-32 flex flex-col lg:flex-row items-center gap-16">
@@ -173,14 +154,7 @@ export const BerandaScreen: React.FC<BerandaScreenProps> = ({ onNavigate }) => {
             <motion.p variants={fadeUp} className="text-lg text-slate-400 max-w-xl leading-relaxed">
               Platform pembelajaran matematika kontekstual yang mengintegrasikan <em className="text-slate-200 not-italic">Realistic Mathematics Education</em> (RME) dengan <em className="text-slate-200 not-italic">AI Scoring Engine</em>—memandu siswa dari masalah dunia nyata menuju penguasaan matematis mendalam.
             </motion.p>
-            <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4">
-              <button onClick={() => onNavigate('latihan-rme')} className="group inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-base transition-all duration-300 shadow-lg shadow-blue-600/30 hover:scale-[1.03] active:scale-95 cursor-pointer">
-                Eksplorasi Modul <ArrowRight size={18} className="group-hover:translate-x-0.5 transition-transform" />
-              </button>
-              <button onClick={() => document.getElementById('metode-rme')?.scrollIntoView({ behavior: 'smooth' })} className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl border border-slate-700 hover:border-blue-500/50 text-slate-300 hover:text-white font-semibold text-base transition-all duration-300 cursor-pointer">
-                <Play size={16} className="text-blue-400" /> Pelajari Metode RME
-              </button>
-            </motion.div>
+            {/* Buttons removed as requested */}
             <motion.div variants={fadeUp} className="flex items-center gap-4 pt-2">
               <div className="flex -space-x-2">
                 {['#3B82F6','#8B5CF6','#06B6D4','#10B981'].map((c,i) => (
@@ -196,53 +170,20 @@ export const BerandaScreen: React.FC<BerandaScreenProps> = ({ onNavigate }) => {
             </motion.div>
           </motion.div>
 
-          {/* Dashboard preview card */}
-          <motion.div className="flex-1 w-full max-w-lg relative" initial={{ opacity:0,x:40 }} animate={{ opacity:1,x:0,transition:{duration:0.8,ease:'easeOut' as const,delay:0.2} }}>
-            <div className="relative rounded-3xl border border-white/[0.08] bg-[#1E293B]/80 backdrop-blur-xl p-6 shadow-2xl shadow-black/40">
-              <div className="flex items-center justify-between mb-5 pb-4 border-b border-white/[0.07]">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-blue-600/20 border border-blue-600/30 flex items-center justify-center">
-                    <Triangle size={14} className="text-blue-400" fill="currentColor" />
-                  </div>
-                  <div><p className="text-xs font-bold text-white">TRISULA AI Engine</p><p className="text-[10px] text-slate-500">Real-time Evaluation</p></div>
-                </div>
-                <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-700/40 px-2.5 py-1 rounded-full">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"/>Live
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3 mb-5">
-                {[{label:'Skor Total',val:'87',unit:'/100'},{label:'Tahap Selesai',val:'3',unit:'/4'},{label:'Waktu Tersisa',val:'14',unit:' mnt'},{label:'Akurasi',val:'91',unit:'%'}].map(m=>(
-                  <div key={m.label} className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3">
-                    <p className="text-[10px] text-slate-500 mb-1">{m.label}</p>
-                    <p className="text-xl font-black text-white">{m.val}<span className="text-xs font-normal text-slate-500">{m.unit}</span></p>
-                  </div>
-                ))}
-              </div>
-              <div className="space-y-2.5">
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Evaluasi Per Tahap</p>
-                {[{label:'Konteks',pct:100,color:'#10B981'},{label:'Matematisasi',pct:85,color:'#3B82F6'},{label:'Penyelesaian',pct:78,color:'#8B5CF6'},{label:'Refleksi',pct:65,color:'#F59E0B'}].map(b=>(
-                  <div key={b.label} className="flex items-center gap-3 text-xs">
-                    <span className="w-20 text-slate-400 shrink-0">{b.label}</span>
-                    <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden"><div className="h-full rounded-full" style={{width:`${b.pct}%`,backgroundColor:b.color}}/></div>
-                    <span className="text-white font-bold w-8 text-right">{b.pct}%</span>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 p-3 rounded-xl bg-blue-950/40 border border-blue-800/30 text-xs text-blue-200/80 leading-relaxed">
-                <span className="font-bold text-blue-300">AI Feedback: </span>"Strategi matematisasi sangat kuat. Perkuat justifikasi unit pada kesimpulan akhir."
-              </div>
-            </div>
-            <motion.div animate={{y:[0,-8,0]}} transition={{duration:4,repeat:Infinity,ease:'easeInOut' as const}} className="absolute -top-5 -right-5 bg-[#1E293B] border border-white/[0.08] rounded-2xl px-4 py-3 shadow-xl text-xs font-semibold text-white flex items-center gap-2">
-              <CheckCircle2 size={14} className="text-emerald-400"/>Soal divalidasi AI
-            </motion.div>
-            <motion.div animate={{y:[0,8,0]}} transition={{duration:5,repeat:Infinity,ease:'easeInOut' as const,delay:1}} className="absolute -bottom-5 -left-5 bg-[#1E293B] border border-white/[0.08] rounded-2xl px-4 py-3 shadow-xl text-xs font-semibold text-white flex items-center gap-2">
-              <BarChart3 size={14} className="text-blue-400"/>+12% minggu ini
-            </motion.div>
+          {/* Right — Image fading to left */}
+          <motion.div className="flex-1 w-full max-w-lg relative h-[400px] rounded-3xl overflow-hidden" initial={{ opacity:0,x:40 }} animate={{ opacity:1,x:0,transition:{duration:0.8,ease:'easeOut' as const,delay:0.2} }}>
+            <div className="absolute inset-0 bg-gradient-to-r from-[#0F172A] via-transparent to-transparent z-10" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A] via-transparent to-transparent z-10" />
+            <img 
+              src="https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=1200&auto=format&fit=crop" 
+              alt="Students learning math" 
+              className="w-full h-full object-cover object-center opacity-80"
+            />
           </motion.div>
         </section>
-
+        
         {/* PILLARS */}
-        <section id="metode-rme" className="scroll-mt-24 bg-[#111827] border-y border-white/[0.05]">
+        <section id="metode-rme" className="scroll-mt-24 border-y border-white/[0.05] bg-black/10">
           <div className="max-w-7xl mx-auto px-6 py-28">
             <motion.div className="text-center mb-16" initial="hidden" whileInView="show" viewport={{once:true,amount:0.3}} variants={stagger}>
               <motion.p variants={fadeUp} className="text-blue-400 text-xs font-bold uppercase tracking-[0.25em] mb-4">Pendekatan RME</motion.p>
@@ -253,181 +194,205 @@ export const BerandaScreen: React.FC<BerandaScreenProps> = ({ onNavigate }) => {
             </motion.div>
             <motion.div className="grid grid-cols-1 md:grid-cols-3 gap-6" initial="hidden" whileInView="show" viewport={{once:true,amount:0.2}} variants={stagger}>
               {pillars.map((p,i)=>(
-                <motion.div key={i} variants={fadeUp} className="group relative rounded-3xl border border-white/[0.07] bg-[#1E293B]/50 p-8 hover:border-blue-500/40 hover:bg-[#1E293B] hover:-translate-y-1.5 transition-all duration-300 cursor-default">
+                <motion.div 
+                  key={i} 
+                  variants={fadeUp} 
+                  onClick={() => setActivePillar(activePillar === i ? null : i)}
+                  className="group relative rounded-3xl border border-white/[0.07] bg-[#1E293B]/50 p-8 hover:border-blue-500/40 hover:bg-[#1E293B] hover:-translate-y-1.5 transition-all duration-300 cursor-pointer overflow-hidden"
+                >
                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 border ${p.color==='blue'?'bg-blue-600/15 border-blue-600/30 text-blue-400':p.color==='violet'?'bg-violet-600/15 border-violet-600/30 text-violet-400':'bg-cyan-600/15 border-cyan-600/30 text-cyan-400'}`}>{p.icon}</div>
                   <span className={`text-[10px] font-black uppercase tracking-[0.2em] mb-2 block ${p.color==='blue'?'text-blue-500':p.color==='violet'?'text-violet-500':'text-cyan-500'}`}>Pilar 0{i+1}</span>
-                  <h3 className="text-xl font-bold text-white mb-3">{p.title}</h3>
-                  <p className="text-slate-400 text-sm leading-relaxed">{p.desc}</p>
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="text-xl font-bold text-white">{p.title}</h3>
+                    <ChevronDown size={18} className={`text-slate-400 transition-transform duration-300 ${activePillar === i ? 'rotate-180' : ''}`} />
+                  </div>
+                  
+                  <AnimatePresence>
+                    {activePillar === i && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <p className="text-slate-400 text-sm leading-relaxed pt-2 border-t border-white/10">{p.desc}</p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </motion.div>
               ))}
             </motion.div>
           </div>
         </section>
 
-        {/* FEATURE SHOWCASE */}
-        <section className="max-w-7xl mx-auto px-6 py-28">
-          <motion.div className="text-center mb-16" initial="hidden" whileInView="show" viewport={{once:true,amount:0.3}} variants={stagger}>
-            <motion.p variants={fadeUp} className="text-blue-400 text-xs font-bold uppercase tracking-[0.25em] mb-4">Fitur Platform</motion.p>
-            <motion.h2 variants={fadeUp} className="text-3xl lg:text-5xl font-extrabold text-white tracking-tight">
-              Semua yang Kamu Butuhkan,<br/><span className="bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text text-transparent">dalam Satu Platform</span>
-            </motion.h2>
-          </motion.div>
-          <motion.div className="grid grid-cols-1 lg:grid-cols-[1fr,1.4fr] gap-6 items-start" initial="hidden" whileInView="show" viewport={{once:true,amount:0.2}} variants={stagger}>
-            <motion.div variants={fadeUp} className="flex flex-col gap-3">
-              {features.map((f,i)=>(
-                <button key={i} onClick={()=>setActiveFeature(i)} className={`group text-left p-5 rounded-2xl border transition-all duration-300 cursor-pointer ${activeFeature===i?'bg-blue-600/10 border-blue-500/50 shadow-lg shadow-blue-900/20':'bg-[#1E293B]/40 border-white/[0.06] hover:border-slate-700 hover:bg-[#1E293B]/60'}`}>
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${activeFeature===i?'bg-blue-600 text-white':'bg-slate-800 text-slate-400'}`}>{f.icon}</div>
-                    <h4 className={`font-bold text-sm ${activeFeature===i?'text-white':'text-slate-300'}`}>{f.title}</h4>
-                    <ChevronRight size={14} className={`ml-auto ${activeFeature===i?'text-blue-400 translate-x-0.5':'text-slate-600'}`}/>
-                  </div>
-                  {activeFeature===i&&<p className="text-slate-400 text-sm leading-relaxed pl-11">{f.desc}</p>}
-                </button>
-              ))}
-            </motion.div>
-            <motion.div variants={fadeUp} className="rounded-3xl border border-white/[0.07] bg-[#1E293B]/60 p-6 backdrop-blur-sm shadow-2xl shadow-black/30">
-              <div className="flex items-center gap-2 mb-5 pb-4 border-b border-white/[0.06]">
-                <div className="flex gap-1.5">{['#EF4444','#F59E0B','#10B981'].map(c=><div key={c} className="w-3 h-3 rounded-full" style={{backgroundColor:c}}/>)}</div>
-                <span className="ml-2 text-[11px] text-slate-500 font-mono">trisula.preview — {features[activeFeature].title}</span>
-              </div>
-              <AnimatePresence mode="wait">
-                <motion.div key={activeFeature} initial={{opacity:0,y:10}} animate={{opacity:1,y:0,transition:{duration:0.35}}} exit={{opacity:0,y:-10,transition:{duration:0.2}}}>
-                  {features[activeFeature].preview}
-                </motion.div>
-              </AnimatePresence>
-            </motion.div>
-          </motion.div>
-        </section>
-
-        {/* COMPARISON */}
-        <section className="bg-[#111827] border-y border-white/[0.05]">
-          <div className="max-w-5xl mx-auto px-6 py-28">
-            <motion.div className="text-center mb-14" initial="hidden" whileInView="show" viewport={{once:true}} variants={stagger}>
-              <motion.h2 variants={fadeUp} className="text-3xl lg:text-4xl font-extrabold text-white">
-                Konvensional vs <span className="bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text text-transparent">Metode RME TRISULA</span>
+        {/* Transition into light theme area starts here conceptually. 
+            We'll adjust text colors dynamically so it looks good on light slate-50. */}
+        <div className="text-slate-900 mt-20">
+          {/* FEATURE SHOWCASE */}
+          <section className="max-w-7xl mx-auto px-6 py-20">
+            <motion.div className="text-center mb-16" initial="hidden" whileInView="show" viewport={{once:true,amount:0.3}} variants={stagger}>
+              <motion.p variants={fadeUp} className="text-blue-600 text-xs font-bold uppercase tracking-[0.25em] mb-4">Fitur Platform</motion.p>
+              <motion.h2 variants={fadeUp} className="text-3xl lg:text-5xl font-extrabold text-slate-900 tracking-tight">
+                Semua yang Kamu Butuhkan,<br/><span className="bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">dalam Satu Platform</span>
               </motion.h2>
             </motion.div>
-            <div className="flex gap-3 justify-center mb-8">
-              {(['rme','traditional'] as const).map(v=>(
-                <button key={v} onClick={()=>setActiveProblem(v)} className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${activeProblem===v?'bg-blue-600 text-white shadow-lg shadow-blue-600/30':'bg-[#1E293B] text-slate-400 border border-white/[0.06] hover:border-slate-600'}`}>
-                  {v==='rme'?'Metode RME TRISULA':'Konvensional'}
-                </button>
+            <motion.div className="grid grid-cols-1 lg:grid-cols-[1fr,1.4fr] gap-6 items-start" initial="hidden" whileInView="show" viewport={{once:true,amount:0.2}} variants={stagger}>
+              <motion.div variants={fadeUp} className="flex flex-col gap-3">
+                {features.map((f,i)=>(
+                  <button key={i} onClick={()=>setActiveFeature(i)} className={`group text-left p-5 rounded-2xl border transition-all duration-300 cursor-pointer ${activeFeature===i?'bg-blue-50 border-blue-200 shadow-lg shadow-blue-900/5':'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`}>
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${activeFeature===i?'bg-blue-600 text-white':'bg-slate-100 text-slate-500'}`}>{f.icon}</div>
+                      <h4 className={`font-bold text-sm ${activeFeature===i?'text-blue-900':'text-slate-700'}`}>{f.title}</h4>
+                      <ChevronRight size={14} className={`ml-auto ${activeFeature===i?'text-blue-500 translate-x-0.5':'text-slate-400'}`}/>
+                    </div>
+                    {activeFeature===i&&<p className="text-slate-600 text-sm leading-relaxed pl-11">{f.desc}</p>}
+                  </button>
+                ))}
+              </motion.div>
+              <motion.div variants={fadeUp} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/50">
+                <div className="flex items-center gap-2 mb-5 pb-4 border-b border-slate-100">
+                  <div className="flex gap-1.5">{['#EF4444','#F59E0B','#10B981'].map(c=><div key={c} className="w-3 h-3 rounded-full" style={{backgroundColor:c}}/>)}</div>
+                  <span className="ml-2 text-[11px] text-slate-500 font-mono">trisula.preview — {features[activeFeature].title}</span>
+                </div>
+                <AnimatePresence mode="wait">
+                  <motion.div key={activeFeature} initial={{opacity:0,y:10}} animate={{opacity:1,y:0,transition:{duration:0.35}}} exit={{opacity:0,y:-10,transition:{duration:0.2}}}>
+                    {features[activeFeature].preview}
+                  </motion.div>
+                </AnimatePresence>
+              </motion.div>
+            </motion.div>
+          </section>
+
+          {/* COMPARISON */}
+          <section className="bg-white/50 border-y border-slate-200">
+            <div className="max-w-5xl mx-auto px-6 py-28">
+              <motion.div className="text-center mb-14" initial="hidden" whileInView="show" viewport={{once:true}} variants={stagger}>
+                <motion.h2 variants={fadeUp} className="text-3xl lg:text-4xl font-extrabold text-slate-900">
+                  Konvensional vs <span className="bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">Metode RME TRISULA</span>
+                </motion.h2>
+              </motion.div>
+              <div className="flex gap-3 justify-center mb-8">
+                {(['rme','traditional'] as const).map(v=>(
+                  <button key={v} onClick={()=>setActiveProblem(v)} className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${activeProblem===v?'bg-blue-600 text-white shadow-lg shadow-blue-600/30':'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'}`}>
+                    {v==='rme'?'Metode RME TRISULA':'Konvensional'}
+                  </button>
+                ))}
+              </div>
+              <AnimatePresence mode="wait">
+                <motion.div key={activeProblem} initial={{opacity:0,y:16}} animate={{opacity:1,y:0,transition:{duration:0.4}}} exit={{opacity:0,y:-16}} className={`rounded-3xl border p-8 lg:p-10 ${activeProblem==='rme'?'bg-blue-50/50 border-blue-200 shadow-xl shadow-blue-900/5':'bg-white border-slate-200'}`}>
+                  {activeProblem==='rme'?(
+                    <div className="grid md:grid-cols-2 gap-8">
+                      <div>
+                        <p className="text-blue-600 text-xs font-bold uppercase tracking-widest mb-4">Metode RME TRISULA</p>
+                        <ul className="space-y-3">
+                          {['Dimulai dari skenario dunia nyata yang autentik','Siswa membangun sendiri model matematis (discovery)','Penilaian per tahap: konteks, matematisasi, penyelesaian, refleksi','Feedback AI yang menjelaskan MENGAPA salah','Mengasah HOTS: analisis, evaluasi, kreasi'].map(item=>(
+                            <li key={item} className="flex items-start gap-2.5 text-sm text-slate-700"><CheckCircle2 size={15} className="text-blue-600 mt-0.5 shrink-0"/>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="bg-slate-900 rounded-2xl border border-slate-800 p-5 text-xs font-mono text-slate-300 leading-relaxed">
+                        <p className="text-blue-400 font-bold mb-3">Konteks Arsitektur:</p>
+                        <p className="mb-3">"Atap kubah stadion berbentuk parabola dengan diameter 80m dan tinggi 20m..."</p>
+                        <div className="pt-3 border-t border-slate-800">
+                          <p className="text-emerald-400 font-bold">Matematisasi: y = -(x^2/80) + 20</p>
+                          <p className="text-blue-300">Panjang kabel ~94.3 m</p>
+                        </div>
+                      </div>
+                    </div>
+                  ):(
+                    <div className="grid md:grid-cols-2 gap-8">
+                      <div>
+                        <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-4">Metode Konvensional</p>
+                        <ul className="space-y-3">
+                          {['Dimulai langsung dari definisi dan rumus abstrak','Siswa menghafal rumus tanpa memahami konteks','Penilaian hanya berdasarkan jawaban akhir','Tidak ada umpan balik kualitatif','Fokus pada prosedur mekanis, bukan penalaran'].map(item=>(
+                            <li key={item} className="flex items-start gap-2.5 text-sm text-slate-600"><div className="w-4 h-4 rounded-full border border-slate-300 mt-0.5 shrink-0 flex items-center justify-center"><div className="w-1.5 h-1.5 rounded-full bg-slate-400"/></div>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="bg-slate-100 rounded-2xl border border-slate-200 p-5 text-xs font-mono text-slate-600 leading-relaxed">
+                        <p className="text-slate-800 font-bold mb-3">Soal Standar:</p>
+                        <p className="mb-3">"Diketahui parabola y = ax^2 + bx + c. Jika titik puncaknya (2, 5)..."</p>
+                        <div className="pt-3 border-t border-slate-200">
+                          <p className="text-slate-700">Jawaban: a = -2, b = 8, c = -3</p>
+                          <p className="text-red-600">Status: Salah (skor 0)</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </section>
+
+          {/* STATS */}
+          <section className="max-w-7xl mx-auto px-6 py-20">
+            <motion.div className="grid grid-cols-1 sm:grid-cols-3 gap-6" initial="hidden" whileInView="show" viewport={{once:true,amount:0.3}} variants={stagger}>
+              {[{icon:<Users size={24}/>,target:1240,suffix:'+',label:'Siswa Aktif',sub:'dari 18 sekolah mitra'},{icon:<Award size={24}/>,target:8500,suffix:'+',label:'Studi Kasus Selesai',sub:'dengan penilaian AI'},{icon:<Building2 size={24}/>,target:18,suffix:'',label:'Sekolah Mitra',sub:'se-Sulawesi dan Nusa Tenggara'}].map((s,i)=>(
+                <motion.div key={i} variants={fadeUp} className="group rounded-3xl border border-slate-200 bg-white p-8 text-center hover:border-blue-300 hover:shadow-lg transition-all duration-300">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center mx-auto mb-4">{s.icon}</div>
+                  <div className="text-4xl font-black text-slate-900 mb-1"><AnimatedCounter target={s.target} suffix={s.suffix}/></div>
+                  <p className="text-base font-bold text-slate-700 mb-1">{s.label}</p>
+                  <p className="text-xs text-slate-500">{s.sub}</p>
+                </motion.div>
               ))}
-            </div>
-            <AnimatePresence mode="wait">
-              <motion.div key={activeProblem} initial={{opacity:0,y:16}} animate={{opacity:1,y:0,transition:{duration:0.4}}} exit={{opacity:0,y:-16}} className={`rounded-3xl border p-8 lg:p-10 ${activeProblem==='rme'?'bg-blue-950/30 border-blue-500/30 shadow-xl shadow-blue-900/20':'bg-[#1E293B]/40 border-white/[0.07] opacity-80'}`}>
-                {activeProblem==='rme'?(
-                  <div className="grid md:grid-cols-2 gap-8">
-                    <div>
-                      <p className="text-blue-400 text-xs font-bold uppercase tracking-widest mb-4">Metode RME TRISULA</p>
-                      <ul className="space-y-3">
-                        {['Dimulai dari skenario dunia nyata yang autentik','Siswa membangun sendiri model matematis (discovery)','Penilaian per tahap: konteks, matematisasi, penyelesaian, refleksi','Feedback AI yang menjelaskan MENGAPA salah','Mengasah HOTS: analisis, evaluasi, kreasi'].map(item=>(
-                          <li key={item} className="flex items-start gap-2.5 text-sm text-slate-300"><CheckCircle2 size={15} className="text-blue-400 mt-0.5 shrink-0"/>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="bg-[#0F172A] rounded-2xl border border-blue-900/40 p-5 text-xs font-mono text-slate-300 leading-relaxed">
-                      <p className="text-blue-400 font-bold mb-3">Konteks Arsitektur:</p>
-                      <p className="mb-3">"Atap kubah stadion berbentuk parabola dengan diameter 80m dan tinggi 20m..."</p>
-                      <div className="pt-3 border-t border-slate-800">
-                        <p className="text-emerald-400 font-bold">Matematisasi: y = -(x^2/80) + 20</p>
-                        <p className="text-blue-300">Panjang kabel ~94.3 m</p>
-                      </div>
-                    </div>
-                  </div>
-                ):(
-                  <div className="grid md:grid-cols-2 gap-8">
-                    <div>
-                      <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-4">Metode Konvensional</p>
-                      <ul className="space-y-3">
-                        {['Dimulai langsung dari definisi dan rumus abstrak','Siswa menghafal rumus tanpa memahami konteks','Penilaian hanya berdasarkan jawaban akhir','Tidak ada umpan balik kualitatif','Fokus pada prosedur mekanis, bukan penalaran'].map(item=>(
-                          <li key={item} className="flex items-start gap-2.5 text-sm text-slate-500"><div className="w-4 h-4 rounded-full border border-slate-700 mt-0.5 shrink-0 flex items-center justify-center"><div className="w-1.5 h-1.5 rounded-full bg-slate-600"/></div>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="bg-[#0F172A]/60 rounded-2xl border border-slate-800 p-5 text-xs font-mono text-slate-500 leading-relaxed">
-                      <p className="text-slate-600 font-bold mb-3">Soal Standar:</p>
-                      <p className="mb-3">"Diketahui parabola y = ax^2 + bx + c. Jika titik puncaknya (2, 5)..."</p>
-                      <div className="pt-3 border-t border-slate-800/60">
-                        <p className="text-slate-600">Jawaban: a = -2, b = 8, c = -3</p>
-                        <p className="text-slate-700">Status: Salah (skor 0)</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-            </AnimatePresence>
-          </div>
-        </section>
+            </motion.div>
+          </section>
 
-        {/* STATS */}
-        <section className="max-w-7xl mx-auto px-6 py-20">
-          <motion.div className="grid grid-cols-1 sm:grid-cols-3 gap-6" initial="hidden" whileInView="show" viewport={{once:true,amount:0.3}} variants={stagger}>
-            {[{icon:<Users size={24}/>,target:1240,suffix:'+',label:'Siswa Aktif',sub:'dari 18 sekolah mitra'},{icon:<Award size={24}/>,target:8500,suffix:'+',label:'Studi Kasus Selesai',sub:'dengan penilaian AI'},{icon:<Building2 size={24}/>,target:18,suffix:'',label:'Sekolah Mitra',sub:'se-Sulawesi dan Nusa Tenggara'}].map((s,i)=>(
-              <motion.div key={i} variants={fadeUp} className="group rounded-3xl border border-white/[0.07] bg-[#1E293B]/40 p-8 text-center hover:border-blue-500/30 hover:bg-[#1E293B] transition-all duration-300">
-                <div className="w-12 h-12 rounded-2xl bg-blue-600/15 border border-blue-600/25 text-blue-400 flex items-center justify-center mx-auto mb-4">{s.icon}</div>
-                <div className="text-4xl font-black text-white mb-1"><AnimatedCounter target={s.target} suffix={s.suffix}/></div>
-                <p className="text-base font-bold text-slate-300 mb-1">{s.label}</p>
-                <p className="text-xs text-slate-500">{s.sub}</p>
-              </motion.div>
-            ))}
-          </motion.div>
-        </section>
-
-        {/* FINAL CTA */}
-        <section className="max-w-7xl mx-auto px-6 pb-28">
-          <motion.div className="relative rounded-[2rem] overflow-hidden border border-blue-500/20 bg-gradient-to-br from-blue-950/60 via-[#1E293B] to-violet-950/40 p-12 lg:p-20 text-center shadow-2xl shadow-blue-900/20" initial={{opacity:0,y:30}} whileInView={{opacity:1,y:0,transition:{duration:0.7}}} viewport={{once:true}}>
-            <div className="absolute inset-0 pointer-events-none">
-              <div className="absolute top-0 left-1/4 w-64 h-64 rounded-full bg-blue-500/10 blur-3xl"/>
-              <div className="absolute bottom-0 right-1/4 w-64 h-64 rounded-full bg-violet-500/10 blur-3xl"/>
-            </div>
-            <div className="relative z-10 flex flex-col items-center gap-6">
-              <p className="text-blue-400 text-xs font-bold uppercase tracking-[0.25em]">Mulai Hari Ini</p>
-              <h2 className="text-3xl lg:text-5xl font-extrabold text-white tracking-tight">
-                Siap Menguasai Matematika<br/><span className="bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text text-transparent">dengan Cara yang Benar?</span>
-              </h2>
-              <p className="text-slate-400 max-w-xl text-lg leading-relaxed">Bergabung bersama ribuan siswa yang telah membuktikan bahwa matematika bukan tentang menghafal—tapi tentang memahami dan berpikir.</p>
-              <button onClick={()=>onNavigate('latihan-rme')} className="group mt-4 inline-flex items-center gap-3 px-10 py-5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg transition-all duration-300 shadow-2xl shadow-blue-600/40 hover:scale-[1.04] active:scale-95 cursor-pointer">
-                Eksplorasi Modul Sekarang <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform"/>
-              </button>
-            </div>
-          </motion.div>
-        </section>
+          {/* FINAL CTA */}
+          <section className="max-w-7xl mx-auto px-6 pb-28">
+            <motion.div className="relative rounded-[2rem] overflow-hidden bg-blue-900 p-12 lg:p-20 text-center shadow-2xl shadow-blue-900/20 text-white" initial={{opacity:0,y:30}} whileInView={{opacity:1,y:0,transition:{duration:0.7}}} viewport={{once:true}}>
+              <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute top-0 left-1/4 w-64 h-64 rounded-full bg-blue-500/20 blur-3xl"/>
+                <div className="absolute bottom-0 right-1/4 w-64 h-64 rounded-full bg-violet-500/20 blur-3xl"/>
+              </div>
+              <div className="relative z-10 flex flex-col items-center gap-6">
+                <p className="text-blue-300 text-xs font-bold uppercase tracking-[0.25em]">Mulai Hari Ini</p>
+                <h2 className="text-3xl lg:text-5xl font-extrabold text-white tracking-tight">
+                  Siap Menguasai Matematika<br/><span className="text-blue-200">dengan Cara yang Benar?</span>
+                </h2>
+                <p className="text-blue-100 max-w-xl text-lg leading-relaxed">Bergabung bersama ribuan siswa yang telah membuktikan bahwa matematika bukan tentang menghafal—tapi tentang memahami dan berpikir.</p>
+                <button onClick={()=>onNavigate('materi')} className="group mt-4 inline-flex items-center gap-3 px-10 py-5 rounded-2xl bg-white hover:bg-blue-50 text-blue-900 font-bold text-lg transition-all duration-300 shadow-xl hover:scale-[1.04] active:scale-95 cursor-pointer">
+                  Eksplorasi Modul Sekarang <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform"/>
+                </button>
+              </div>
+            </motion.div>
+          </section>
+        </div>
 
         {/* FOOTER */}
-        <footer className="border-t border-white/[0.06] bg-[#0F172A]">
+        <footer className="border-t border-slate-200 bg-white text-slate-900">
           <div className="max-w-7xl mx-auto px-6 py-16">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
               <div className="md:col-span-2 flex flex-col gap-4">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center"><Triangle size={16} className="text-white" fill="white"/></div>
-                  <span className="text-base font-extrabold text-white">TRISULA <span className="font-light text-blue-400">EDUMATH</span></span>
+                  <span className="text-base font-extrabold text-slate-900">TRISULA <span className="font-light text-blue-600">EDUMATH</span></span>
                 </div>
-                <p className="text-sm text-slate-500 leading-relaxed max-w-sm">Platform asesmen matematika berbasis RME dan AI Generatif untuk siswa Kelas XII, mendorong penalaran logis yang bermakna.</p>
+                <p className="text-sm text-slate-600 leading-relaxed max-w-sm">Platform asesmen matematika berbasis RME dan AI Generatif untuk siswa Kelas XII, mendorong penalaran logis yang bermakna.</p>
                 <div className="flex gap-3 mt-2">
                   {[<Twitter size={15}/>,<Instagram size={15}/>,<Github size={15}/>,<Mail size={15}/>].map((Icon,i)=>(
-                    <a key={i} href="#" className="w-9 h-9 rounded-xl border border-white/[0.08] bg-white/[0.03] flex items-center justify-center text-slate-500 hover:text-white hover:border-blue-500/50 hover:bg-blue-600/10 transition-all">{Icon}</a>
+                    <a key={i} href="#" className="w-9 h-9 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center text-slate-500 hover:text-blue-600 hover:border-blue-200 transition-all">{Icon}</a>
                   ))}
                 </div>
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Platform</p>
-                <ul className="space-y-2.5 text-sm text-slate-500">
+                <p className="text-xs font-bold text-slate-800 uppercase tracking-widest mb-4">Platform</p>
+                <ul className="space-y-2.5 text-sm text-slate-600">
                   {['Beranda','Metode RME','Modul Interaktif','Keunggulan','Kontak'].map(link=>(
-                    <li key={link}><a href="#" className="hover:text-white transition-colors">{link}</a></li>
+                    <li key={link}><a href="#" className="hover:text-blue-600 transition-colors">{link}</a></li>
                   ))}
                 </ul>
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Sumber</p>
-                <ul className="space-y-2.5 text-sm text-slate-500">
+                <p className="text-xs font-bold text-slate-800 uppercase tracking-widest mb-4">Sumber</p>
+                <ul className="space-y-2.5 text-sm text-slate-600">
                   {['Tentang RME','Panduan Guru','Blog Edukasi','Kebijakan Privasi','Syarat Ketentuan'].map(link=>(
-                    <li key={link}><a href="#" className="hover:text-white transition-colors">{link}</a></li>
+                    <li key={link}><a href="#" className="hover:text-blue-600 transition-colors">{link}</a></li>
                   ))}
                 </ul>
               </div>
             </div>
-            <div className="border-t border-white/[0.06] pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-600">
+            <div className="border-t border-slate-200 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
               <p>2026 TRISULA EDUMATH. Seluruh hak cipta dilindungi.</p>
               <p>Dibuat untuk pendidikan matematika yang bermakna di Indonesia.</p>
             </div>
