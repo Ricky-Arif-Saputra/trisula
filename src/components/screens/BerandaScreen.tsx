@@ -181,69 +181,132 @@ export const BerandaScreen: React.FC<BerandaScreenProps> = ({ onNavigate }) => {
         {/* Transition into light theme */}
         <div className="text-slate-900 mt-10">
           
-          {/* BENTO GRID FEATURES (Replaced old features) */}
+          {/* TABBED INTERACTIVE FEATURES (Replaced bento grid) */}
           <section className="max-w-7xl mx-auto px-6 py-12">
-            <motion.div className="text-center mb-10" initial="hidden" whileInView="show" viewport={{once:true,amount:0.3}} variants={stagger}>
+            <motion.div className="text-center mb-12" initial="hidden" whileInView="show" viewport={{once:true,amount:0.3}} variants={stagger}>
               <motion.p variants={fadeUp} className="text-blue-600 text-xs font-bold uppercase tracking-[0.25em] mb-3">Ekosistem Pembelajaran Terpadu</motion.p>
               <motion.h2 variants={fadeUp} className="text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">
                 Teknologi yang Memberdayakan<br/><span className="bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">Potensi Logika Siswa</span>
               </motion.h2>
             </motion.div>
             
-            <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" initial="hidden" whileInView="show" viewport={{once:true,amount:0.2}} variants={stagger}>
-              {/* Feature 1 - Wide Card */}
-              <motion.div variants={fadeUp} className="lg:col-span-2 rounded-3xl bg-blue-50 border border-blue-100 p-8 flex flex-col md:flex-row gap-6 items-center shadow-lg shadow-blue-900/5 relative overflow-hidden">
-                <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-blue-200/50 rounded-full blur-3xl"></div>
-                <div className="flex-1 relative z-10">
-                  <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-blue-600/30">
-                    <Zap size={24} />
-                  </div>
-                  <h3 className="text-2xl font-bold text-slate-900 mb-3">Evaluasi Real-Time dengan AI</h3>
-                  <p className="text-slate-600 leading-relaxed">Setiap langkah perhitungan dan logika bahasa dianalisis seketika. Siswa tidak perlu menunggu guru untuk mengetahui letak kesalahan atau memvalidasi strategi mereka.</p>
-                </div>
-                <div className="flex-1 w-full relative z-10 bg-white rounded-2xl p-5 border border-slate-200 shadow-xl">
-                   <div className="flex items-center gap-3 mb-3 border-b border-slate-100 pb-3">
-                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                     <span className="text-xs font-semibold text-slate-500">AI Feedback Engine</span>
-                   </div>
-                   <p className="text-sm text-slate-700 italic border-l-4 border-blue-500 pl-3">"Strategi substitusimu sudah tepat! Namun, perhatikan kembali saat mengalikan tanda negatif di baris kedua. Coba perbaiki lalu kirim ulang."</p>
-                </div>
-              </motion.div>
-
-              {/* Feature 2 - Tall Card */}
-              <motion.div variants={fadeUp} className="rounded-3xl bg-white border border-slate-200 p-8 shadow-lg shadow-slate-200/50 flex flex-col">
-                <div className="w-12 h-12 bg-violet-100 text-violet-600 rounded-2xl flex items-center justify-center mb-5">
-                  <Target size={24} />
-                </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-3">Kasus Multi-Tahap</h3>
-                <p className="text-slate-600 text-sm leading-relaxed mb-6">Mengurangi tebakan ganda. Soal dipecah menjadi: Identifikasi, Matematisasi, Solusi, dan Refleksi—dinilai secara parsial.</p>
-                <div className="mt-auto space-y-2">
-                  {['Identifikasi (20%)','Matematisasi (30%)','Solusi (40%)'].map((l,i) => (
-                    <div key={i} className="w-full bg-slate-50 rounded-lg p-2.5 flex items-center gap-2 border border-slate-100">
-                      <CheckCircle2 size={14} className="text-emerald-500"/>
-                      <span className="text-xs font-semibold text-slate-600">{l}</span>
+            <motion.div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center" initial="hidden" whileInView="show" viewport={{once:true,amount:0.2}} variants={stagger}>
+              
+              {/* Left Side: Tabs */}
+              <motion.div variants={fadeUp} className="lg:col-span-5 flex flex-col gap-3">
+                {[
+                  { icon: <Zap size={20} />, title: "Evaluasi Real-Time AI", desc: "Setiap baris perhitungan dianalisis instan tanpa menunggu guru. Dapatkan feedback persis di titik kesalahan." },
+                  { icon: <Target size={20} />, title: "Soal Studi Kasus Multi-Tahap", desc: "Memecah kebuntuan belajar. Evaluasi dilakukan per tahap (Identifikasi, Matematisasi, Solusi) secara terpisah." },
+                  { icon: <TrendingUp size={20} />, title: "Analitik Kompetensi Spesifik", desc: "Lacak kelemahan sampai ke sub-topik terkecil. Dashboard pintar untuk merencanakan strategi belajar selanjutnya." },
+                  { icon: <Lightbulb size={20} />, title: "Fokus pada Bernalar Logis", desc: "Singkirkan metode hafalan rumus mati. Sistem membiasakan siswa membangun model dari fenomena nyata." }
+                ].map((f, i) => (
+                  <button 
+                    key={i} 
+                    onClick={() => setActiveFeature(i)}
+                    className={`text-left p-5 rounded-2xl transition-all duration-300 border-2 ${activeFeature === i ? 'bg-white border-blue-500 shadow-xl shadow-blue-900/5 transform scale-[1.02]' : 'bg-transparent border-transparent hover:bg-slate-100'}`}
+                  >
+                    <div className="flex items-center gap-4 mb-2">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${activeFeature === i ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-200 text-slate-500'}`}>
+                        {f.icon}
+                      </div>
+                      <h3 className={`text-lg font-bold ${activeFeature === i ? 'text-blue-900' : 'text-slate-700'}`}>{f.title}</h3>
                     </div>
-                  ))}
-                </div>
+                    <AnimatePresence>
+                      {activeFeature === i && (
+                        <motion.p 
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="text-slate-600 text-sm leading-relaxed pl-14"
+                        >
+                          {f.desc}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
+                  </button>
+                ))}
               </motion.div>
-
-              {/* Feature 3 */}
-              <motion.div variants={fadeUp} className="rounded-3xl bg-slate-900 p-8 text-white shadow-xl flex flex-col justify-between relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 blur-2xl rounded-full"></div>
-                <div className="relative z-10">
-                  <div className="w-12 h-12 bg-indigo-500/20 text-indigo-400 rounded-2xl flex items-center justify-center mb-5 border border-indigo-500/30">
-                    <TrendingUp size={24} />
-                  </div>
-                  <h3 className="text-xl font-bold text-white mb-3">Analitik Kompetensi</h3>
-                  <p className="text-slate-400 text-sm leading-relaxed">Dashboard menyajikan pemetaan kelemahan spesifik per sub-topik sehingga evaluasi lebih tajam.</p>
-                </div>
-              </motion.div>
-
-              {/* Feature 4 - Wide Card */}
-              <motion.div variants={fadeUp} className="lg:col-span-2 rounded-3xl bg-white border border-slate-200 p-8 shadow-lg flex flex-col justify-center items-center text-center">
-                <Lightbulb size={32} className="text-amber-500 mb-4" />
-                <h3 className="text-2xl font-bold text-slate-900 mb-3">Berhenti Menghafal, Mulai Bernalar</h3>
-                <p className="text-slate-600 max-w-lg">Kurikulum TRISULA didesain agar siswa tidak dijejali rumus usang, melainkan dibiasakan merumuskan pola dari fenomena dunia nyata yang terstruktur.</p>
+              
+              {/* Right Side: Visual Showcase */}
+              <motion.div variants={fadeUp} className="lg:col-span-7 h-[450px] bg-slate-900 rounded-[2rem] p-8 shadow-2xl relative overflow-hidden flex items-center justify-center">
+                {/* Decorative background glow based on active tab */}
+                <div className={`absolute -right-20 -top-20 w-96 h-96 rounded-full blur-[100px] transition-colors duration-700 ${activeFeature === 0 ? 'bg-blue-600/30' : activeFeature === 1 ? 'bg-violet-600/30' : activeFeature === 2 ? 'bg-indigo-600/30' : 'bg-amber-500/20'}`} />
+                
+                <AnimatePresence mode="wait">
+                  {activeFeature === 0 && (
+                    <motion.div key="f0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="w-full max-w-md bg-[#0F172A] border border-blue-500/30 rounded-2xl p-6 shadow-2xl relative z-10">
+                      <div className="flex items-center gap-3 mb-5 border-b border-white/10 pb-4">
+                        <div className="flex space-x-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-400"/><div className="w-2.5 h-2.5 rounded-full bg-amber-400"/><div className="w-2.5 h-2.5 rounded-full bg-emerald-400"/></div>
+                        <span className="text-xs text-slate-400 font-mono ml-2">ai-terminal.log</span>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="bg-slate-800/50 p-3 rounded-lg border border-white/5 text-sm text-slate-300 font-mono">
+                          x² - 5x + <span className="text-red-400 border-b border-red-400">4</span> = 0
+                        </div>
+                        <div className="bg-blue-950/40 p-4 rounded-xl border border-blue-800/50 flex gap-4 items-start">
+                          <Sparkles size={18} className="text-blue-400 shrink-0 mt-0.5" />
+                          <p className="text-sm text-blue-200 leading-relaxed font-medium">Tampaknya kamu salah memfaktorkan konstanta. Coba cari dua bilangan yang jika ditambahkan hasilnya -5, dan jika dikalikan hasilnya 6.</p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                  {activeFeature === 1 && (
+                    <motion.div key="f1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="w-full max-w-md relative z-10">
+                      <div className="space-y-3">
+                        {[
+                          { step: '01', title: 'Identifikasi Masalah', status: 'done' },
+                          { step: '02', title: 'Matematisasi Horizontal', status: 'done' },
+                          { step: '03', title: 'Penyelesaian Matematis', status: 'active' },
+                          { step: '04', title: 'Refleksi Dunia Nyata', status: 'pending' },
+                        ].map((s, i) => (
+                          <div key={i} className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${s.status === 'active' ? 'bg-violet-900/30 border-violet-500/50 shadow-lg shadow-violet-900/20' : s.status === 'done' ? 'bg-[#1E293B]/50 border-emerald-500/30' : 'bg-[#1E293B]/30 border-white/5 opacity-50'}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black ${s.status === 'active' ? 'bg-violet-500 text-white' : s.status === 'done' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-500'}`}>
+                              {s.status === 'done' ? <CheckCircle2 size={16} /> : s.step}
+                            </div>
+                            <span className={`font-semibold ${s.status === 'active' ? 'text-violet-200' : s.status === 'done' ? 'text-slate-300' : 'text-slate-500'}`}>{s.title}</span>
+                            {s.status === 'active' && <div className="ml-auto w-2 h-2 rounded-full bg-violet-400 animate-ping" />}
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                  {activeFeature === 2 && (
+                    <motion.div key="f2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="w-full max-w-md bg-[#0F172A] border border-indigo-500/30 rounded-2xl p-6 shadow-2xl relative z-10">
+                       <h4 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-6 text-center">Peta Kemampuan Siswa</h4>
+                       <div className="space-y-5">
+                         {[
+                           { label: 'Interpretasi Grafik', val: 92, color: '#818CF8' },
+                           { label: 'Pemodelan Aljabar', val: 78, color: '#C084FC' },
+                           { label: 'Logika Geometri', val: 45, color: '#F472B6' }
+                         ].map((bar, i) => (
+                           <div key={i}>
+                             <div className="flex justify-between text-xs mb-2">
+                               <span className="text-slate-300 font-medium">{bar.label}</span>
+                               <span className="text-white font-bold">{bar.val}%</span>
+                             </div>
+                             <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                               <motion.div initial={{ width: 0 }} animate={{ width: `${bar.val}%` }} transition={{ duration: 1, delay: i * 0.2 }} className="h-full rounded-full" style={{ backgroundColor: bar.color }} />
+                             </div>
+                           </div>
+                         ))}
+                       </div>
+                    </motion.div>
+                  )}
+                  {activeFeature === 3 && (
+                    <motion.div key="f3" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="relative z-10 flex flex-col items-center text-center">
+                      <div className="relative mb-8">
+                        <div className="w-24 h-24 bg-amber-500/20 rounded-full flex items-center justify-center animate-pulse">
+                          <Lightbulb size={48} className="text-amber-400" />
+                        </div>
+                        <Sparkles size={24} className="absolute -top-2 -right-2 text-amber-300" />
+                      </div>
+                      <h3 className="text-2xl font-black text-white mb-4">Ucapkan Selamat Tinggal Pada "Hafalan Rumus"</h3>
+                      <p className="text-slate-400 text-sm max-w-xs leading-relaxed">
+                        TRISULA mengubah cara otak memproses informasi: dari sekadar menghafal persamaan yang membosankan menjadi petualangan menemukan pola tersembunyi di alam semesta.
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             </motion.div>
           </section>
