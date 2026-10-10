@@ -1,54 +1,41 @@
 -- ============================================================
--- Tabel: materi
--- Menyimpan konten pembelajaran per strand + subtopik
--- Jalankan di Supabase SQL Editor
+-- Tabel: materi_posts
+-- Bahan ajar per topik — admin bisa post materi berisi
+-- judul, deskripsi, lampiran (file/video/gambar/youtube/link)
 -- ============================================================
 
-create table if not exists public.materi (
+create table if not exists public.materi_posts (
   id           uuid        primary key default gen_random_uuid(),
-  strand       text        not null,           -- bilangan | aljabar | geometri | trigonometri | peluang
-  subtopic_id  text        not null,           -- slug subtopik, misal: 'linear', 'fpbkpk'
-  subtopic_title text      not null,
-  blocks       jsonb       not null default '[]'::jsonb,
-  -- Blok: [{id, type: 'text'|'latex'|'image'|'callout_definition'|
-  --   'callout_theorem'|'callout_example'|'callout_solution'|'heading'|
-  --   'divider', value, callout_title}]
-  order_index  integer     not null default 0,
+  strand       text        not null,     -- bilangan | aljabar | geometri | trigonometri | peluang
+  title        text        not null,
+  description  text        default '',
+  -- Attachments disimpan sebagai array JSON:
+  -- [{id, type: 'pdf'|'video'|'image'|'youtube'|'link'|'audio', url, label}]
+  attachments  jsonb       not null default '[]'::jsonb,
+  tags         text[]      default '{}',
+  published    boolean     not null default true,
   created_by   text,
   created_at   timestamptz default now(),
   updated_at   timestamptz default now()
 );
 
--- Pastikan satu record per strand+subtopik
-create unique index if not exists idx_materi_strand_subtopic
-  on public.materi (strand, subtopic_id);
+create index if not exists idx_materi_posts_strand
+  on public.materi_posts (strand, created_at desc);
 
--- Index pencarian per strand
-create index if not exists idx_materi_strand
-  on public.materi (strand, order_index);
+alter table public.materi_posts enable row level security;
 
--- Row Level Security
-alter table public.materi enable row level security;
+create policy "Semua user bisa baca materi yang dipublikasikan"
+  on public.materi_posts for select
+  using (auth.uid() is not null and published = true);
 
--- Semua user login bisa membaca
-create policy "Semua user bisa membaca materi"
-  on public.materi
-  for select
-  using (auth.uid() is not null);
-
--- Hanya admin (service role atau via custom claim) bisa insert/update/delete
--- Untuk sementara: hanya service_role (admin menggunakan supabase admin client)
-create policy "Admin bisa insert materi"
-  on public.materi
-  for insert
+create policy "Admin bisa insert"
+  on public.materi_posts for insert
   with check (auth.uid() is not null);
 
-create policy "Admin bisa update materi"
-  on public.materi
-  for update
+create policy "Admin bisa update"
+  on public.materi_posts for update
   using (auth.uid() is not null);
 
-create policy "Admin bisa delete materi"
-  on public.materi
-  for delete
+create policy "Admin bisa delete"
+  on public.materi_posts for delete
   using (auth.uid() is not null);
