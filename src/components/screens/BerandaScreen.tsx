@@ -186,8 +186,8 @@ export const BerandaScreen: React.FC<BerandaScreenProps> = ({ onNavigate }) => {
           <section className="max-w-7xl mx-auto px-6 py-12">
             <motion.div className="text-center mb-12" initial="hidden" whileInView="show" viewport={{once:true,amount:0.3}} variants={stagger}>
               <motion.p variants={fadeUp} className="text-blue-600 text-xs font-bold uppercase tracking-[0.25em] mb-3">Ekosistem Pembelajaran Terpadu</motion.p>
-              <motion.h2 variants={fadeUp} className="text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">
-                Teknologi yang Memberdayakan<br/><span className="bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">Potensi Logika Siswa</span>
+              <motion.h2 variants={fadeUp} className="text-3xl lg:text-4xl font-extrabold tracking-tight">
+                <span className="text-slate-900">Teknologi yang Memberdayakan</span><br/><span className="bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">Potensi Logika Siswa</span>
               </motion.h2>
             </motion.div>
             
@@ -204,13 +204,13 @@ export const BerandaScreen: React.FC<BerandaScreenProps> = ({ onNavigate }) => {
                   <button 
                     key={i} 
                     onClick={() => setActiveFeature(i)}
-                    className={`text-left p-5 rounded-2xl transition-all duration-300 border-2 ${activeFeature === i ? 'bg-white border-blue-500 shadow-xl shadow-blue-900/5 transform scale-[1.02]' : 'bg-transparent border-transparent hover:bg-slate-100'}`}
+                    className={`text-left p-5 rounded-2xl transition-all duration-300 border-2 ${activeFeature === i ? 'bg-white border-blue-500 shadow-xl shadow-blue-900/5 transform scale-[1.02]' : 'bg-slate-50 border-slate-200 hover:bg-slate-100 hover:border-slate-300'}`}
                   >
                     <div className="flex items-center gap-4 mb-2">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${activeFeature === i ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-200 text-slate-500'}`}>
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${activeFeature === i ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-200 text-slate-600'}`}>
                         {f.icon}
                       </div>
-                      <h3 className={`text-lg font-bold ${activeFeature === i ? 'text-blue-900' : 'text-slate-700'}`}>{f.title}</h3>
+                      <h3 className={`text-lg font-bold ${activeFeature === i ? 'text-blue-900' : 'text-slate-800'}`}>{f.title}</h3>
                     </div>
                     <AnimatePresence>
                       {activeFeature === i && (
