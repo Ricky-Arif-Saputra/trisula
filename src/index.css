@@ -65,6 +65,14 @@
   --spacing-space-2xl: 3rem;
   --spacing-margin-mobile: 1rem;
   --spacing-margin: 2rem;
+
+  --font-serif: "Cormorant Garamond", "Playfair Display", serif;
+  
+  --color-beranda-bg: #fffbf9;
+  --color-beranda-blush: #ffeef2;
+  --color-beranda-mauve: #50394c;
+  --color-beranda-mauve-light: #7c6478;
+  --color-beranda-gold: #cfa873;
 }
 
 @layer base {
@@ -101,6 +109,12 @@
     --color-on-secondary: #00382f;
     --color-secondary-container: #005045;
     --color-on-secondary-container: #65fade;
+
+    --color-beranda-bg: #1f131a;
+    --color-beranda-blush: #3d2331;
+    --color-beranda-mauve: #e6c8da;
+    --color-beranda-mauve-light: #bca0b2;
+    --color-beranda-gold: #cfa873;
   }
 }
 
