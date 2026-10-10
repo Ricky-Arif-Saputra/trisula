@@ -325,14 +325,6 @@ const QuizListView: React.FC<QuizListViewProps> = ({
             Latihan {selectedCategory} — <span className="capitalize">{quizLevel}</span>
           </h3>
           <div className="flex items-center gap-2">
-            {isAdmin && !formOpen && (
-              <button
-                onClick={() => { setEditing(null); setFormOpen(true); }}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold cursor-pointer hover:bg-indigo-700"
-              >
-                <Plus size={14} /> Tambah soal
-              </button>
-            )}
             <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-full px-2.5 py-1">
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">Live</span>
@@ -359,16 +351,6 @@ const QuizListView: React.FC<QuizListViewProps> = ({
         <p className="text-sm text-on-surface-variant mb-5">
           Kerjakan dengan 4 tahap RME. Pada tahap pengerjaan tersedia kisi-kisi jika kamu membutuhkan panduan.
         </p>
-
-        {formOpen && isAdmin && (
-          <LatihanQuestionForm
-            strand={selectedCategory as any}
-            category={quizLevel as Difficulty}
-            editing={editing}
-            onCancel={() => { setFormOpen(false); setEditing(null); }}
-            onSaved={() => { setFormOpen(false); setEditing(null); refetch(); }}
-          />
-        )}
 
         <div className="flex flex-col gap-3 mt-4">
           {loading && (
@@ -453,19 +435,34 @@ const QuizListView: React.FC<QuizListViewProps> = ({
               <p className="text-sm font-semibold text-on-surface-variant">
                 Belum ada soal untuk {selectedCategory} — {quizLevel}.
               </p>
-              {isAdmin ? (
-                <button
-                  onClick={() => { setEditing(null); setFormOpen(true); }}
-                  className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold cursor-pointer"
-                >
-                  <Plus size={14} /> Tambah soal di sini
-                </button>
-              ) : (
+              {!isAdmin && (
                 <p className="text-xs text-slate-400 mt-1">Soal akan muncul setelah guru menambahkannya.</p>
               )}
             </div>
           )}
         </div>
+
+        {/* Form tambah/edit soal — selalu di bawah daftar soal */}
+        {isAdmin && (
+          <div className="mt-4">
+            {formOpen ? (
+              <LatihanQuestionForm
+                strand={selectedCategory as any}
+                category={quizLevel as Difficulty}
+                editing={editing}
+                onCancel={() => { setFormOpen(false); setEditing(null); }}
+                onSaved={() => { setFormOpen(false); setEditing(null); refetch(); }}
+              />
+            ) : (
+              <button
+                onClick={() => { setEditing(null); setFormOpen(true); }}
+                className="w-full flex items-center justify-center gap-1.5 px-3 py-3 rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 text-xs font-bold cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
+              >
+                <Plus size={14} /> Tambah Soal Latihan
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

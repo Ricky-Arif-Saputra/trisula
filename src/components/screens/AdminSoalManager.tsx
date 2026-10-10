@@ -2,7 +2,7 @@
 import { useAuth } from '../Auth/AuthProvider';
 import { supabase } from '../../lib/supabaseClient';
 import { RmePosttestBuilder } from './RmePosttestBuilder';
-import { Edit2, Trash2, Plus, X, Package2 } from 'lucide-react';
+import { Trash2, Plus, X, Package2 } from 'lucide-react';
 
 interface ExamPackageRow {
   id: string;
@@ -15,13 +15,15 @@ interface ExamPackageRow {
   created_at: string;
 }
 
+type FilterType = 'all' | 'latihan' | 'pretest' | 'postest';
+
 export const AdminSoalManager: React.FC = () => {
   const { user } = useAuth();
   const [packages, setPackages] = useState<ExamPackageRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
-  const [editingPkgId, setEditingPkgId] = useState<string | null>(null);
-  const [filterType, setFilterType] = useState<'all' | 'latihan' | 'pretest' | 'postest'>('all');
+  const [builderTestType, setBuilderTestType] = useState<'pretest' | 'postest' | 'latihan'>('postest');
+  const [filterType, setFilterType] = useState<FilterType>('all');
 
   const fetchPackages = useCallback(async () => {
     setLoading(true);
@@ -49,17 +51,20 @@ export const AdminSoalManager: React.FC = () => {
 
   const handleBuilderSaved = () => {
     setIsBuilderOpen(false);
-    setEditingPkgId(null);
     fetchPackages();
   };
 
-  const openNewBuilder = () => {
-    setEditingPkgId(null);
+  const openBuilder = (type: 'pretest' | 'postest' | 'latihan') => {
+    setBuilderTestType(type);
     setIsBuilderOpen(true);
+    // Scroll to bottom after a tick so the builder has rendered
+    setTimeout(() => {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }, 100);
   };
 
-  const filteredPackages = filterType === 'all' 
-    ? packages 
+  const filteredPackages = filterType === 'all'
+    ? packages
     : packages.filter(p => p.test_type === filterType);
 
   const typeColors: Record<string, string> = {
@@ -76,32 +81,35 @@ export const AdminSoalManager: React.FC = () => {
     peluang: 'bar_chart',
   };
 
+  // Label & style for add button per type
+  const addBtnConfig: Record<'pretest' | 'postest' | 'latihan', { label: string; cls: string }> = {
+    pretest:  { label: 'Tambah Pretest',  cls: 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20' },
+    postest:  { label: 'Tambah Posttest', cls: 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20' },
+    latihan:  { label: 'Tambah Latihan',  cls: 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/20' },
+  };
+
   return (
     <div className="w-full max-w-6xl mx-auto space-y-6">
       {/* HEADER */}
       <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 shadow-2xl text-white">
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h2 className="text-xl font-extrabold tracking-tight flex items-center gap-2">
-              <Package2 size={22} className="text-indigo-400" />
-              Kelola Paket Ujian RME
-            </h2>
-            <p className="text-sm text-slate-400 mt-1">Buat, edit, dan hapus paket Pretest, Posttest, dan Latihan.</p>
-          </div>
-          <button
-            onClick={openNewBuilder}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-indigo-500/25 cursor-pointer"
-          >
-            <Plus size={16} /> Buat Paket Baru
-          </button>
+        <div className="mb-2">
+          <h2 className="text-xl font-extrabold tracking-tight flex items-center gap-2">
+            <Package2 size={22} className="text-indigo-400" />
+            Kelola Paket Ujian RME
+          </h2>
+          <p className="text-sm text-slate-400 mt-1">Buat, edit, dan hapus paket Pretest, Posttest, dan Latihan.</p>
         </div>
 
         {/* Filter tabs */}
-        <div className="flex gap-2 mt-4 border-t border-slate-800 pt-4">
+        <div className="flex gap-2 mt-4 border-t border-slate-800 pt-4 flex-wrap">
           {(['all', 'pretest', 'postest', 'latihan'] as const).map(f => (
             <button
               key={f}
-              onClick={() => setFilterType(f)}
+              onClick={() => {
+                setFilterType(f);
+                // Close builder when switching tabs
+                if (isBuilderOpen) setIsBuilderOpen(false);
+              }}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 filterType === f
                   ? 'bg-indigo-600 text-white shadow-md'
@@ -119,27 +127,6 @@ export const AdminSoalManager: React.FC = () => {
         </div>
       </div>
 
-      {/* BUILDER PANEL (inline) */}
-      {isBuilderOpen && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-xl animate-in slide-in-from-top-4 fade-in duration-300">
-          <div className="bg-slate-100 dark:bg-slate-800 px-5 py-3 flex items-center justify-between border-b border-slate-200 dark:border-slate-700">
-            <span className="text-sm font-black text-slate-700 dark:text-slate-200">
-              {editingPkgId ? 'Edit Paket Ujian' : 'Buat Paket Ujian Baru'}
-            </span>
-            <button onClick={() => { setIsBuilderOpen(false); setEditingPkgId(null); }} className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors cursor-pointer">
-              <X size={16} />
-            </button>
-          </div>
-          <div className="p-0">
-            <RmePosttestBuilder
-              testType="postest"
-              onBack={() => { setIsBuilderOpen(false); setEditingPkgId(null); }}
-              onSaved={handleBuilderSaved}
-            />
-          </div>
-        </div>
-      )}
-
       {/* PACKAGES LIST */}
       <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 shadow-2xl">
         <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">
@@ -149,7 +136,7 @@ export const AdminSoalManager: React.FC = () => {
           <div className="text-center py-10 text-slate-500 text-sm">Memuat...</div>
         ) : filteredPackages.length === 0 ? (
           <div className="text-center py-10 text-slate-500 text-sm bg-slate-800/50 rounded-xl border border-slate-700/50">
-            Belum ada paket ujian. Klik "Buat Paket Baru" untuk memulai.
+            Belum ada paket untuk kategori ini.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -176,14 +163,77 @@ export const AdminSoalManager: React.FC = () => {
                     className="text-rose-400 hover:text-rose-300 flex items-center gap-1 text-xs cursor-pointer transition-colors"
                     onClick={() => handleDelete(pkg.id)}
                   >
-                    <Trash2 size={14}/> Hapus
+                    <Trash2 size={14} /> Hapus
                   </button>
                 </div>
               </div>
             ))}
           </div>
         )}
+
+        {/* Tombol tambah di bawah daftar — per jenis yang dipilih */}
+        <div className="mt-6 pt-5 border-t border-slate-800">
+          {isBuilderOpen ? (
+            /* judul panel inline saat builder terbuka */
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-black text-slate-300 uppercase tracking-widest">
+                Buat Paket — {builderTestType.charAt(0).toUpperCase() + builderTestType.slice(1)}
+              </span>
+              <button
+                onClick={() => setIsBuilderOpen(false)}
+                className="w-7 h-7 rounded-lg bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-600 transition-colors cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ) : filterType === 'all' ? (
+            /* Ketika "Semua" — tampilkan 3 tombol tambah */
+            <div className="flex flex-wrap gap-3">
+              {(['pretest', 'postest', 'latihan'] as const).map(type => (
+                <button
+                  key={type}
+                  onClick={() => openBuilder(type)}
+                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-white text-xs font-bold transition-all shadow-lg cursor-pointer ${addBtnConfig[type].cls}`}
+                >
+                  <Plus size={14} /> {addBtnConfig[type].label}
+                </button>
+              ))}
+            </div>
+          ) : (
+            /* Ketika filter spesifik — tombol sesuai jenis aktif */
+            <button
+              onClick={() => openBuilder(filterType as 'pretest' | 'postest' | 'latihan')}
+              className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-white text-xs font-bold transition-all shadow-lg cursor-pointer ${addBtnConfig[filterType as 'pretest' | 'postest' | 'latihan'].cls}`}
+            >
+              <Plus size={14} /> {addBtnConfig[filterType as 'pretest' | 'postest' | 'latihan'].label}
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* BUILDER PANEL — di bawah daftar */}
+      {isBuilderOpen && (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-xl animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div className="bg-slate-100 dark:bg-slate-800 px-5 py-3 flex items-center justify-between border-b border-slate-200 dark:border-slate-700">
+            <span className="text-sm font-black text-slate-700 dark:text-slate-200">
+              Buat Paket — {builderTestType.charAt(0).toUpperCase() + builderTestType.slice(1)}
+            </span>
+            <button
+              onClick={() => setIsBuilderOpen(false)}
+              className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors cursor-pointer"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <div className="p-0">
+            <RmePosttestBuilder
+              testType={builderTestType}
+              onBack={() => setIsBuilderOpen(false)}
+              onSaved={handleBuilderSaved}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
