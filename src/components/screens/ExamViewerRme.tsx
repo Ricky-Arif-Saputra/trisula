@@ -118,14 +118,12 @@ const stageDesign: Record<string, { border: string; bg: string; label: string; b
 };
 
 export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) => {
-  const { user } = useAuth();
+  const { user, userName, userNisn } = useAuth();
   const [exam, setExam] = useState<ExamPackage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [phase, setPhase] = useState<'intro' | 'active' | 'scoring' | 'result'>('intro');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [studentName, setStudentName] = useState('');
-  const [studentNisn, setStudentNisn] = useState('');
   const [showIdentityModal, setShowIdentityModal] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [startTime, setStartTime] = useState<Date | null>(null);
@@ -195,7 +193,6 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
   }, [phase]);
 
   const handleStart = () => {
-    if (!studentName.trim() || !studentNisn.trim()) { alert('Nama Lengkap dan NISN wajib diisi!'); return; }
     setShowIdentityModal(false);
     setStartTime(new Date());
     setPhase('active');
@@ -284,8 +281,8 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
           await supabase.from('exam_attempts').insert({
             exam_id: exam.id,
             user_id: user.id,
-            student_name: studentName,
-            student_nisn: studentNisn,
+            student_name: userName,
+            student_nisn: userNisn,
             score: normalizedScore,
             correct_count: 0,
             wrong_count: 0,
@@ -361,7 +358,7 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
       if (!element) throw new Error('Template PDF tidak ditemukan.');
       await (html2pdf as any)().set({
         margin: 0,
-        filename: `Hasil_Postest_RME_${studentNisn || pastAttempt?.student_nisn || 'siswa'}_${Date.now()}.pdf`,
+        filename: `Hasil_${exam?.test_type || 'Ujian'}_RME_${userNisn || pastAttempt?.student_nisn || 'siswa'}_${Date.now()}.pdf`,
         image: { type: 'jpeg', quality: 0.95 },
         html2canvas: { scale: 2, useCORS: true, letterRendering: true },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
@@ -387,10 +384,10 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
       score: totalMaxPoints > 0 ? Math.round((totalScore / totalMaxPoints) * 100) : 0,
       total_essay_score: totalScore,
       total_max_points: totalMaxPoints,
-      student_name: studentName,
-      student_nisn: studentNisn,
+      student_name: userName,
+      student_nisn: userNisn,
     };
-  }, [aiResults, pastAttempt, exam, studentName, studentNisn]);
+  }, [aiResults, pastAttempt, exam, userName, userNisn]);
 
   const tanggal = (startTime || new Date()).toLocaleDateString('id-ID', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
   const waktuMulai = (startTime || new Date()).toLocaleTimeString('id-ID');
@@ -399,8 +396,8 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
     ? (() => { const s = Math.floor((endTime.getTime() - startTime.getTime()) / 1000); return `${Math.floor(s / 60)} menit ${s % 60} detik`; })()
     : '-';
 
-  const displayName = pastAttempt?.student_name || studentName || '-';
-  const displayNisn = pastAttempt?.student_nisn || studentNisn || '-';
+  const displayName = pastAttempt?.student_name || userName || '-';
+  const displayNisn = pastAttempt?.student_nisn || userNisn || '-';
   const finalScore = computedResults?.score ?? 0;
   const scoreColor = finalScore >= 75 ? '#16a34a' : finalScore >= 50 ? '#d97706' : '#dc2626';
   const scoreBadge = finalScore >= 75
@@ -500,66 +497,22 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
           </div>
 
           <button
-            onClick={() => setShowIdentityModal(true)}
+            onClick={handleStart}
             className="w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base shadow-xl shadow-indigo-500/30 cursor-pointer transition-all duration-200 active:scale-95 flex items-center justify-center gap-2"
           >
             <span className="material-symbols-outlined text-[24px]">play_arrow</span>
-            Mulai Postest RME
+            Mulai Ujian — {exam.test_type === 'pretest' ? 'Pretest' : 'Posttest'} RME
           </button>
-        </div>
 
-        {/* Identity Modal */}
-        {showIdentityModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="w-full max-w-sm mx-4 bg-white rounded-3xl shadow-2xl shadow-slate-900/20 p-7 animate-in zoom-in-95">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-indigo-600 text-[22px]">badge</span>
-                </div>
-                <div>
-                  <h3 className="font-black text-slate-800 text-base">Identitas Peserta</h3>
-                  <p className="text-xs text-slate-400 font-medium">Wajib diisi sebelum ujian dimulai</p>
-                </div>
-              </div>
-              <div className="space-y-4 mb-6">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Nama Lengkap *</label>
-                  <input
-                    type="text"
-                    value={studentName}
-                    onChange={(e) => setStudentName(e.target.value)}
-                    placeholder="Masukkan nama lengkap"
-                    className="w-full p-3.5 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-800 font-semibold text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all duration-200"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">NISN *</label>
-                  <input
-                    type="text"
-                    value={studentNisn}
-                    onChange={(e) => setStudentNisn(e.target.value)}
-                    placeholder="Masukkan NISN"
-                    className="w-full p-3.5 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-800 font-semibold text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all duration-200"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowIdentityModal(false)}
-                  className="flex-1 py-3 rounded-xl border-2 border-slate-200 text-slate-600 font-bold text-sm cursor-pointer hover:bg-slate-50 transition-all duration-200"
-                >
-                  Batal
-                </button>
-                <button
-                  onClick={handleStart}
-                  className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm cursor-pointer shadow-lg shadow-indigo-500/20 transition-all duration-200 active:scale-95"
-                >
-                  Mulai Ujian
-                </button>
-              </div>
+          {/* Info identitas otomatis */}
+          <div className="mt-3 p-3 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center gap-3">
+            <span className="material-symbols-outlined text-indigo-400 text-[18px]">badge</span>
+            <div className="text-xs text-indigo-700">
+              <span className="font-bold">{userName || 'Nama belum diatur'}</span>
+              {userNisn && <span className="ml-2 text-indigo-500">· NISN {userNisn}</span>}
             </div>
           </div>
-        )}
+        </div>
       </div>
     );
   }
@@ -636,7 +589,7 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
             <div className="flex items-center gap-3">
               <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-200/60 rounded-xl">
                 <span className="material-symbols-outlined text-indigo-500 text-[14px]">person</span>
-                <span className="text-xs font-bold text-indigo-700">{studentName}</span>
+                <span className="text-xs font-bold text-indigo-700">{userName}</span>
               </div>
               <div className="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200/60 text-slate-600 font-bold text-xs">
                 Soal {currentQuestionIndex + 1} / {exam.questions.length}

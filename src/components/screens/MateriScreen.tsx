@@ -2,12 +2,13 @@
 import { MathCategory } from '../../types';
 import { useAuth } from '../Auth/AuthProvider';
 import { supabase } from '../../lib/supabaseClient';
+import { RmePosttestBuilder } from './RmePosttestBuilder';
 import {
   Plus, BookOpen, Loader2, Edit3, Trash2, Save, X,
   ChevronRight, ArrowLeft, Check, AlertCircle, FileText,
   Video, ImageIcon, Link2, Youtube, Music, Eye, EyeOff,
   Calendar, Tag, Download, ExternalLink, PlayCircle,
-  GripVertical, UploadCloud,
+  GripVertical, UploadCloud, ClipboardList, Lock,
 } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────
@@ -38,16 +39,14 @@ interface MateriPost {
 // ─────────────────────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────────────────────
-const TOPICS: { id: MathCategory; label: string; icon: string; gradient: string; accent: string; desc: string }[] = [
-  { id: 'bilangan',     label: 'Bilangan',              icon: 'tag',            gradient: 'from-blue-600 to-cyan-500',     accent: '#2563eb', desc: 'Operasi hitung, FPB & KPK, rasio & sifat bilangan' },
+const TOPICS: { id: MathCategory; label: string; icon: string; gradient: string; accent: string; desc: string }[] = [  { id: 'bilangan',     label: 'Bilangan',              icon: 'tag',            gradient: 'from-blue-600 to-cyan-500',     accent: '#2563eb', desc: 'Operasi hitung, FPB & KPK, rasio & sifat bilangan' },
   { id: 'aljabar',      label: 'Aljabar',               icon: 'functions',      gradient: 'from-violet-600 to-purple-500', accent: '#7c3aed', desc: 'Persamaan, pertidaksamaan & sistem fungsi' },
   { id: 'geometri',     label: 'Geometri & Pengukuran', icon: 'category',       gradient: 'from-emerald-600 to-teal-500',  accent: '#059669', desc: 'Bangun 2D/3D, transformasi & pengukuran' },
   { id: 'trigonometri', label: 'Trigonometri',           icon: 'change_history', gradient: 'from-amber-500 to-orange-500',  accent: '#d97706', desc: 'Rasio, identitas & grafik gelombang' },
   { id: 'peluang',      label: 'Data & Peluang',         icon: 'bar_chart',      gradient: 'from-rose-600 to-pink-500',     accent: '#e11d48', desc: 'Analisis data, statistik & teori peluang' },
 ];
 
-const ATTACHMENT_META: Record<AttachmentType, { label: string; icon: React.ReactNode; color: string; placeholder: string; hint: string }> = {
-  pdf:     { label: 'File PDF',       icon: <FileText size={14} />,    color: 'text-rose-600 bg-rose-50 border-rose-200',     placeholder: 'URL file PDF atau Google Drive share link', hint: 'Link langsung ke file .pdf' },
+const ATTACHMENT_META: Record<AttachmentType, { label: string; icon: React.ReactNode; color: string; placeholder: string; hint: string }> = {  pdf:     { label: 'File PDF',       icon: <FileText size={14} />,    color: 'text-rose-600 bg-rose-50 border-rose-200',     placeholder: 'URL file PDF atau Google Drive share link', hint: 'Link langsung ke file .pdf' },
   video:   { label: 'Video',          icon: <Video size={14} />,       color: 'text-blue-600 bg-blue-50 border-blue-200',     placeholder: 'URL file video (mp4, webm, atau hosting)', hint: 'Link video yang bisa diputar langsung' },
   image:   { label: 'Gambar',         icon: <ImageIcon size={14} />,   color: 'text-sky-600 bg-sky-50 border-sky-200',        placeholder: 'URL gambar (jpg, png, webp...)', hint: 'Gambar akan ditampilkan langsung' },
   youtube: { label: 'YouTube',        icon: <Youtube size={14} />,     color: 'text-red-600 bg-red-50 border-red-200',        placeholder: 'https://youtube.com/watch?v=... atau youtu.be/...', hint: 'Akan di-embed sebagai player' },
@@ -667,12 +666,203 @@ const PostForm: React.FC<{
 };
 
 // ─────────────────────────────────────────────────────────────
+// Exam types & ExamSection
+// ─────────────────────────────────────────────────────────────
+interface ExamPackage {
+  id: string;
+  title: string;
+  strand: string;
+  test_type: 'pretest' | 'postest';
+  duration_minutes: number;
+  total_max_points?: number;
+}
+
+interface ExamAttempt {
+  id: string;
+  exam_id: string;
+  score: number;
+}
+
+const ExamSection: React.FC<{
+  topic: typeof TOPICS[number];
+  onNavigateToExam: (examId: string) => void;
+}> = ({ topic, onNavigateToExam }) => {
+  const { isAdmin, user } = useAuth();
+  const [packages, setPackages] = useState<ExamPackage[]>([]);
+  const [attempts, setAttempts] = useState<Record<string, ExamAttempt>>({});
+  const [loading, setLoading] = useState(true);
+  const [builderType, setBuilderType] = useState<'pretest' | 'postest' | null>(null);
+
+  const fetchExams = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await supabase
+        .from('exam_packages')
+        .select('id, title, strand, test_type, duration_minutes, total_max_points')
+        .ilike('strand', topic.id)
+        .in('test_type', ['pretest', 'postest'])
+        .order('created_at', { ascending: false });
+      const pkgs = (data || []) as ExamPackage[];
+      setPackages(pkgs);
+      if (user && pkgs.length > 0) {
+        const { data: atts } = await supabase
+          .from('exam_attempts')
+          .select('id, exam_id, score')
+          .eq('user_id', user.id)
+          .in('exam_id', pkgs.map(p => p.id));
+        const map: Record<string, ExamAttempt> = {};
+        (atts || []).forEach((a: ExamAttempt) => { map[a.exam_id] = a; });
+        setAttempts(map);
+      }
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  }, [topic.id, user]);
+
+  useEffect(() => { fetchExams(); }, [fetchExams]);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Hapus paket ujian ini?')) return;
+    await supabase.from('exam_packages').delete().eq('id', id);
+    setPackages(prev => prev.filter(p => p.id !== id));
+  };
+
+  const pretests = packages.filter(p => p.test_type === 'pretest');
+  const posttests = packages.filter(p => p.test_type === 'postest');
+
+  const ExamCard: React.FC<{ pkg: ExamPackage; colorClass: 'amber' | 'emerald' }> = ({ pkg, colorClass }) => {
+    const attempt = attempts[pkg.id];
+    const isDone = !!attempt;
+    const c = colorClass === 'amber'
+      ? { badge: 'bg-amber-100 text-amber-700 border-amber-200', btn: 'bg-amber-500 hover:bg-amber-600', border: 'border-amber-200' }
+      : { badge: 'bg-emerald-100 text-emerald-700 border-emerald-200', btn: 'bg-emerald-600 hover:bg-emerald-700', border: 'border-emerald-200' };
+    return (
+      <div className={`bg-white dark:bg-slate-800 border ${c.border} dark:border-slate-700 rounded-2xl p-4 flex flex-col gap-3 shadow-sm hover:shadow-md transition-all`}>
+        <div className="flex items-start justify-between gap-2">
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase ${c.badge}`}>
+            {pkg.test_type === 'pretest' ? 'Pretest' : 'Posttest'}
+          </span>
+          {isDone && (
+            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+              <Check size={9} /> Selesai
+            </span>
+          )}
+        </div>
+        <h4 className="text-sm font-extrabold text-slate-800 dark:text-white line-clamp-2">{pkg.title}</h4>
+        <div className="flex items-center gap-3 text-[11px] text-slate-500">
+          <span>{pkg.duration_minutes} menit</span>
+          {pkg.total_max_points && <span>🏆 {pkg.total_max_points} poin</span>}
+        </div>
+        {isDone && (
+          <div className="px-3 py-2 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-700 flex items-center justify-between">
+            <span className="text-[11px] font-bold text-slate-500">Nilai</span>
+            <span className={`text-base font-black ${attempt.score >= 70 ? 'text-emerald-600' : 'text-amber-600'}`}>{attempt.score}</span>
+          </div>
+        )}
+        <div className="flex gap-2 mt-auto">
+          <button onClick={() => onNavigateToExam(pkg.id)}
+            className={`flex-1 py-2.5 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${isDone ? 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300' : `${c.btn} shadow-md`}`}>
+            {isDone ? <><Eye size={12} /> Lihat Hasil</> : <><PlayCircle size={12} /> Kerjakan</>}
+          </button>
+          {isAdmin && (
+            <button onClick={() => handleDelete(pkg.id)}
+              className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-700 text-rose-500 hover:bg-rose-50 flex items-center justify-center cursor-pointer transition-colors">
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Section header */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <ClipboardList size={16} className="text-slate-500" />
+          <h3 className="text-sm font-extrabold text-slate-700 dark:text-slate-200">Pretest & Posttest</h3>
+        </div>
+        {isAdmin && !builderType && (
+          <div className="flex gap-2">
+            <button onClick={() => setBuilderType('pretest')}
+              className="flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 cursor-pointer transition-colors">
+              <Plus size={12} /> Pretest
+            </button>
+            <button onClick={() => setBuilderType('postest')}
+              className="flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 cursor-pointer transition-colors">
+              <Plus size={12} /> Posttest
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Builder */}
+      {isAdmin && builderType && (
+        <div className="animate-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-slate-500">
+              Buat {builderType === 'pretest' ? 'Pretest' : 'Posttest'} Baru — {topic.label}
+            </span>
+            <button onClick={() => setBuilderType(null)}
+              className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 cursor-pointer">
+              <X size={13} />
+            </button>
+          </div>
+          <RmePosttestBuilder
+            testType={builderType}
+            onBack={() => setBuilderType(null)}
+            onSaved={() => { setBuilderType(null); fetchExams(); }}
+          />
+        </div>
+      )}
+
+      {/* List */}
+      {!builderType && (
+        <>
+          {loading ? (
+            <div className="flex items-center gap-2 py-6 text-slate-400 text-sm justify-center">
+              <Loader2 size={16} className="animate-spin" /> Memuat ujian...
+            </div>
+          ) : packages.length === 0 ? (
+            <div className="py-10 text-center text-slate-400 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl">
+              <Lock size={24} className="mx-auto mb-2 opacity-30" />
+              <p className="text-sm font-bold">Belum ada ujian</p>
+              <p className="text-xs mt-1">{isAdmin ? 'Klik "+ Pretest" atau "+ Posttest" di atas untuk membuat.' : 'Guru belum membuat pretest/posttest untuk topik ini.'}</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {pretests.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-2">Pretest ({pretests.length})</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {pretests.map(p => <ExamCard key={p.id} pkg={p} colorClass="amber" />)}
+                  </div>
+                </div>
+              )}
+              {posttests.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-2">Posttest ({posttests.length})</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {posttests.map(p => <ExamCard key={p.id} pkg={p} colorClass="emerald" />)}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────
 // TopicScreen — daftar & detail materi satu topik
 // ─────────────────────────────────────────────────────────────
 const TopicScreen: React.FC<{
   topic: typeof TOPICS[number];
   onBack: () => void;
-}> = ({ topic, onBack }) => {
+  onNavigateToExam: (examId: string) => void;
+}> = ({ topic, onBack, onNavigateToExam }) => {
   const { isAdmin } = useAuth();
   const [posts, setPosts] = useState<MateriPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -761,7 +951,14 @@ const TopicScreen: React.FC<{
         </div>
       </div>
 
-      <div className="px-4 py-5 space-y-5 max-w-5xl mx-auto">
+      <div className="px-4 py-5 space-y-6 max-w-5xl mx-auto">
+        {/* Exam Section — Pretest & Posttest */}
+        {!isFormOpen && !openPost && (
+          <ExamSection topic={topic} onNavigateToExam={onNavigateToExam} />
+        )}
+
+        <div className="border-t border-slate-200 dark:border-slate-800" />
+
         {/* Form tambah/edit */}
         {isFormOpen && (
           <div className="animate-in slide-in-from-top-2 duration-300">
@@ -851,6 +1048,7 @@ interface MateriScreenProps {
 export const MateriScreen: React.FC<MateriScreenProps> = ({
   initialCategory = null,
   onSelectCategory,
+  onNavigateToRmeExam,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<MathCategory | null>(initialCategory);
 
@@ -864,7 +1062,7 @@ export const MateriScreen: React.FC<MateriScreenProps> = ({
   const topic = TOPICS.find(t => t.id === selectedCategory);
 
   if (topic) {
-    return <TopicScreen topic={topic} onBack={() => handleSelectCat(null)} />;
+    return <TopicScreen topic={topic} onBack={() => handleSelectCat(null)} onNavigateToExam={(id) => onNavigateToRmeExam?.(id)} />;
   }
 
   // ── Halaman pilih topik ──

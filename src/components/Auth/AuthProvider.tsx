@@ -17,6 +17,7 @@ interface AuthContextProps {
   session: Session | null;
   loading: boolean;
   userName: string;
+  userNisn: string;
   isAdmin: boolean;
   signOut: () => Promise<void>;
 }
@@ -28,6 +29,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [userName, setUserName] = useState<string>('Siswa TRISULA');
+  const [userNisn, setUserNisn] = useState<string>('');
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
   const checkAdminStatus = async (currentUser: User | null) => {
@@ -64,6 +66,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const fetchProfileName = async (currentUser: User | null) => {
     if (!currentUser) {
       setUserName('Siswa TRISULA');
+      setUserNisn('');
       return;
     }
 
@@ -77,20 +80,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUserName(metaName);
     }
 
+    const metaNisn = currentUser.user_metadata?.nisn || '';
+    if (metaNisn) setUserNisn(metaNisn);
+
     // 2. Coba fetch dari tabel profiles di Supabase
     try {
       const { data } = await supabase
         .from('profiles')
-        .select('nama_lengkap')
+        .select('nama_lengkap, nisn')
         .eq('id', currentUser.id)
         .maybeSingle();
 
       if (data?.nama_lengkap) {
         setUserName(data.nama_lengkap);
       } else if (!metaName) {
-        // Fallback jika tidak ada metadata & profiles: gunakan bagian depan email atau NISN
         const emailFront = currentUser.email?.split('@')[0] || 'Siswa TRISULA';
         setUserName(emailFront);
+      }
+
+      if (data?.nisn) {
+        setUserNisn(data.nisn);
       }
     } catch (err) {
       console.error('Fetch profile name error:', err);
@@ -137,7 +146,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, userName, isAdmin, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, userName, userNisn, isAdmin, signOut }}>
       {children}
     </AuthContext.Provider>
   );
