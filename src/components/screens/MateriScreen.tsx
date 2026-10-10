@@ -332,6 +332,15 @@ const PostDetail: React.FC<{
 // ─────────────────────────────────────────────────────────────
 // AttachmentEditorRow — satu baris lampiran di form admin
 // ─────────────────────────────────────────────────────────────
+
+// Tipe yang bisa upload file fisik
+const FILE_UPLOAD_ACCEPT: Partial<Record<AttachmentType, string>> = {
+  pdf:   'application/pdf',
+  video: 'video/*',
+  audio: 'audio/*',
+  image: 'image/*',
+};
+
 const AttachmentEditorRow: React.FC<{
   att: Attachment;
   index: number;
@@ -341,6 +350,35 @@ const AttachmentEditorRow: React.FC<{
   onMove: (id: string, dir: 'up' | 'down') => void;
 }> = ({ att, index, total, onChange, onRemove, onMove }) => {
   const meta = ATTACHMENT_META[att.type];
+  const [uploading, setUploading] = useState(false);
+  const [uploadErr, setUploadErr] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadErr(null);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `materi/${att.type}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from('materi-files')
+        .upload(path, file, { cacheControl: '3600', upsert: false });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from('materi-files').getPublicUrl(path);
+      onChange(att.id, 'url', data.publicUrl);
+      if (!att.label) onChange(att.id, 'label', file.name.replace(/\.[^/.]+$/, ''));
+    } catch (err: any) {
+      setUploadErr(err.message || 'Gagal mengupload file.');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const canUploadFile = att.type in FILE_UPLOAD_ACCEPT;
+
   return (
     <div className={`rounded-xl border p-3 space-y-2 ${meta.color.replace('text-', 'border-').split(' ')[0]} bg-white dark:bg-slate-900`}>
       <div className="flex items-center gap-2">
@@ -363,19 +401,74 @@ const AttachmentEditorRow: React.FC<{
           </button>
         </div>
       </div>
+
+      {/* Label */}
       <input
         value={att.label}
         onChange={e => onChange(att.id, 'label', e.target.value)}
         placeholder="Nama / label (misal: Modul Bab 1)"
         className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold outline-none focus:border-indigo-400"
       />
-      <input
-        value={att.url}
-        onChange={e => onChange(att.id, 'url', e.target.value)}
-        placeholder={meta.placeholder}
-        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-mono outline-none focus:border-indigo-400"
-      />
-      <p className="text-[10px] text-slate-400">{meta.hint}</p>
+
+      {/* URL input */}
+      <div className="space-y-1">
+        <p className="text-[10px] font-bold text-slate-400">Tautan URL</p>
+        <input
+          value={att.url}
+          onChange={e => onChange(att.id, 'url', e.target.value)}
+          placeholder={meta.placeholder}
+          className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-mono outline-none focus:border-indigo-400"
+        />
+        <p className="text-[10px] text-slate-400">{meta.hint}</p>
+      </div>
+
+      {/* File upload fisik */}
+      {canUploadFile && (
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-bold text-slate-400">— atau upload file langsung —</p>
+          <div
+            onClick={() => !uploading && fileInputRef.current?.click()}
+            className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 border-dashed transition-colors cursor-pointer
+              ${uploading
+                ? 'border-indigo-300 bg-indigo-50 dark:bg-indigo-900/20 cursor-wait'
+                : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-600 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 bg-slate-50 dark:bg-slate-800/50'
+              }`}
+          >
+            {uploading ? (
+              <>
+                <Loader2 size={16} className="text-indigo-500 animate-spin shrink-0" />
+                <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">Mengupload...</span>
+              </>
+            ) : (
+              <>
+                <UploadCloud size={16} className="text-slate-400 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                    {att.url ? 'Ganti dengan file baru' : 'Klik untuk pilih file'}
+                  </p>
+                  <p className="text-[10px] text-slate-400 truncate">
+                    {FILE_UPLOAD_ACCEPT[att.type]} · Maks. 50 MB
+                  </p>
+                </div>
+                {att.url && <Check size={14} className="text-emerald-500 shrink-0" />}
+              </>
+            )}
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={FILE_UPLOAD_ACCEPT[att.type]}
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+          {uploadErr && (
+            <p className="text-[10px] text-rose-500 font-bold flex items-center gap-1">
+              <AlertCircle size={10} /> {uploadErr}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Preview thumbnails */}
       {att.type === 'image' && att.url.trim() && (
         <img src={att.url} alt="" className="max-h-24 rounded-lg border border-slate-200 object-contain" />
@@ -481,7 +574,7 @@ const PostForm: React.FC<{
         </button>
       </div>
 
-      <div className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+      <div className="p-5 space-y-4">
         {/* Judul */}
         <div>
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Judul *</label>
@@ -664,12 +757,7 @@ const TopicScreen: React.FC<{
             <h2 className="text-sm font-extrabold text-slate-800 dark:text-white">{topic.label}</h2>
             <p className="text-[10px] text-slate-400">{posts.length} bahan ajar tersedia</p>
           </div>
-          {isAdmin && !isFormOpen && (
-            <button onClick={() => setFormMode('new')}
-              className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r ${topic.gradient} text-white text-xs font-bold cursor-pointer hover:opacity-90 transition-opacity shadow-md`}>
-              <Plus size={14} /> Tambah Materi
-            </button>
-          )}
+
         </div>
       </div>
 
@@ -720,18 +808,27 @@ const TopicScreen: React.FC<{
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {posts.map(post => (
-                  <PostCard
-                    key={post.id}
-                    post={post}
-                    isAdmin={isAdmin}
-                    accentGradient={topic.gradient}
-                    onOpen={() => setOpenPostId(post.id)}
-                    onEdit={() => setFormMode(post.id)}
-                    onDelete={() => handleDelete(post.id)}
-                  />
-                ))}
+              <div className="space-y-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {posts.map(post => (
+                    <PostCard
+                      key={post.id}
+                      post={post}
+                      isAdmin={isAdmin}
+                      accentGradient={topic.gradient}
+                      onOpen={() => setOpenPostId(post.id)}
+                      onEdit={() => setFormMode(post.id)}
+                      onDelete={() => handleDelete(post.id)}
+                    />
+                  ))}
+                </div>
+                {/* Tombol tambah — satu-satunya, di bawah grid */}
+                {isAdmin && (
+                  <button onClick={() => setFormMode('new')}
+                    className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-sm font-bold cursor-pointer hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-all">
+                    <Plus size={16} /> Tambah Materi Baru
+                  </button>
+                )}
               </div>
             )}
           </>
