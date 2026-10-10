@@ -37,6 +37,7 @@ interface RmeQuestion {
 }
 
 interface RmePosttestBuilderProps {
+  testType?: 'latihan' | 'pretest' | 'postest';
   onBack: () => void;
   onSaved: () => void;
 }
@@ -249,7 +250,7 @@ const StageKeyPanel: React.FC<{
 // =====================================================
 // Main RmePosttestBuilder
 // =====================================================
-export const RmePosttestBuilder: React.FC<RmePosttestBuilderProps> = ({ onBack, onSaved }) => {
+export const RmePosttestBuilder: React.FC<RmePosttestBuilderProps> = ({ onBack, onSaved, testType = 'postest' }) => {
   const { user } = useAuth();
 
   const [title, setTitle] = useState('');
@@ -318,7 +319,7 @@ export const RmePosttestBuilder: React.FC<RmePosttestBuilderProps> = ({ onBack, 
     const payload = {
       title: title.trim(),
       strand,
-      test_type: 'postest',
+      test_type: testType,
       exam_type: 'rme_posttest',
       duration_minutes: durationMinutes,
       questions: builtQuestions,
@@ -329,7 +330,7 @@ export const RmePosttestBuilder: React.FC<RmePosttestBuilderProps> = ({ onBack, 
     try {
       const { error } = await supabase.from('exam_packages').insert([payload]);
       if (error) throw error;
-      setSaveMsg({ type: 'success', text: `✅ Paket Postest RME "${title}" berhasil disimpan!` });
+      setSaveMsg({ type: 'success', text: `✅ Paket Ujian/Latihan RME "${title}" berhasil disimpan!` });
       setTimeout(() => onSaved(), 2000);
     } catch (err: any) {
       setSaveMsg({ type: 'error', text: err.message || 'Terjadi kesalahan saat menyimpan.' });
@@ -348,7 +349,7 @@ export const RmePosttestBuilder: React.FC<RmePosttestBuilderProps> = ({ onBack, 
             <span className="material-symbols-outlined text-[18px]">arrow_back</span>
           </button>
           <div>
-            <div className="text-[10px] font-black uppercase tracking-widest opacity-80">RME Postest Builder</div>
+            <div className="text-[10px] font-black uppercase tracking-widest opacity-80">RME Builder</div>
             <h2 className="text-lg font-extrabold">Buat Studi Kasus RME</h2>
           </div>
         </div>

@@ -9,6 +9,7 @@ import { UjianScreen } from './components/screens/UjianScreen';
 import { DashboardScreen } from './components/screens/DashboardScreen';
 import { AdminSoalManager } from './components/screens/AdminSoalManager';
 import { ExamViewer } from './components/screens/ExamViewer';
+import { ExamViewerRme } from './components/screens/ExamViewerRme';
 import { useAuth } from './components/Auth/AuthProvider';
 import AuthLayout from './components/Auth/AuthLayout';
 import AuthTabs from './components/Auth/AuthTabs';
@@ -20,6 +21,7 @@ export default function App() {
   const [materiCategory, setMateriCategory] = useState<MathCategory | null>(null);
   const [latihanCategory, setLatihanCategory] = useState<MathCategory | null>(null);
   const [activeExamId, setActiveExamId] = useState<string | null>(null);
+  const [activeRmeExamId, setActiveRmeExamId] = useState<string | null>(null);
   const [isDark, setIsDark] = useState<boolean>(false);
   const [userXp, setUserXp] = useState<number>(4850);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -71,15 +73,19 @@ export default function App() {
     if (screen === 'ujian' && examId) {
       setActiveExamId(examId);
     }
+    if (screen === 'ujian-rme' && examId) {
+      setActiveRmeExamId(examId);
+    }
     setCurrentScreen(screen);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const isDetailView = (currentScreen === 'materi' && materiCategory !== null) || (currentScreen === 'latihan' && latihanCategory !== null);
+  const isDetailView = (currentScreen === 'materi' && materiCategory !== null) || (currentScreen === 'latihan' && latihanCategory !== null) || currentScreen === 'ujian-rme';
 
   const handleBack = () => {
     if (currentScreen === 'materi') setMateriCategory(null);
     if (currentScreen === 'latihan') setLatihanCategory(null);
+    if (currentScreen === 'ujian-rme') { setActiveRmeExamId(null); setCurrentScreen('materi'); }
   };
 
   const getHeaderTitle = () => {
@@ -101,6 +107,7 @@ export default function App() {
     }
     if (currentScreen === 'beranda') return 'TRISULA EduMath';
     if (currentScreen === 'ujian') return 'Uji Kompetensi';
+    if (currentScreen === 'ujian-rme') return 'Kerjakan Ujian RME';
     if (currentScreen === 'dashboard') return 'Dasbor Analyst & Profil';
     if (currentScreen === 'admin') return 'Manajemen Soal (Admin)';
     return 'TRISULA EduMath';
@@ -170,6 +177,7 @@ export default function App() {
               initialCategory={materiCategory}
               onSelectCategory={(cat) => setMateriCategory(cat)}
               onNavigateToProblem={() => handleNavigate('latihan')}
+              onNavigateToRmeExam={(examId) => handleNavigate('ujian-rme', null, examId)}
             />
           )}
           {currentScreen === 'latihan' && (
@@ -193,6 +201,9 @@ export default function App() {
           )}
           {currentScreen === 'ujian' && activeExamId && (
             <ExamViewer examId={activeExamId} onBack={() => { setActiveExamId(null); handleNavigate('ujian'); }} />
+          )}
+          {currentScreen === 'ujian-rme' && activeRmeExamId && (
+            <ExamViewerRme examId={activeRmeExamId} onBack={() => { setActiveRmeExamId(null); handleNavigate('materi'); }} />
           )}
 
           {/* Floating Admin Button */}
