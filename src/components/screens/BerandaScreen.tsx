@@ -21,7 +21,7 @@ import {
   Instagram,
   Github,
   Mail,
-  ChevronDown
+  X
 } from 'lucide-react';
 import { ScreenType, MathCategory } from '../../types';
 import { useAuth } from '../Auth/AuthProvider';
@@ -54,7 +54,7 @@ export const BerandaScreen: React.FC<BerandaScreenProps> = ({ onNavigate }) => {
   const { userName } = useAuth();
   const [activeFeature, setActiveFeature] = useState(0);
   const [activeProblem, setActiveProblem] = useState<'rme' | 'traditional'>('rme');
-  const [activePillar, setActivePillar] = useState<number | null>(null);
+  const [selectedPillarIndex, setSelectedPillarIndex] = useState<number | null>(null);
 
   const fadeUp = {
     hidden: { opacity: 0, y: 32 },
@@ -124,9 +124,27 @@ export const BerandaScreen: React.FC<BerandaScreenProps> = ({ onNavigate }) => {
   ];
 
   const pillars = [
-    { icon: <Globe size={28} />, title: 'Konteks Dunia Nyata', desc: 'Setiap konsep diawali dari situasi autentik—pasar, arsitektur, kesehatan—sehingga siswa merasakan relevansi matematika.', color: 'blue' },
-    { icon: <Sigma size={28} />, title: 'Pembentukan Model', desc: 'Menjembatani realitas ke bahasa matematis melalui matematisasi horizontal & vertikal, membangun intuisi yang kokoh.', color: 'violet' },
-    { icon: <BrainCircuit size={28} />, title: 'Pembelajaran Interaktif', desc: 'Umpan balik AI generatif per tahap mendorong meta-kognisi sehingga siswa memahami mengapa strategi mereka benar atau perlu diperbaiki.', color: 'cyan' },
+    { 
+      icon: <Globe size={32} />, 
+      title: 'Konteks Dunia Nyata', 
+      desc: 'Setiap konsep diawali dari situasi autentik—pasar, arsitektur, kesehatan—sehingga siswa merasakan relevansi matematika.', 
+      color: 'blue',
+      fullContent: 'Pendekatan ini berfokus pada penggunaan masalah dari dunia nyata sebagai titik tolak belajar matematika. Dengan mengaitkan materi pada kehidupan sehari-hari, siswa tidak lagi menganggap matematika sebagai ilmu yang abstrak dan sulit dijangkau, melainkan sesuatu yang sangat berguna dan melekat dalam berbagai aspek kehidupan mereka, mulai dari perancangan bangunan hingga pemecahan masalah ekonomi.' 
+    },
+    { 
+      icon: <Sigma size={32} />, 
+      title: 'Pembentukan Model', 
+      desc: 'Menjembatani realitas ke bahasa matematis melalui matematisasi horizontal & vertikal, membangun intuisi yang kokoh.', 
+      color: 'violet',
+      fullContent: 'Siswa didorong untuk secara mandiri memodelkan permasalahan nyata ke dalam bentuk matematika (matematisasi horizontal), kemudian menyederhanakannya menjadi rumus atau algoritma formal (matematisasi vertikal). Hal ini memicu kebebasan berkreasi, mengasah daya kritis, dan membangun intuisi aljabar serta geometri secara alami tanpa harus memaksa hafalan rumus belaka.'
+    },
+    { 
+      icon: <BrainCircuit size={32} />, 
+      title: 'Pembelajaran Interaktif', 
+      desc: 'Umpan balik AI generatif per tahap mendorong meta-kognisi sehingga siswa memahami mengapa strategi mereka benar.', 
+      color: 'cyan',
+      fullContent: 'Mengadopsi pendekatan modern, sistem kami tidak hanya menilai hasil akhir, tetapi memantau proses berpikir. Melalui bantuan Kecerdasan Buatan (AI), siswa menerima umpan balik yang relevan di setiap tahapan pengerjaan. AI kami bertindak seperti tutor privat yang mampu mengidentifikasi letak kesalahan logika dan memberikan panduan agar siswa menyadari secara mandiri bagaimana memperbaiki strategi pemecahan masalahnya.'
+    },
   ];
 
   return (
@@ -141,7 +159,7 @@ export const BerandaScreen: React.FC<BerandaScreenProps> = ({ onNavigate }) => {
       <div className="relative z-10 text-white">
 
         {/* HERO */}
-        <section className="max-w-7xl mx-auto px-6 pt-24 pb-32 flex flex-col lg:flex-row items-center gap-16">
+        <section className="max-w-7xl mx-auto px-6 pt-10 pb-20 flex flex-col lg:flex-row items-center gap-16">
           <motion.div className="flex-1 flex flex-col items-start gap-8" variants={stagger} initial="hidden" animate="show">
             <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-300 text-xs font-semibold tracking-wide">
               <Sparkles size={13} />{userName ? `Selamat kembali, ${userName}` : 'Platform Asesmen RME Berbasis AI'}
@@ -154,7 +172,6 @@ export const BerandaScreen: React.FC<BerandaScreenProps> = ({ onNavigate }) => {
             <motion.p variants={fadeUp} className="text-lg text-slate-400 max-w-xl leading-relaxed">
               Platform pembelajaran matematika kontekstual yang mengintegrasikan <em className="text-slate-200 not-italic">Realistic Mathematics Education</em> (RME) dengan <em className="text-slate-200 not-italic">AI Scoring Engine</em>—memandu siswa dari masalah dunia nyata menuju penguasaan matematis mendalam.
             </motion.p>
-            {/* Buttons removed as requested */}
             <motion.div variants={fadeUp} className="flex items-center gap-4 pt-2">
               <div className="flex -space-x-2">
                 {['#3B82F6','#8B5CF6','#06B6D4','#10B981'].map((c,i) => (
@@ -184,50 +201,47 @@ export const BerandaScreen: React.FC<BerandaScreenProps> = ({ onNavigate }) => {
         
         {/* PILLARS */}
         <section id="metode-rme" className="scroll-mt-24 border-y border-white/[0.05] bg-black/10">
-          <div className="max-w-7xl mx-auto px-6 py-28">
-            <motion.div className="text-center mb-16" initial="hidden" whileInView="show" viewport={{once:true,amount:0.3}} variants={stagger}>
+          <div className="max-w-7xl mx-auto px-6 py-16">
+            <motion.div className="text-center mb-12" initial="hidden" whileInView="show" viewport={{once:true,amount:0.3}} variants={stagger}>
               <motion.p variants={fadeUp} className="text-blue-400 text-xs font-bold uppercase tracking-[0.25em] mb-4">Pendekatan RME</motion.p>
-              <motion.h2 variants={fadeUp} className="text-3xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">
-                Tiga Pilar Utama<br/><span className="bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text text-transparent">Metode TRISULA</span>
+              <motion.h2 variants={fadeUp} className="text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight">
+                Tiga Pilar Utama <span className="bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text text-transparent">Metode TRISULA</span>
               </motion.h2>
-              <motion.p variants={fadeUp} className="mt-5 text-slate-400 max-w-2xl mx-auto text-lg leading-relaxed">Dikembangkan dari teori RME Hans Freudenthal, diakselerasi dengan kecerdasan buatan.</motion.p>
+              <motion.p variants={fadeUp} className="mt-4 text-slate-400 w-full whitespace-normal md:whitespace-nowrap mx-auto text-lg leading-relaxed">
+                Dikembangkan dari teori RME Hans Freudenthal, diakselerasi dengan kecerdasan buatan.
+              </motion.p>
             </motion.div>
-            <motion.div className="grid grid-cols-1 md:grid-cols-3 gap-6" initial="hidden" whileInView="show" viewport={{once:true,amount:0.2}} variants={stagger}>
+            
+            <motion.div className="grid grid-cols-1 md:grid-cols-3 gap-8" initial="hidden" whileInView="show" viewport={{once:true,amount:0.2}} variants={stagger}>
               {pillars.map((p,i)=>(
                 <motion.div 
                   key={i} 
                   variants={fadeUp} 
-                  onClick={() => setActivePillar(activePillar === i ? null : i)}
-                  className="group relative rounded-3xl border border-white/[0.07] bg-[#1E293B]/50 p-8 hover:border-blue-500/40 hover:bg-[#1E293B] hover:-translate-y-1.5 transition-all duration-300 cursor-pointer overflow-hidden"
+                  onClick={() => setSelectedPillarIndex(i)}
+                  className="group relative rounded-3xl bg-gradient-to-b from-[#1E293B]/80 to-[#0F172A] border border-white/[0.08] p-8 hover:border-blue-500/50 hover:shadow-2xl hover:shadow-blue-900/40 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col items-center text-center"
                 >
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 border ${p.color==='blue'?'bg-blue-600/15 border-blue-600/30 text-blue-400':p.color==='violet'?'bg-violet-600/15 border-violet-600/30 text-violet-400':'bg-cyan-600/15 border-cyan-600/30 text-cyan-400'}`}>{p.icon}</div>
-                  <span className={`text-[10px] font-black uppercase tracking-[0.2em] mb-2 block ${p.color==='blue'?'text-blue-500':p.color==='violet'?'text-violet-500':'text-cyan-500'}`}>Pilar 0{i+1}</span>
-                  <div className="flex justify-between items-center mb-3">
-                    <h3 className="text-xl font-bold text-white">{p.title}</h3>
-                    <ChevronDown size={18} className={`text-slate-400 transition-transform duration-300 ${activePillar === i ? 'rotate-180' : ''}`} />
+                  {/* Decorative glow inside card */}
+                  <div className={`absolute top-0 w-full h-32 opacity-20 blur-3xl rounded-full pointer-events-none transition-all duration-500 ${p.color==='blue'?'bg-blue-500':p.color==='violet'?'bg-violet-500':'bg-cyan-500'}`} />
+                  
+                  <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 border-2 transition-all duration-300 shadow-lg relative z-10 ${p.color==='blue'?'bg-blue-900/50 border-blue-500 text-blue-400 group-hover:scale-110':p.color==='violet'?'bg-violet-900/50 border-violet-500 text-violet-400 group-hover:scale-110':'bg-cyan-900/50 border-cyan-500 text-cyan-400 group-hover:scale-110'}`}>
+                    {p.icon}
                   </div>
                   
-                  <AnimatePresence>
-                    {activePillar === i && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <p className="text-slate-400 text-sm leading-relaxed pt-2 border-t border-white/10">{p.desc}</p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  <span className={`text-[10px] font-black uppercase tracking-[0.2em] mb-3 block ${p.color==='blue'?'text-blue-500':p.color==='violet'?'text-violet-500':'text-cyan-500'}`}>Pilar 0{i+1}</span>
+                  <h3 className="text-xl font-bold text-white mb-4 relative z-10">{p.title}</h3>
+                  <p className="text-slate-400 text-sm leading-relaxed mb-6 flex-1">{p.desc}</p>
+                  
+                  <div className="mt-auto flex items-center text-xs font-semibold text-blue-400 group-hover:text-blue-300 transition-colors">
+                    Pelajari Selengkapnya <ArrowRight size={14} className="ml-1 group-hover:translate-x-1 transition-transform" />
+                  </div>
                 </motion.div>
               ))}
             </motion.div>
           </div>
         </section>
 
-        {/* Transition into light theme area starts here conceptually. 
-            We'll adjust text colors dynamically so it looks good on light slate-50. */}
-        <div className="text-slate-900 mt-20">
+        {/* Transition into light theme area starts here conceptually. */}
+        <div className="text-slate-900 mt-16">
           {/* FEATURE SHOWCASE */}
           <section className="max-w-7xl mx-auto px-6 py-20">
             <motion.div className="text-center mb-16" initial="hidden" whileInView="show" viewport={{once:true,amount:0.3}} variants={stagger}>
@@ -400,6 +414,59 @@ export const BerandaScreen: React.FC<BerandaScreenProps> = ({ onNavigate }) => {
         </footer>
 
       </div>
+
+      {/* PILLAR MODAL OVERLAY */}
+      <AnimatePresence>
+        {selectedPillarIndex !== null && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => setSelectedPillarIndex(null)}
+              className="absolute inset-0 bg-[#0F172A]/80 backdrop-blur-md cursor-pointer"
+            />
+            
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden z-10"
+            >
+              <div className={`h-24 w-full flex items-center justify-center ${pillars[selectedPillarIndex].color === 'blue' ? 'bg-blue-600' : pillars[selectedPillarIndex].color === 'violet' ? 'bg-violet-600' : 'bg-cyan-600'}`}>
+                <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center text-white shadow-inner">
+                  {pillars[selectedPillarIndex].icon}
+                </div>
+              </div>
+              
+              <button 
+                onClick={() => setSelectedPillarIndex(null)}
+                className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-black/20 text-white hover:bg-black/40 transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+              
+              <div className="p-8">
+                <span className={`text-xs font-black uppercase tracking-widest block mb-2 ${pillars[selectedPillarIndex].color === 'blue' ? 'text-blue-600' : pillars[selectedPillarIndex].color === 'violet' ? 'text-violet-600' : 'text-cyan-600'}`}>
+                  Pilar 0{selectedPillarIndex + 1}
+                </span>
+                <h3 className="text-2xl font-extrabold text-slate-900 mb-4">{pillars[selectedPillarIndex].title}</h3>
+                <p className="text-slate-600 leading-relaxed text-sm">
+                  {pillars[selectedPillarIndex].fullContent}
+                </p>
+                <button 
+                  onClick={() => setSelectedPillarIndex(null)}
+                  className="mt-8 w-full py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm transition-colors cursor-pointer"
+                >
+                  Tutup Informasi
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 };
