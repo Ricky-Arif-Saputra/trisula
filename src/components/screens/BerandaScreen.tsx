@@ -57,6 +57,7 @@ function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: str
 export const BerandaScreen: React.FC<BerandaScreenProps> = ({ onNavigate }) => {
   const { userName } = useAuth();
   const [selectedPillarIndex, setSelectedPillarIndex] = useState<number | null>(null);
+  const [activeFeature, setActiveFeature] = useState(0);
 
   const fadeUp = {
     hidden: { opacity: 0, y: 32 },
