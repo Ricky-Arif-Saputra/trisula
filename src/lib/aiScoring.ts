@@ -60,7 +60,8 @@ export async function scoreRmeAnswers(
   try {
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     if (!apiKey) {
-      throw new Error('API Key AI tidak terdeteksi.');
+      // Jika API key tidak ada, langsung gunakan fallback lokal tanpa throw error
+      return calculateLocalRmeScore(answers, keys);
     }
 
     const ai = new GoogleGenAI({ apiKey });
@@ -91,6 +92,7 @@ Kembalikan HANYA format JSON murni tanpa markdown:
   "total_score": <total_score_sum>
 }`;
 
+    // Memanggil API Gemini
     const response = await ai.models.generateContent({
       model: 'gemini-1.5-flash',
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -101,8 +103,12 @@ Kembalikan HANYA format JSON murni tanpa markdown:
 
     const result = JSON.parse(jsonStr) as AiScoreResult;
     return result;
+
   } catch (error) {
-    console.warn("AI Scoring failed, falling back to local scoring:", error);
+    // Tangkap SEMUA error (termasuk 404, network error, parsing error, dll)
+    console.warn("AI Scoring failed or encountered an error. Falling back to calculateLocalRmeScore:", error);
+    
+    // Kembalikan penilaian lokal tanpa pernah throw error ke antarmuka aplikasi
     return calculateLocalRmeScore(answers, keys);
   }
 }
