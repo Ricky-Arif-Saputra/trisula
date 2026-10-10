@@ -3,7 +3,6 @@
 export interface RmeHint {
   id: string;
   question: string;
-  answer: string;
 }
 
 export interface RmeKeys {

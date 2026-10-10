@@ -31,8 +31,6 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
   });
   const [showHints, setShowHints] = useState(false);
   const [activeHint, setActiveHint] = useState(0);
-  const [hintFills, setHintFills] = useState<string[]>([]);
-  const [hintRevealed, setHintRevealed] = useState<boolean[]>([]);
   const [finalNumber, setFinalNumber] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [numericCorrect, setNumericCorrect] = useState(false);
@@ -93,13 +91,6 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
   const color = STAGE_COLORS[stage.color];
   const isLast = stageIdx === STAGES.length - 1;
 
-  const checkHint = (index: number) => {
-    setHintRevealed(prev => {
-      const next = [...prev];
-      next[index] = true;
-      return next;
-    });
-  };
 
   const handleSubmit = () => {
     setNumericCorrect(numbersMatch(finalNumber, keys.finalNumericAnswer));
@@ -167,8 +158,6 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
                         onClick={() => {
                           setShowHints(true);
                           setActiveHint(0);
-                          setHintFills(Array(hints.length).fill(''));
-                          setHintRevealed(Array(hints.length).fill(false));
                         }}
                         className="w-full py-3 rounded-xl border-2 border-dashed border-amber-300 bg-amber-50 text-amber-800 font-bold text-sm flex items-center justify-center gap-2 cursor-pointer"
                       >
@@ -178,36 +167,22 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
 
                     {showHints && hints.map((hint, i) => {
                       if (i > activeHint) return null;
-                      const revealed = hintRevealed[i];
+                      const isLast = i === hints.length - 1;
                       return (
-                        <div key={hint.id} className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 space-y-2">
-                          <div className="text-[10px] font-black uppercase tracking-widest text-amber-600">Kisi-kisi {i + 1} dari {hints.length}</div>
+                        <div key={hint.id} className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 space-y-3">
+                          <div className="text-[10px] font-black uppercase tracking-widest text-amber-600">
+                            Kisi-kisi {i + 1} dari {hints.length}
+                          </div>
                           <div className="text-sm text-slate-800">
                             <MathRenderer text={hint.question} />
                           </div>
-                          <textarea
-                            rows={2}
-                            value={hintFills[i] || ''}
-                            onChange={e => setHintFills(prev => prev.map((v, idx) => idx === i ? e.target.value : v))}
-                            disabled={revealed}
-                            placeholder="Isi jawaban kisi-kisi ini..."
-                            className="w-full p-2.5 rounded-lg border border-amber-200 text-sm outline-none resize-y disabled:bg-slate-100"
-                          />
-                          {!revealed ? (
+                          {i === activeHint && !isLast && (
                             <button
-                              onClick={() => {
-                                checkHint(i);
-                                if (i + 1 < hints.length) setActiveHint(i + 1);
-                              }}
-                              className="w-full py-2 rounded-lg bg-amber-500 text-white font-bold text-xs cursor-pointer"
+                              onClick={() => setActiveHint(i + 1)}
+                              className="w-full py-2 rounded-lg bg-amber-500 text-white font-bold text-xs cursor-pointer hover:bg-amber-600 transition-colors"
                             >
-                              Cek kisi-kisi
+                              Kisi-kisi berikutnya →
                             </button>
-                          ) : (
-                            <div className="p-3 rounded-lg bg-white border border-emerald-200">
-                              <div className="text-[10px] font-black uppercase text-emerald-600 mb-1">Jawaban kisi-kisi</div>
-                              <MathRenderer text={hint.answer} className="text-sm text-slate-800" />
-                            </div>
                           )}
                         </div>
                       );
@@ -284,7 +259,7 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
                 {keys[`ref_${s.key}` as 'ref_diketahui'] && (
                   <>
                     <div className="text-xs font-bold text-indigo-600 mb-1">Kunci acuan</div>
-                    <MathRenderer text={String(keys[`ref_${s.key}` as 'ref_diketahui'])} className="text-sm" />
+                    <RefBlocks raw={String(keys[`ref_${s.key}` as 'ref_diketahui'])} />
                   </>
                 )}
               </div>
@@ -301,4 +276,27 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
       </div>
     </div>
   );
+};
+
+// Render kunci acuan stage — mendukung format JSON blok baru maupun string plain lama
+const RefBlocks: React.FC<{ raw: string }> = ({ raw }) => {
+  if (!raw) return null;
+  try {
+    const blocks = JSON.parse(raw);
+    if (Array.isArray(blocks)) {
+      return (
+        <div className="space-y-1">
+          {blocks.map((b: { type: string; value: string }, i: number) => {
+            if (!b.value?.trim()) return null;
+            if (b.type === 'image') {
+              return <img key={i} src={b.value} alt="" className="max-h-40 rounded-lg border border-slate-200 object-contain" />;
+            }
+            return <MathRenderer key={i} text={b.value} className="text-sm" />;
+          })}
+        </div>
+      );
+    }
+  } catch { /* not JSON */ }
+  // Fallback: plain string / single LaTeX
+  return <MathRenderer text={raw} className="text-sm" />;
 };
