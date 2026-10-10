@@ -133,6 +133,7 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
   const [aiResults, setAiResults] = useState<Record<string, AiScoreResult>>({});
   const [scoringError, setScoringError] = useState<string | null>(null);
   const [scoringErrorDetail, setScoringErrorDetail] = useState<string | null>(null);
+  const [retryingStage, setRetryingStage] = useState<string | null>(null);
 
   const { riwayat, loading: riwayatLoading, refetch: refetchRiwayat } = useRiwayat();
 
@@ -214,34 +215,34 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
         if (!keys) continue;
         const answers = essayAnswers[q.id] || { diketahui: '', ditanya: '', pengerjaan: '', kesimpulan: '' };
 
-        // Kirim jawaban + rubrik + skorMaks ke server
+        // Kirim jawaban + rubrik + skorMaks ke server (berurutan untuk mengurangi beban paralel)
         const STAGE_KEYS = ['diketahui', 'ditanya', 'pengerjaan', 'kesimpulan'] as const;
-        const evalResults = await Promise.all(
-          STAGE_KEYS.map(stage => {
-            const rubrikText = keys[`ref_${stage}` as keyof RmeKeys] as string || `Berikan nilai untuk tahap ${stage}`;
-            const maxPoints = keys[`points_${stage}` as keyof RmeKeys] as number || 0;
-            return nilaiTahap({
+        const evalResults: Record<string, any> = {};
+
+        for (const stage of STAGE_KEYS) {
+          const rubrikText = keys[`ref_${stage}` as keyof RmeKeys] as string || `Berikan nilai untuk tahap ${stage}`;
+          const maxPoints = keys[`points_${stage}` as keyof RmeKeys] as number || 0;
+          try {
+            evalResults[stage] = await nilaiTahap({
               soalId: q.id,
               tahap: stage,
               jawaban: answers[stage] || '',
               rubrik: rubrikText,
               skorMaks: maxPoints,
-            }).catch((e: Error) => {
-              throw e;
             });
-          })
-        );
-
-        const [evalDiketahui, evalDitanya, evalPengerjaan, evalKesimpulan] = evalResults;
+          } catch (e: any) {
+            evalResults[stage] = { skor: 0, alasan: `GAGAL: ${e.message}` };
+          }
+        }
 
         const result: AiScoreResult = {
           evaluation: {
-            diketahui:  { score: evalDiketahui.skor,  max_score: keys.points_diketahui,  reason: evalDiketahui.alasan  },
-            ditanya:    { score: evalDitanya.skor,    max_score: keys.points_ditanya,    reason: evalDitanya.alasan    },
-            pengerjaan: { score: evalPengerjaan.skor, max_score: keys.points_pengerjaan, reason: evalPengerjaan.alasan },
-            kesimpulan: { score: evalKesimpulan.skor, max_score: keys.points_kesimpulan, reason: evalKesimpulan.alasan },
+            diketahui:  { score: evalResults.diketahui.skor,  max_score: keys.points_diketahui,  reason: evalResults.diketahui.alasan  },
+            ditanya:    { score: evalResults.ditanya.skor,    max_score: keys.points_ditanya,    reason: evalResults.ditanya.alasan    },
+            pengerjaan: { score: evalResults.pengerjaan.skor, max_score: keys.points_pengerjaan, reason: evalResults.pengerjaan.alasan },
+            kesimpulan: { score: evalResults.kesimpulan.skor, max_score: keys.points_kesimpulan, reason: evalResults.kesimpulan.alasan },
           },
-          total_score: evalDiketahui.skor + evalDitanya.skor + evalPengerjaan.skor + evalKesimpulan.skor,
+          total_score: evalResults.diketahui.skor + evalResults.ditanya.skor + evalResults.pengerjaan.skor + evalResults.kesimpulan.skor,
         };
 
         resultsMap[q.id] = result;
@@ -284,6 +285,47 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
       setScoringError('Penilaian AI Gagal');
       setScoringErrorDetail(e.message || 'Terjadi kesalahan tidak dikenal.');
       setPhase('result');
+    }
+  };
+
+  const handleRetryStage = async (questionId: string, stageKey: string) => {
+    if (!exam) return;
+    setRetryingStage(`${questionId}_${stageKey}`);
+    const q = exam.questions.find(x => x.id === questionId);
+    if (!q) { setRetryingStage(null); return; }
+    
+    const keys = q.rme_keys as unknown as RmeKeys;
+    const answers = essayAnswers[questionId];
+    const rubrikText = (keys as any)[`ref_${stageKey}`] as string || `Berikan nilai untuk tahap ${stageKey}`;
+    const maxPoints = (keys as any)[`points_${stageKey}`] as number || 0;
+
+    try {
+      const res = await nilaiTahap({
+        soalId: questionId,
+        tahap: stageKey,
+        jawaban: answers?.[stageKey as keyof RmeAnswers] || '',
+        rubrik: rubrikText,
+        skorMaks: maxPoints,
+      });
+
+      setAiResults(prev => {
+        const updated = { ...prev };
+        if (updated[questionId]) {
+          updated[questionId].evaluation[stageKey as keyof AiScoreResult['evaluation']] = {
+            score: res.skor,
+            max_score: maxPoints,
+            reason: res.alasan,
+          };
+          updated[questionId].total_score = STAGES.reduce((acc, s) => acc + (updated[questionId].evaluation[s.key]?.score || 0), 0);
+        }
+        return updated;
+      });
+      // Optionally update riwayat
+      refetchRiwayat();
+    } catch (e: any) {
+      alert(`Gagal menilai ulang: ${e.message}`);
+    } finally {
+      setRetryingStage(null);
     }
   };
 
@@ -1078,7 +1120,24 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
                                 <span className="font-black text-[10px] uppercase text-indigo-600 tracking-widest block mb-1.5 flex items-center gap-1">
                                   <span className="material-symbols-outlined text-[14px]">smart_toy</span> Alasan & Evaluasi Penilaian
                                 </span>
-                                <div className="whitespace-pre-wrap italic">{feedback || 'Tidak ada evaluasi'}</div>
+                                <div className="whitespace-pre-wrap italic">
+                                  {feedback || 'Tidak ada evaluasi'}
+                                </div>
+                                {feedback.startsWith('GAGAL:') && (
+                                  <div className="mt-3">
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleRetryStage(q.id, stage.key); }}
+                                      disabled={retryingStage === `${q.id}_${stage.key}`}
+                                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors shadow-sm disabled:bg-indigo-400 flex items-center gap-2"
+                                    >
+                                      {retryingStage === `${q.id}_${stage.key}` ? (
+                                        <><span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Menilai...</>
+                                      ) : (
+                                        <><span className="material-symbols-outlined text-[14px]">refresh</span> Coba Nilai Lagi</>
+                                      )}
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>

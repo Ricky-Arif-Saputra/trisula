@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/nilai.ts": {
+      "maxDuration": 30
+    }
+  }
+}
