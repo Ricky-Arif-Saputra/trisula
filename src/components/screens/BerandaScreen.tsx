@@ -187,7 +187,7 @@ export const BerandaScreen: React.FC<BerandaScreenProps> = ({ onNavigate }) => {
             <motion.div className="text-center mb-12" initial="hidden" whileInView="show" viewport={{once:true,amount:0.3}} variants={stagger}>
               <motion.p variants={fadeUp} className="text-indigo-600 font-extrabold text-xs uppercase tracking-[0.25em] mb-3">Ekosistem Pembelajaran Terpadu</motion.p>
               <motion.h2 variants={fadeUp} className="text-3xl lg:text-4xl font-extrabold tracking-tight">
-                <span className="text-[#0F172A]">Teknologi yang Memberdayakan</span><br/><span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Potensi Logika Siswa</span>
+                <span className="text-white">Teknologi yang Memberdayakan</span><br/><span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Potensi Logika Siswa</span>
               </motion.h2>
             </motion.div>
             
