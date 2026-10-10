@@ -270,10 +270,11 @@ export const LatihanQuestionForm: React.FC<LatihanQuestionFormProps> = ({
   const removeStageBlock = (sk: StageKey, id: string) =>
     setStageBlocks(prev => ({ ...prev, [sk]: prev[sk].filter(b => b.id !== id) }));
 
-  // ── helpers kisi-kisi (hanya question, tanpa answer) ──
-  const addHint    = () => setKeys(k => ({ ...k, hints: [...(k.hints || []), { id: uid('hnt'), question: '' }] }));
-  const updateHint = (id: string, value: string) =>
-    setKeys(k => ({ ...k, hints: (k.hints || []).map(h => h.id === id ? { ...h, question: value } : h) }));
+  // ── helpers kisi-kisi ──
+  const addHint = () =>
+    setKeys(k => ({ ...k, hints: [...(k.hints || []), { id: uid('hnt'), question: '', answer: '' }] }));
+  const updateHint = (id: string, field: 'question' | 'answer', value: string) =>
+    setKeys(k => ({ ...k, hints: (k.hints || []).map(h => h.id === id ? { ...h, [field]: value } : h) }));
   const removeHint = (id: string) =>
     setKeys(k => ({ ...k, hints: (k.hints || []).filter(h => h.id !== id) }));
 
@@ -291,7 +292,6 @@ export const LatihanQuestionForm: React.FC<LatihanQuestionFormProps> = ({
     if (emptyHint) {
       setMsg({ type: 'error', text: 'Setiap kisi-kisi harus memiliki tulisan pemandu.' }); return;
     }
-
     const numeric = String(keys.finalNumericAnswer).replace(',', '.').trim();
     const rme_keys: RmeKeys = {
       ref_diketahui:  serializeBlocks(stageBlocks.diketahui),
@@ -453,9 +453,16 @@ export const LatihanQuestionForm: React.FC<LatihanQuestionFormProps> = ({
                           <textarea
                             rows={2}
                             value={h.question}
-                            onChange={e => updateHint(h.id, e.target.value)}
-                            placeholder="Tulisan pemandu yang akan ditampilkan ke siswa"
+                            onChange={e => updateHint(h.id, 'question', e.target.value)}
+                            placeholder="Tulisan pemandu / pertanyaan (muncul ke siswa)"
                             className="w-full p-2 rounded-md border border-amber-200 bg-white text-xs outline-none resize-y focus:border-amber-400"
+                          />
+                          <textarea
+                            rows={2}
+                            value={h.answer}
+                            onChange={e => updateHint(h.id, 'answer', e.target.value)}
+                            placeholder="Jawaban kisi-kisi ini (muncul setelah siswa klik 'Lihat Jawaban')"
+                            className="w-full p-2 mt-1.5 rounded-md border border-amber-100 bg-white/70 text-xs outline-none resize-y focus:border-amber-400 italic"
                           />
                         </div>
                       ))}
