@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import type { Question } from '../../hooks/useQuestions';
+import { MathRenderer } from '../MathRenderer';
+import {
+  STAGES,
+  STAGE_COLORS,
+  parseRmeKeys,
+  stripRmeMetaBlocks,
+  numbersMatch,
+  type RmeHint,
+} from './LatihanTypes';
+import { Lightbulb, CheckCircle, ChevronRight } from 'lucide-react';
 
 interface QuizQuestionDynamicProps {
   questionId: string;
@@ -8,14 +18,24 @@ interface QuizQuestionDynamicProps {
   onBack?: () => void;
 }
 
+type StageKey = 'diketahui' | 'ditanya' | 'pengerjaan' | 'kesimpulan';
+
 export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questionId, onFinish }) => {
   const [question, setQuestion] = useState<Question | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // User input states
-  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
-  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [stageIdx, setStageIdx] = useState(0);
+  const [answers, setAnswers] = useState<Record<StageKey, string>>({
+    diketahui: '', ditanya: '', pengerjaan: '', kesimpulan: '',
+  });
+  const [showHints, setShowHints] = useState(false);
+  const [activeHint, setActiveHint] = useState(0);
+  const [hintFills, setHintFills] = useState<string[]>([]);
+  const [hintRevealed, setHintRevealed] = useState<boolean[]>([]);
+  const [finalNumber, setFinalNumber] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+  const [numericCorrect, setNumericCorrect] = useState(false);
 
   useEffect(() => {
     const fetchQ = async () => {
@@ -26,24 +46,19 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
           .from('questions')
           .select('*')
           .eq('id', questionId)
-          .maybeSingle(); // maybeSingle() aman: tidak throws jika data null
-          
-        if (fetchErr) {
-          throw fetchErr;
-        }
+          .maybeSingle();
+        if (fetchErr) throw fetchErr;
         if (!data) {
           setError('Soal tidak ditemukan. Pastikan ID soal valid.');
         } else {
           setQuestion(data as Question);
         }
       } catch (err: any) {
-        console.error('Failed to fetch dynamic question:', err);
         setError(err.message || 'Gagal memuat soal dari database.');
       } finally {
         setLoading(false);
       }
     };
-
     if (questionId) fetchQ();
   }, [questionId]);
 
@@ -52,7 +67,7 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
       <div className="w-full max-w-4xl mx-auto p-4 flex items-center justify-center min-h-[40vh]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-4 border-slate-200 border-t-primary rounded-full animate-spin" />
-          <span className="text-sm font-bold text-slate-500">Memuat soal dinamis...</span>
+          <span className="text-sm font-bold text-slate-500">Memuat soal...</span>
         </div>
       </div>
     );
@@ -60,208 +75,229 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
 
   if (error) {
     return (
-      <div className="w-full max-w-4xl mx-auto p-4 flex flex-col gap-4">
-        <div className="bg-rose-50 text-rose-600 p-4 rounded-xl border border-rose-200 flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
-          <span className="material-symbols-outlined text-3xl">error</span>
-          <div>
-            <h3 className="font-bold text-sm">Gagal memuat soal</h3>
-            <p className="text-xs">{error}</p>
-          </div>
+      <div className="w-full max-w-4xl mx-auto p-4">
+        <div className="bg-rose-50 text-rose-600 p-4 rounded-xl border border-rose-200">
+          <h3 className="font-bold text-sm">Gagal memuat soal</h3>
+          <p className="text-xs">{error}</p>
         </div>
       </div>
     );
   }
 
-  if (!question) {
-    return null; // Fallback jika tidak ada question namun tidak loading dan tidak ada error
-  }
+  if (!question) return null;
 
-  // Safe JSON Parser Helper
-  const safeParse = (data: any) => {
-    if (!data) return [];
-    if (typeof data === 'string') {
-      try { return JSON.parse(data); } catch (e) { return []; }
-    }
-    return Array.isArray(data) ? data : [];
-  };
+  const keys = parseRmeKeys(question);
+  const hints: RmeHint[] = keys.hints || [];
+  const contentBlocks = stripRmeMetaBlocks(question.content_blocks || []);
+  const stage = STAGES[stageIdx];
+  const color = STAGE_COLORS[stage.color];
+  const isLast = stageIdx === STAGES.length - 1;
 
-  // Defensive array checks
-  const safeContentBlocks = safeParse(question.content_blocks);
-  const safeOptions = safeParse(question.options);
-
-  const handleToggleOption = (optId: string) => {
-    if (hasSubmitted) return;
-    setSelectedOptions(prev => 
-      prev.includes(optId) ? prev.filter(id => id !== optId) : [...prev, optId]
-    );
+  const checkHint = (index: number) => {
+    setHintRevealed(prev => {
+      const next = [...prev];
+      next[index] = true;
+      return next;
+    });
   };
 
   const handleSubmit = () => {
-    setHasSubmitted(true);
+    setNumericCorrect(numbersMatch(finalNumber, keys.finalNumericAnswer));
+    setSubmitted(true);
   };
 
-  // Evaluate correctness
-  const correctOptionIds = safeOptions.filter(o => o.is_correct).map(o => o.id);
-  const isAllCorrect = 
-    selectedOptions.length === correctOptionIds.length && 
-    correctOptionIds.every(id => selectedOptions.includes(id));
-
   return (
-    <div className="w-full max-w-4xl mx-auto p-4 md:p-6 font-sans">
+    <div className="w-full max-w-4xl mx-auto p-1 md:p-2 font-sans">
       <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-lg overflow-hidden">
-        
-        {/* Header */}
-        <div className="bg-surface-container p-5 border-b border-outline-variant/30 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center shadow-md font-black">
-              <span className="material-symbols-outlined">description</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold text-primary uppercase tracking-widest block">
-                Topik: {question.strand} — {question.category}
-              </span>
-              <h2 className="text-base font-bold text-on-surface font-serif leading-tight">
-                {question.title || 'Soal Dinamis'}
-              </h2>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {question.has_simulation && (
-              <span className="px-2 py-1 bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 text-[10px] font-bold rounded flex items-center gap-1 uppercase">
-                <span className="material-symbols-outlined text-[12px]">science</span> RME Aktif
-              </span>
-            )}
-          </div>
+        <div className="bg-gradient-to-r from-indigo-700 to-violet-700 p-5 text-white">
+          <span className="text-[10px] font-bold uppercase tracking-widest opacity-80 block">
+            {question.strand} — {question.category} · 4 Tahap RME
+          </span>
+          <h2 className="text-base font-bold leading-tight mt-1">{question.title || 'Soal Latihan'}</h2>
         </div>
 
-        <div className="p-6">
-          {/* Dynamic Content Blocks */}
-          <div className="space-y-4 mb-6">
-            {safeContentBlocks.length === 0 && (
-              <p className="text-xs text-on-surface-variant italic">Konten soal kosong.</p>
-            )}
-            {safeContentBlocks.map((block: any) => {
-              if (block?.type === 'text') {
-                return (
-                  <p key={block?.id} className="text-sm leading-relaxed text-on-surface whitespace-pre-wrap">
-                    {block?.value}
-                  </p>
-                );
-              } else if (block?.type === 'latex') {
-                return (
-                  <div key={block?.id ?? Math.random()} className="my-2 p-3 bg-slate-100 dark:bg-slate-800 rounded-lg overflow-x-auto">
-                    <code className="text-emerald-700 dark:text-emerald-400 font-mono text-sm whitespace-pre-wrap">
-                      {block?.value || ''}
-                    </code>
-                  </div>
-                );
-              } else if (block?.type === 'image') {
-                return (
-                  <div key={block?.id} className="my-4 flex justify-center">
-                    <img src={block?.value} alt="Ilustrasi soal" className="max-h-64 rounded-xl border border-outline-variant/30 shadow-sm" />
-                  </div>
-                );
-              }
-              return null;
-            })}
-          </div>
+        <div className="p-5 space-y-3 border-b border-outline-variant/20">
+          {contentBlocks.length === 0 && <p className="text-xs text-on-surface-variant italic">Konten soal kosong.</p>}
+          {contentBlocks.map((block: any) => {
+            if (block?.type === 'image') {
+              return <img key={block.id} src={block.value} alt="" className="max-h-56 rounded-xl border border-slate-200 mx-auto" />;
+            }
+            return (
+              <div key={block.id} className="text-sm leading-relaxed text-on-surface">
+                <MathRenderer text={block.value || ''} />
+              </div>
+            );
+          })}
+        </div>
 
+        {!submitted && (
+          <div className="p-5 space-y-4">
+            <div className="flex gap-1">
+              {STAGES.map((s, i) => (
+                <div
+                  key={s.key}
+                  className={`flex-1 h-1.5 rounded-full ${i <= stageIdx ? STAGE_COLORS[s.color].badge : 'bg-slate-200'}`}
+                />
+              ))}
+            </div>
 
-
-          {/* Options */}
-          <div className="flex flex-col gap-3 mb-6">
-            {safeOptions.length === 0 && (
-              <p className="text-xs text-on-surface-variant italic">Pilihan jawaban belum tersedia.</p>
-            )}
-            {safeOptions.map((opt) => {
-              const isSelected = selectedOptions.includes(opt.id);
-              const isCorrectOpt = opt.is_correct;
-              
-              let btnClass = "border-outline-variant/30 hover:border-primary text-on-surface";
-              if (hasSubmitted) {
-                if (isSelected && isCorrectOpt) btnClass = "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400";
-                else if (isSelected && !isCorrectOpt) btnClass = "border-rose-500 bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400";
-                else if (!isSelected && isCorrectOpt) btnClass = "border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400";
-                else btnClass = "border-outline-variant/30 text-on-surface-variant opacity-50";
-              } else if (isSelected) {
-                btnClass = "border-primary bg-primary/10 text-primary ring-2 ring-primary/30";
-              }
-
-              return (
-                <button key={opt.id} disabled={hasSubmitted} onClick={() => handleToggleOption(opt.id)}
-                  className={`w-full text-left p-4 rounded-xl border-2 transition-all cursor-pointer flex items-start gap-3 ${btnClass}`}>
-                  <div className={`mt-0.5 w-5 h-5 rounded flex items-center justify-center border-2 flex-shrink-0 ${isSelected ? (hasSubmitted ? (isCorrectOpt ? 'bg-emerald-500 border-emerald-500' : 'bg-rose-500 border-rose-500') : 'bg-primary border-primary') : 'border-outline-variant'}`}>
-                    {isSelected && <span className="material-symbols-outlined text-[14px] text-white">check</span>}
-                  </div>
-                  <div className="flex items-start gap-2 flex-1">
-                    <span className="font-bold text-sm shrink-0">{opt.id}.</span>
-                    <span className="text-sm font-semibold">{opt.text}</span>
-                  </div>
-                  {hasSubmitted && !isSelected && isCorrectOpt && <span className="text-[10px] text-amber-600 font-bold shrink-0">*Terlewat</span>}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Submit Button */}
-          {!hasSubmitted && (
-            <button disabled={selectedOptions.length === 0} onClick={handleSubmit}
-              className={`w-full py-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${selectedOptions.length > 0 ? 'bg-primary text-on-primary hover:opacity-90 shadow-md cursor-pointer' : 'bg-surface-container-high text-on-surface-variant cursor-not-allowed'}`}>
-              Submit Jawaban
-            </button>
-          )}
-
-          {/* Feedback & RME Simulation section */}
-          {hasSubmitted && (
-            <div className="mt-8 pt-8 border-t border-outline-variant/30 space-y-6 animate-in fade-in slide-in-from-bottom-4">
-              <div className={`p-4 rounded-xl flex items-start gap-4 border ${isAllCorrect ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/10 dark:border-emerald-800' : 'bg-amber-50 border-amber-200 dark:bg-amber-900/10 dark:border-amber-800'}`}>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0 ${isAllCorrect ? 'bg-emerald-500' : 'bg-amber-500'}`}>
-                  <span className="material-symbols-outlined">{isAllCorrect ? 'verified' : 'fact_check'}</span>
+            <div className={`rounded-2xl border-2 ${color.border} overflow-hidden`}>
+              <div className={`px-4 py-3 ${color.bg} flex items-center gap-3`}>
+                <div className={`w-8 h-8 rounded-xl ${color.badge} flex items-center justify-center`}>
+                  <span className="material-symbols-outlined text-white text-[15px]">{stage.icon}</span>
                 </div>
                 <div>
-                  <h3 className={`font-bold text-lg ${isAllCorrect ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
-                    {isAllCorrect ? 'Tepat Sekali!' : 'Masih ada yang kurang tepat.'}
-                  </h3>
-                  <p className={`text-sm ${isAllCorrect ? 'text-emerald-600 dark:text-emerald-500' : 'text-amber-600 dark:text-amber-500'}`}>
-                    {isAllCorrect ? 'Kamu telah memilih semua jawaban yang benar.' : 'Periksa kembali opsi yang ditandai merah atau terlewat.'}
-                  </p>
+                  <div className={`font-black text-sm ${color.label} uppercase`}>Tahap {stageIdx + 1} — {stage.label}</div>
+                  <div className="text-[10px] text-slate-400">Isi sesuai tahap ini, lalu lanjut.</div>
                 </div>
               </div>
+              <div className="p-4 space-y-4 bg-white">
+                <textarea
+                  rows={stage.key === 'pengerjaan' ? 6 : 4}
+                  value={answers[stage.key]}
+                  onChange={e => setAnswers(prev => ({ ...prev, [stage.key]: e.target.value }))}
+                  placeholder={stage.placeholder}
+                  className={`w-full p-3 rounded-xl border-2 border-slate-200 bg-slate-50 text-sm outline-none resize-y ${color.ring}`}
+                />
 
-              {/* RME Simulation Placeholder (jika diaktifkan) */}
-              {question.has_simulation && (
-                <div className="border border-violet-200 dark:border-violet-800 rounded-2xl overflow-hidden shadow-md">
-                  <div className="bg-gradient-to-r from-violet-600 to-fuchsia-600 p-4">
-                    <h4 className="font-bold text-white text-sm flex items-center gap-2">
-                      <span className="material-symbols-outlined">science</span>
-                      Laboratorium Visualisasi RME
-                    </h4>
-                    <p className="text-violet-100 text-xs mt-1">
-                      Mari kita bedah konsep soal ini dengan simulasi interaktif agar lebih paham!
-                    </p>
-                  </div>
-                  <div className="p-8 bg-white dark:bg-slate-900 text-center">
-                    <div className="w-16 h-16 bg-violet-100 dark:bg-violet-900/30 text-violet-500 rounded-full flex items-center justify-center mx-auto mb-3 animate-pulse">
-                      <span className="material-symbols-outlined text-3xl">model_training</span>
+                {stage.key === 'pengerjaan' && (
+                  <>
+                    {hints.length > 0 && !showHints && (
+                      <button
+                        onClick={() => {
+                          setShowHints(true);
+                          setActiveHint(0);
+                          setHintFills(Array(hints.length).fill(''));
+                          setHintRevealed(Array(hints.length).fill(false));
+                        }}
+                        className="w-full py-3 rounded-xl border-2 border-dashed border-amber-300 bg-amber-50 text-amber-800 font-bold text-sm flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Lightbulb size={16} /> Saya butuh kisi-kisi
+                      </button>
+                    )}
+
+                    {showHints && hints.map((hint, i) => {
+                      if (i > activeHint) return null;
+                      const revealed = hintRevealed[i];
+                      return (
+                        <div key={hint.id} className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 space-y-2">
+                          <div className="text-[10px] font-black uppercase tracking-widest text-amber-600">Kisi-kisi {i + 1} dari {hints.length}</div>
+                          <div className="text-sm text-slate-800">
+                            <MathRenderer text={hint.question} />
+                          </div>
+                          <textarea
+                            rows={2}
+                            value={hintFills[i] || ''}
+                            onChange={e => setHintFills(prev => prev.map((v, idx) => idx === i ? e.target.value : v))}
+                            disabled={revealed}
+                            placeholder="Isi jawaban kisi-kisi ini..."
+                            className="w-full p-2.5 rounded-lg border border-amber-200 text-sm outline-none resize-y disabled:bg-slate-100"
+                          />
+                          {!revealed ? (
+                            <button
+                              onClick={() => {
+                                checkHint(i);
+                                if (i + 1 < hints.length) setActiveHint(i + 1);
+                              }}
+                              className="w-full py-2 rounded-lg bg-amber-500 text-white font-bold text-xs cursor-pointer"
+                            >
+                              Cek kisi-kisi
+                            </button>
+                          ) : (
+                            <div className="p-3 rounded-lg bg-white border border-emerald-200">
+                              <div className="text-[10px] font-black uppercase text-emerald-600 mb-1">Jawaban kisi-kisi</div>
+                              <MathRenderer text={hint.answer} className="text-sm text-slate-800" />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    <div>
+                      <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">Jawaban akhir (angka saja)</label>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={finalNumber}
+                        onChange={e => setFinalNumber(e.target.value)}
+                        placeholder="Contoh: 42"
+                        className="w-full p-3 rounded-xl border-2 border-amber-200 font-mono text-lg outline-none focus:border-amber-400"
+                      />
                     </div>
-                    <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                      Modul Simulasi Dinamis sedang disiapkan...
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1">
-                      (Dalam implementasi penuh, area ini akan me-render komponen Canvas/SVG interaktif spesifik untuk soal ini yang diatur dari backend)
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <button onClick={onFinish}
-                className="w-full py-4 rounded-xl font-bold text-sm bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors cursor-pointer flex items-center justify-center gap-2">
-                <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-                Kembali ke Daftar Latihan Soal
-              </button>
+                  </>
+                )}
+              </div>
             </div>
-          )}
-        </div>
+
+            <div className="flex gap-2">
+              {stageIdx > 0 && (
+                <button
+                  onClick={() => setStageIdx(i => i - 1)}
+                  className="flex-1 py-3 rounded-xl border-2 border-slate-200 font-bold text-sm cursor-pointer"
+                >
+                  Sebelumnya
+                </button>
+              )}
+              {!isLast ? (
+                <button
+                  onClick={() => setStageIdx(i => i + 1)}
+                  className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  Lanjut <ChevronRight size={16} />
+                </button>
+              ) : (
+                <button
+                  onClick={handleSubmit}
+                  disabled={!finalNumber.trim()}
+                  className="flex-1 py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm disabled:bg-slate-300 cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <CheckCircle size={16} /> Cek jawaban akhir
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {submitted && (
+          <div className="p-5 space-y-4">
+            <div className={`p-4 rounded-xl border flex items-start gap-3 ${numericCorrect ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white ${numericCorrect ? 'bg-emerald-500' : 'bg-rose-500'}`}>
+                <span className="material-symbols-outlined">{numericCorrect ? 'verified' : 'close'}</span>
+              </div>
+              <div>
+                <h3 className={`font-bold ${numericCorrect ? 'text-emerald-700' : 'text-rose-700'}`}>
+                  {numericCorrect ? 'Jawaban akhir tepat!' : 'Jawaban akhir belum tepat'}
+                </h3>
+                <p className="text-sm text-slate-600 mt-0.5">
+                  Isianmu: <span className="font-mono font-bold">{finalNumber || '—'}</span>
+                  {' · '}Kunci: <span className="font-mono font-bold">{keys.finalNumericAnswer ?? '—'}</span>
+                </p>
+                <p className="text-xs text-slate-400 mt-1">Angka dicocokkan persis dengan kunci jawaban.</p>
+              </div>
+            </div>
+
+            {STAGES.map(s => (
+              <div key={s.key} className={`rounded-xl border ${STAGE_COLORS[s.color].border} p-4`}>
+                <div className={`text-xs font-black uppercase mb-2 ${STAGE_COLORS[s.color].label}`}>Tahap {s.label}</div>
+                <div className="text-xs text-slate-500 mb-1">Jawabanmu</div>
+                <p className="text-sm whitespace-pre-wrap mb-3">{answers[s.key] || '—'}</p>
+                {keys[`ref_${s.key}` as 'ref_diketahui'] && (
+                  <>
+                    <div className="text-xs font-bold text-indigo-600 mb-1">Kunci acuan</div>
+                    <MathRenderer text={String(keys[`ref_${s.key}` as 'ref_diketahui'])} className="text-sm" />
+                  </>
+                )}
+              </div>
+            ))}
+
+            <button
+              onClick={onFinish}
+              className="w-full py-3 rounded-xl bg-surface-container-high font-bold text-sm cursor-pointer"
+            >
+              Kembali ke daftar soal
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

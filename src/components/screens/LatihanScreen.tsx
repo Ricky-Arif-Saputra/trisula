@@ -3,6 +3,11 @@ import { MathCategory } from '../../types';
 import { QuizQuestionDynamic } from './QuizQuestionDynamic';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { useQuestions, type Question, type Difficulty } from '../../hooks/useQuestions';
+import { useAuth } from '../Auth/AuthProvider';
+import { LatihanQuestionForm } from './LatihanQuestionForm';
+import { DIFF_BADGE, parseRmeKeys, stripRmeMetaBlocks } from './LatihanTypes';
+import { supabase } from '../../lib/supabaseClient';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 
 interface LatihanScreenProps {
   initialCategory?: MathCategory | null;
@@ -22,7 +27,7 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<MathCategory | null>(initialCategory);
   
   // Quiz State
-  const [quizLevel, setQuizLevel] = useState<'mudah' | 'sedang' | 'sulit'>('sedang');
+  const [quizLevel, setQuizLevel] = useState<'mudah' | 'sedang' | 'sulit'>('mudah');
   const [quizMode, setQuizMode] = useState<QuizMode>('mandiri');
   const [isQuizActive, setIsQuizActive] = useState(false);
   const [isQuizFinished, setIsQuizFinished] = useState(false);
@@ -131,81 +136,22 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
   }
 
   // ==============================================================
-  // VIEW 2: QUIZ DASHBOARD / PREPARATION
+  // VIEW 2: DAFTAR SOAL PER TINGKAT (admin bisa tambah langsung di sini)
   // ==============================================================
   if (!isQuizActive && !isQuizFinished) {
     return (
-      <div className="flex flex-col w-full pb-16 font-sans px-margin-mobile animate-in fade-in">
-        
-        {/* PREPARATION CARD */}
-        <div className="bg-surface-container-lowest dark:bg-surface-container-low p-6 rounded-2xl border border-outline-variant/30 shadow-md flex flex-col gap-6 mt-4">
-          <div className="flex flex-col items-center text-center gap-2">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-2">
-              <span className="material-symbols-outlined text-[32px]">quiz</span>
-            </div>
-            <h2 className="text-xl font-bold text-on-surface capitalize">Latihan: {selectedCategory}</h2>
-            <p className="text-sm text-on-surface-variant">Pilih tingkat kesulitan dan mode latihan untuk memulai.</p>
-          </div>
-
-          <div className="space-y-3">
-            <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Tingkat Kesulitan</label>
-            <div className="grid grid-cols-3 gap-2">
-              {(['mudah', 'sedang', 'sulit'] as const).map(lvl => (
-                <button
-                  key={lvl}
-                  onClick={() => setQuizLevel(lvl)}
-                  className={`py-2 rounded-xl text-xs font-bold capitalize transition-colors border cursor-pointer ${
-                    quizLevel === lvl 
-                      ? 'bg-primary text-on-primary border-primary' 
-                      : 'bg-surface-container text-on-surface border-transparent hover:bg-surface-container-high'
-                  }`}
-                >
-                  {lvl}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Mode Latihan</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div 
-                onClick={() => handleStartQuiz('mandiri')}
-                className="p-4 rounded-xl border-2 border-transparent hover:border-secondary/50 bg-surface-container cursor-pointer transition-all flex flex-col gap-2 group"
-              >
-                <div className="flex items-center gap-2 text-secondary">
-                  <span className="material-symbols-outlined">menu_book</span>
-                  <span className="font-bold text-sm">Latihan Mandiri</span>
-                </div>
-                <p className="text-xs text-on-surface-variant">Feedback instan dan pembahasan step-by-step setelah setiap soal.</p>
-              </div>
-
-              <div 
-                onClick={() => handleStartQuiz('time_attack')}
-                className="p-4 rounded-xl border-2 border-transparent hover:border-error/50 bg-surface-container cursor-pointer transition-all flex flex-col gap-2 group"
-              >
-                <div className="flex items-center gap-2 text-error">
-                  <span className="material-symbols-outlined">timer</span>
-                  <span className="font-bold text-sm">Time Attack</span>
-                </div>
-                <p className="text-xs text-on-surface-variant">Kuis berwaktu seperti ujian. (Segera Hadir)</p>
-              </div>
-            </div>
-          </div>
-          
-          {selectedCategory === 'trigonometri' && (
-             <div className="pt-4 border-t border-outline-variant/20">
-                <button 
-                  onClick={() => handleStartQuiz('lab')}
-                  className="w-full py-3 rounded-xl bg-tertiary-container text-on-tertiary-container font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 cursor-pointer transition-opacity"
-                >
-                  <span className="material-symbols-outlined">science</span>
-                  Buka Virtual Lab: Klinometer
-                </button>
-             </div>
-          )}
-        </div>
-      </div>
+      <QuizListView
+        selectedCategory={selectedCategory as MathCategory}
+        quizLevel={quizLevel}
+        onChangeLevel={setQuizLevel}
+        onSelectQuestion={(idx, id) => {
+          if (id) setDbQuestionId(id);
+          setSelectedQuestion(idx);
+          setQuizMode('mandiri');
+          setIsQuizActive(true);
+        }}
+        onBack={() => handleSelectCat(null)}
+      />
     );
   }
 
@@ -243,7 +189,7 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
         return (
           <div className="flex flex-col w-full pb-16 font-sans px-margin-mobile animate-in fade-in pt-4 relative">
             <button
-              onClick={() => setSelectedQuestion(null)}
+              onClick={() => { setSelectedQuestion(null); setIsQuizActive(false); }}
               className="mb-4 px-4 py-2 rounded-xl bg-surface-container-high text-on-surface font-bold text-xs flex items-center gap-2 self-start hover:bg-surface-container-highest cursor-pointer transition-colors"
             >
               <span className="material-symbols-outlined text-[16px]">arrow_back</span>
@@ -252,7 +198,7 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
             <ErrorBoundary>
               <QuizQuestionDynamic
                 questionId={dbQuestionId}
-                onFinish={() => setSelectedQuestion(null)}
+                onFinish={() => { setSelectedQuestion(null); setIsQuizActive(false); }}
               />
             </ErrorBoundary>
           </div>
@@ -264,6 +210,7 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
           <QuizListView
             selectedCategory={selectedCategory as MathCategory}
             quizLevel={quizLevel}
+            onChangeLevel={setQuizLevel}
             onSelectQuestion={(idx, id) => {
               if (id) setDbQuestionId(id);
               setSelectedQuestion(idx);
@@ -346,46 +293,84 @@ export const LatihanScreen: React.FC<LatihanScreenProps> = ({
 interface QuizListViewProps {
   selectedCategory: MathCategory;
   quizLevel: 'mudah' | 'sedang' | 'sulit';
+  onChangeLevel?: (lvl: 'mudah' | 'sedang' | 'sulit') => void;
   onSelectQuestion: (idx: number, id?: string) => void;
   onBack: () => void;
 }
 
-const DIFF_BADGE: Record<string, { label: string; cls: string }> = {
-  mudah:  { label: 'Mudah',  cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
-  sedang: { label: 'Sedang', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-  sulit:  { label: 'Sulit',  cls: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' },
-};
-
 const QuizListView: React.FC<QuizListViewProps> = ({
-  selectedCategory, quizLevel, onSelectQuestion, onBack,
+  selectedCategory, quizLevel, onChangeLevel, onSelectQuestion,
 }) => {
-  // Fetch soal dari Supabase sesuai strand & level
-  const { questions, loading, error } = useQuestions(
+  const { isAdmin } = useAuth();
+  const { questions, loading, error, refetch } = useQuestions(
     selectedCategory as any,
     'latihan',
     quizLevel as Difficulty,
   );
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<Question | null>(null);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Hapus soal ini dari daftar latihan?')) return;
+    await supabase.from('questions').delete().eq('id', id);
+    refetch();
+  };
 
   return (
     <div className="flex flex-col w-full pb-16 font-sans px-margin-mobile animate-in fade-in pt-4">
       <div className="bg-surface-container-lowest dark:bg-surface-container-low p-6 rounded-2xl border border-outline-variant/30 shadow-md">
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center justify-between mb-1 gap-3">
           <h3 className="text-lg font-bold text-on-surface capitalize">
             Latihan {selectedCategory} — <span className="capitalize">{quizLevel}</span>
           </h3>
-          {/* Realtime indicator */}
-          <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-full px-2.5 py-1">
-            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">Live</span>
+          <div className="flex items-center gap-2">
+            {isAdmin && !formOpen && (
+              <button
+                onClick={() => { setEditing(null); setFormOpen(true); }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold cursor-pointer hover:bg-indigo-700"
+              >
+                <Plus size={14} /> Tambah soal
+              </button>
+            )}
+            <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-full px-2.5 py-1">
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">Live</span>
+            </div>
           </div>
         </div>
-        <p className="text-sm text-on-surface-variant mb-5">Pilih soal untuk mulai mengerjakan latihan mandiri.</p>
+        {onChangeLevel && (
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {(['mudah', 'sedang', 'sulit'] as const).map(lvl => (
+              <button
+                key={lvl}
+                onClick={() => { onChangeLevel(lvl); setFormOpen(false); setEditing(null); }}
+                className={`py-2 rounded-xl text-xs font-bold capitalize transition-colors border cursor-pointer ${
+                  quizLevel === lvl
+                    ? 'bg-primary text-on-primary border-primary'
+                    : 'bg-surface-container text-on-surface border-transparent hover:bg-surface-container-high'
+                }`}
+              >
+                {lvl}
+              </button>
+            ))}
+          </div>
+        )}
+        <p className="text-sm text-on-surface-variant mb-5">
+          Kerjakan dengan 4 tahap RME. Pada tahap pengerjaan tersedia kisi-kisi jika kamu membutuhkan panduan.
+        </p>
 
-        <div className="flex flex-col gap-3">
+        {formOpen && isAdmin && (
+          <LatihanQuestionForm
+            strand={selectedCategory as any}
+            category={quizLevel as Difficulty}
+            editing={editing}
+            onCancel={() => { setFormOpen(false); setEditing(null); }}
+            onSaved={() => { setFormOpen(false); setEditing(null); refetch(); }}
+          />
+        )}
 
-          {/* ---- SOAL DARI SUPABASE (DINAMIS) ---- */}
+        <div className="flex flex-col gap-3 mt-4">
           {loading && (
             <div className="space-y-2 mt-2">
               <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Memuat dari Database...</div>
@@ -406,58 +391,80 @@ const QuizListView: React.FC<QuizListViewProps> = ({
             <div className="space-y-2 mt-2">
               {questions.map((q: Question, idx: number) => {
                 const diffBadge = DIFF_BADGE[q.category] || DIFF_BADGE.sedang;
-                const narasiBlok = q.content_blocks?.find(b => b.type === 'text');
+                const visibleBlocks = stripRmeMetaBlocks(q.content_blocks);
+                const narasiBlok = visibleBlocks.find(b => b.type === 'text');
                 const preview = narasiBlok?.value?.slice(0, 80) || '(Berisi persamaan matematika / gambar)';
+                const hintCount = parseRmeKeys(q).hints?.length || 0;
 
                 return (
                   <div
                     key={q.id}
-                    className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest dark:bg-surface-container hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors flex items-center justify-between cursor-pointer group"
-                    onClick={() => {
-                      onSelectQuestion(9000 + idx, q.id);
-                    }}
+                    className="w-full text-left p-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest dark:bg-surface-container hover:bg-surface-container-high transition-colors flex items-center justify-between cursor-pointer group"
+                    onClick={() => onSelectQuestion(9000 + idx, q.id)}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black text-sm shrink-0">
                         {idx + 1}
                       </div>
-                      <div>
-                        <div className="font-bold text-sm text-on-surface group-hover:text-primary transition-colors">
+                      <div className="min-w-0">
+                        <div className="font-bold text-sm text-on-surface group-hover:text-primary transition-colors truncate">
                           {q.title || 'Soal Tanpa Judul'}
                         </div>
                         <div className="text-[10px] text-on-surface-variant mt-0.5 flex items-center gap-2 flex-wrap">
                           <span className={`font-bold px-1.5 py-0.5 rounded uppercase ${diffBadge.cls}`}>
                             {diffBadge.label}
                           </span>
-                          {q.has_simulation && (
-                            <span className="font-bold px-1.5 py-0.5 rounded bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 uppercase flex items-center gap-0.5">
-                              <span className="material-symbols-outlined text-[10px]">science</span> RME
-                            </span>
-                          )}
-                          <span>· {q.options?.length || 0} Opsi</span>
+                          <span className="font-bold px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 uppercase">RME</span>
+                          {hintCount > 0 && <span>{hintCount} kisi-kisi</span>}
+                          <span className="truncate max-w-[180px]">{preview}</span>
                         </div>
                       </div>
                     </div>
-                    <span className="material-symbols-outlined text-primary text-[20px] shrink-0 mt-1 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                    <div className="flex items-center gap-1 shrink-0 ml-2">
+                      {isAdmin && (
+                        <>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setEditing(q); setFormOpen(true); }}
+                            className="w-8 h-8 rounded-lg text-slate-500 hover:bg-slate-100 flex items-center justify-center cursor-pointer"
+                            title="Edit"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDelete(q.id); }}
+                            className="w-8 h-8 rounded-lg text-rose-500 hover:bg-rose-50 flex items-center justify-center cursor-pointer"
+                            title="Hapus"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </>
+                      )}
+                      <span className="material-symbols-outlined text-primary text-[20px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                    </div>
                   </div>
                 );
               })}
             </div>
           )}
 
-          {/* Empty state jika tidak ada soal sama sekali */}
-          {!loading && !error && questions.length === 0 && (
+          {!loading && !error && questions.length === 0 && !formOpen && (
             <div className="text-center p-10 border-2 border-dashed border-outline-variant/30 rounded-xl bg-surface-container-lowest">
-              <span className="material-symbols-outlined text-4xl text-slate-300 block mb-2">construction</span>
+              <span className="material-symbols-outlined text-4xl text-slate-300 block mb-2">quiz</span>
               <p className="text-sm font-semibold text-on-surface-variant">
                 Belum ada soal untuk {selectedCategory} — {quizLevel}.
               </p>
-              <p className="text-xs text-slate-400 mt-1">
-                Admin dapat menambahkan soal melalui Panel Manajemen Soal.
-              </p>
+              {isAdmin ? (
+                <button
+                  onClick={() => { setEditing(null); setFormOpen(true); }}
+                  className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold cursor-pointer"
+                >
+                  <Plus size={14} /> Tambah soal di sini
+                </button>
+              ) : (
+                <p className="text-xs text-slate-400 mt-1">Soal akan muncul setelah guru menambahkannya.</p>
+              )}
             </div>
           )}
-
         </div>
       </div>
     </div>

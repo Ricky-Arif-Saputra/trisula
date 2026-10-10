@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import type { RmeKeys } from '../components/screens/LatihanTypes';
 
 // =====================================================
 // Types
@@ -31,6 +32,7 @@ export interface Question {
   has_simulation: boolean;
   created_by: string;
   created_at: string;
+  rme_keys?: RmeKeys;
 }
 
 // =====================================================

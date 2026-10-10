@@ -29,3 +29,7 @@ create policy "Siswa bisa menyimpan jawaban miliknya"
   on public.jawaban
   for insert
   with check (auth.uid() = user_id);
+
+-- Kolom kunci RME untuk soal latihan (4 tahap + kisi-kisi + angka akhir)
+alter table if exists public.questions
+  add column if not exists rme_keys jsonb;
