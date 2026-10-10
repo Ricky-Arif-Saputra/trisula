@@ -118,6 +118,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // ── G. Panggil Gemini ────────────────────────────────────────────────────
     if (!process.env.GEMINI_API_KEY) {
+      console.error('GEMINI_API_KEY belum diset');
       return res.status(500).json({ error: 'Konfigurasi AI tidak tersedia' });
     }
 
@@ -180,8 +181,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ skor, alasan });
 
   } catch (error) {
-    // Jangan bocorkan detail error ke klien
-    console.error('Error di /api/nilai:', error);
+    // Cetak hanya nama dan pesan error — jangan bocorkan request, header, atau env
+    const e = error instanceof Error ? error : new Error(String(error));
+    console.error('Error di /api/nilai:', e.name, e.message);
     return res.status(500).json({ error: 'Terjadi kesalahan pada server. Silakan coba lagi.' });
   }
 }
