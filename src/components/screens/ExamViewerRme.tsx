@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { InlineMath } from 'react-katex';
+import { MathRenderer } from '../MathRenderer';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../Auth/AuthProvider';
 import { nilaiTahap } from '../../lib/aiScoring';
+import { Lightbulb, ChevronRight, Check } from 'lucide-react';
 import { useRiwayat } from '../../hooks/useRiwayat';
 import html2pdf from 'html2pdf.js';
 
@@ -47,6 +49,8 @@ export interface RmeKeys {
   points_ditanya: number;
   points_pengerjaan: number;
   points_kesimpulan: number;
+  hints?: { id: string; question: string; answer: string }[];
+  finalNumericAnswer?: number | null;
 }
 export interface AiScoreResult {
   evaluation: {
@@ -56,6 +60,7 @@ export interface AiScoreResult {
     kesimpulan: { score: number; max_score: number; reason: string };
   };
   total_score: number;
+  numeric_verification?: { isCorrect: boolean; userValue: number | null; expectedValue: number | null };
 }
 interface ExamViewerRmeProps {
   examId: string;
@@ -130,6 +135,10 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
 
   const [essayAnswers, setEssayAnswers] = useState<Record<string, RmeAnswers>>({});
+  const [activeHints, setActiveHints] = useState<Record<string, number>>({});
+  const [hintAnswers, setHintAnswers] = useState<Record<string, Record<number, string>>>({});
+  const [hintRevealed, setHintRevealed] = useState<Record<string, Record<number, boolean>>>({});
+  const [finalNumericAnswers, setFinalNumericAnswers] = useState<Record<string, string>>({});
   const [aiResults, setAiResults] = useState<Record<string, AiScoreResult>>({});
   const [scoringError, setScoringError] = useState<string | null>(null);
   const [scoringErrorDetail, setScoringErrorDetail] = useState<string | null>(null);
@@ -223,10 +232,25 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
           const rubrikText = keys[`ref_${stage}` as keyof RmeKeys] as string || `Berikan nilai untuk tahap ${stage}`;
           const maxPoints = keys[`points_${stage}` as keyof RmeKeys] as number || 0;
           try {
+            let extraText = '';
+            // If pengerjaan, append hint answers if any
+            if (stage === 'pengerjaan') {
+               const qHints = keys.hints || [];
+               if (qHints.length > 0) {
+                 extraText = "\n[Log Pengerjaan Siswa Menggunakan Kisi-Kisi]\n";
+                 qHints.forEach((h, i) => {
+                   const hAns = hintAnswers[q.id]?.[i] || 'Belum dijawab';
+                   extraText += `Kisi-Kisi ${i+1} Pertanyaan: ${h.question}\n`;
+                   extraText += `Jawaban Siswa: ${hAns}\n`;
+                 });
+                 extraText += "\n[Uraian Final Pengerjaan Siswa]\n";
+               }
+            }
+
             evalResults[stage] = await nilaiTahap({
               soalId: q.id,
               tahap: stage,
-              jawaban: answers[stage] || '',
+              jawaban: extraText + (answers[stage] || ''),
               rubrik: rubrikText,
               skorMaks: maxPoints,
             });

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { InlineMath } from 'react-katex';
+import { MathRenderer } from '../MathRenderer';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../Auth/AuthProvider';
+import { Plus, Trash2, Eye, Edit3 } from 'lucide-react';
 
 // =====================================================
 // Types
@@ -11,16 +13,23 @@ type BlockType = 'text' | 'latex' | 'image';
 
 interface ContentBlock { id: string; type: BlockType; value: string; }
 
+export interface RmeHint {
+  id: string;
+  question: string;
+  answer: string;
+}
+
 interface RmeStageKey {
   ref: string;
   points: number;
+  hints?: RmeHint[];
+  finalNumericAnswer?: string;
 }
 
 interface RmeQuestion {
   id: string;
   title: string;
   content_blocks: ContentBlock[];
-  // 4-stage RME keys
   stage_diketahui: RmeStageKey;
   stage_ditanya: RmeStageKey;
   stage_pengerjaan: RmeStageKey;
@@ -54,10 +63,10 @@ const makeBlankQuestion = (): RmeQuestion => ({
   id: uid('rmq'),
   title: '',
   content_blocks: [{ id: uid('blk'), type: 'text', value: '' }],
-  stage_diketahui: { ref: '', points: 25 },
-  stage_ditanya: { ref: '', points: 25 },
-  stage_pengerjaan: { ref: '', points: 35 },
-  stage_kesimpulan: { ref: '', points: 15 },
+  stage_diketahui: { ref: '', points: 20 },
+  stage_ditanya: { ref: '', points: 10 },
+  stage_pengerjaan: { ref: '', points: 50, hints: [], finalNumericAnswer: '' },
+  stage_kesimpulan: { ref: '', points: 20 },
 });
 
 // =====================================================
@@ -68,6 +77,9 @@ const StageKeyPanel: React.FC<{
   value: RmeStageKey;
   onChange: (val: RmeStageKey) => void;
 }> = ({ stage, value, onChange }) => {
+  const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
+  const isPhase3 = stage.key === 'pengerjaan';
+
   const colorMap: Record<string, string> = {
     sky: 'border-sky-300 bg-sky-50 dark:bg-sky-900/10',
     violet: 'border-violet-300 bg-violet-50 dark:bg-violet-900/10',
@@ -87,9 +99,30 @@ const StageKeyPanel: React.FC<{
     emerald: 'bg-emerald-500',
   };
 
+  const addHint = () => {
+    onChange({
+      ...value,
+      hints: [...(value.hints || []), { id: uid('hnt'), question: '', answer: '' }]
+    });
+  };
+
+  const updateHint = (hintId: string, field: 'question' | 'answer', text: string) => {
+    onChange({
+      ...value,
+      hints: (value.hints || []).map(h => h.id === hintId ? { ...h, [field]: text } : h)
+    });
+  };
+
+  const removeHint = (hintId: string) => {
+    onChange({
+      ...value,
+      hints: (value.hints || []).filter(h => h.id !== hintId)
+    });
+  };
+
   return (
-    <div className={`rounded-xl border-2 ${colorMap[stage.color]} p-4 space-y-3`}>
-      <div className="flex items-center justify-between gap-3">
+    <div className={`rounded-xl border-2 ${colorMap[stage.color]} p-4 space-y-4`}>
+      <div className="flex items-center justify-between gap-3 border-b border-slate-200/50 pb-3">
         <div className="flex items-center gap-2">
           <div className={`w-7 h-7 rounded-lg ${badgeColor[stage.color]} flex items-center justify-center`}>
             <span className="material-symbols-outlined text-white text-[14px]">{stage.icon}</span>
@@ -111,43 +144,104 @@ const StageKeyPanel: React.FC<{
         </div>
       </div>
 
-      {/* Ref answer textarea */}
-      <div>
-        <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1.5">
-          Kunci Jawaban Acuan (teks / LaTeX)
-        </label>
-        <textarea
-          rows={3}
-          value={value.ref}
-          onChange={(e) => onChange({ ...value, ref: e.target.value })}
-          placeholder={`Contoh kunci "${stage.label}": tulis teks biasa atau sintaks LaTeX, misal: x = \\frac{3}{2}`}
-          className="w-full p-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-white text-sm font-mono leading-relaxed focus:border-indigo-400 outline-none resize-y placeholder:text-slate-400"
-        />
-      </div>
-
-      {/* Live KaTeX Preview */}
-      {value.ref.trim() && (
-        <div className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1">
-            <span className="material-symbols-outlined text-[11px]">visibility</span>
-            Live Preview KaTeX
+      {isPhase3 && (
+        <div className="bg-white/60 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Hasil Akhir Angka Pasti</label>
+              <input
+                type="number"
+                step="any"
+                value={value.finalNumericAnswer || ''}
+                onChange={e => onChange({ ...value, finalNumericAnswer: e.target.value })}
+                placeholder="Contoh: 42"
+                className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-white text-sm focus:border-indigo-400 outline-none"
+              />
+            </div>
+            <div className="flex-1 text-xs text-slate-500 italic mt-4">
+              Digunakan sistem untuk verifikasi jawaban akhir otomatis (jika ada).
+            </div>
           </div>
-          <div className="text-sm text-slate-800 dark:text-white overflow-x-auto">
-            {(() => {
-              try {
-                // Render inline math for any LaTeX detected
-                const hasLatex = value.ref.includes('\\') || value.ref.includes('^') || value.ref.includes('_') || value.ref.includes('frac');
-                if (hasLatex) {
-                  return <InlineMath math={value.ref} />;
-                }
-                return <span>{value.ref}</span>;
-              } catch {
-                return <span className="text-rose-500 text-xs">LaTeX tidak valid</span>;
-              }
-            })()}
+
+          <div className="border-t border-slate-200 dark:border-slate-700 pt-4 mt-2">
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-[10px] font-bold text-slate-500 uppercase block">Kisi-Kisi Bertahap (Hints)</label>
+              <button onClick={addHint} className="flex items-center gap-1 text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md hover:bg-indigo-100 transition-colors">
+                <Plus size={14} /> Tambah Kisi-Kisi
+              </button>
+            </div>
+            {(value.hints || []).length === 0 ? (
+              <p className="text-xs text-slate-400 text-center py-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg">Tidak ada kisi-kisi.</p>
+            ) : (
+              <div className="space-y-3">
+                {(value.hints || []).map((h, i) => (
+                  <div key={h.id} className="relative bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-600">
+                    <button onClick={() => removeHint(h.id)} className="absolute top-2 right-2 text-rose-400 hover:text-rose-600"><Trash2 size={14}/></button>
+                    <span className="text-xs font-bold text-indigo-500 mb-2 block">Kisi-Kisi #{i+1}</span>
+                    <div className="space-y-2">
+                      <textarea
+                        rows={2}
+                        value={h.question}
+                        onChange={e => updateHint(h.id, 'question', e.target.value)}
+                        placeholder="Pertanyaan pemandu (Bisa LaTeX, contoh: $x^2=4$)"
+                        className="w-full p-2 rounded-md border border-slate-200 dark:border-slate-700 text-xs focus:border-indigo-400 outline-none resize-y"
+                      />
+                      <textarea
+                        rows={2}
+                        value={h.answer}
+                        onChange={e => updateHint(h.id, 'answer', e.target.value)}
+                        placeholder="Jawaban pemandu (Bisa LaTeX)"
+                        className="w-full p-2 rounded-md border border-slate-200 dark:border-slate-700 text-xs focus:border-indigo-400 outline-none resize-y bg-slate-50 dark:bg-slate-900"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
+
+      {/* Editor & Preview Toggle */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-[10px] font-bold text-slate-500 uppercase">
+            {isPhase3 ? "Uraian Penyelesaian Lengkap" : "Kunci Jawaban Acuan"}
+          </label>
+          <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+            <button
+              onClick={() => setActiveTab('edit')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-md transition-all ${activeTab === 'edit' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              <Edit3 size={12} /> Edit Teks
+            </button>
+            <button
+              onClick={() => setActiveTab('preview')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-md transition-all ${activeTab === 'preview' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              <Eye size={12} /> Render LaTeX
+            </button>
+          </div>
+        </div>
+        
+        {activeTab === 'edit' ? (
+          <textarea
+            rows={4}
+            value={value.ref}
+            onChange={(e) => onChange({ ...value, ref: e.target.value })}
+            placeholder={`Gunakan $$...$$ untuk block rumus, dan $...$ untuk inline rumus.\nContoh: Nilai dari $x$ adalah $$\\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$$`}
+            className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-white text-sm font-mono leading-relaxed focus:border-indigo-400 outline-none resize-y placeholder:text-slate-400"
+          />
+        ) : (
+          <div className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 min-h-[100px]">
+            {value.ref.trim() ? (
+              <MathRenderer text={value.ref} className="text-sm text-slate-800 dark:text-white" />
+            ) : (
+              <span className="text-slate-400 text-xs italic">Kunci jawaban kosong...</span>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -165,40 +259,30 @@ export const RmePosttestBuilder: React.FC<RmePosttestBuilderProps> = ({ onBack, 
   const [isSaving, setIsSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // ---- Question manipulation ----
   const addQuestion = () => setQuestions(prev => [...prev, makeBlankQuestion()]);
   const removeQuestion = (id: string) => setQuestions(prev => prev.filter(q => q.id !== id));
-
-  const updateTitle = (id: string, t: string) =>
-    setQuestions(prev => prev.map(q => q.id === id ? { ...q, title: t } : q));
-
+  const updateTitle = (id: string, t: string) => setQuestions(prev => prev.map(q => q.id === id ? { ...q, title: t } : q));
   const updateBlock = (qId: string, blockId: string, value: string) =>
     setQuestions(prev => prev.map(q => q.id !== qId ? q : {
       ...q, content_blocks: q.content_blocks.map(b => b.id === blockId ? { ...b, value } : b)
     }));
-
   const addBlock = (qId: string, type: BlockType) =>
     setQuestions(prev => prev.map(q => q.id !== qId ? q : {
       ...q, content_blocks: [...q.content_blocks, { id: uid('blk'), type, value: '' }]
     }));
-
   const removeBlock = (qId: string, blockId: string) =>
     setQuestions(prev => prev.map(q => q.id !== qId ? q : {
       ...q, content_blocks: q.content_blocks.filter(b => b.id !== blockId)
     }));
-
   const updateStage = (qId: string, stageKey: string, val: RmeStageKey) =>
     setQuestions(prev => prev.map(q => q.id !== qId ? q : {
       ...q, [`stage_${stageKey}`]: val
     } as RmeQuestion));
 
-  // ---- Save ----
   const handleSave = async () => {
     setSaveMsg(null);
     if (!title.trim()) { setSaveMsg({ type: 'error', text: 'Judul paket ujian harus diisi.' }); return; }
     if (questions.length === 0) { setSaveMsg({ type: 'error', text: 'Minimal 1 soal harus ditambahkan.' }); return; }
-
-    // Validate: each question must have at least one content block with value
     for (const q of questions) {
       if (!q.content_blocks.some(b => b.value.trim())) {
         setSaveMsg({ type: 'error', text: `Semua soal harus memiliki konten yang diisi.` });
@@ -207,13 +291,11 @@ export const RmePosttestBuilder: React.FC<RmePosttestBuilderProps> = ({ onBack, 
     }
 
     setIsSaving(true);
-
-    // Build questions JSON (include rme_keys for AI scoring)
     const builtQuestions = questions.map((q, idx) => ({
       id: q.id,
       title: q.title || `Soal ${idx + 1}`,
       content_blocks: q.content_blocks,
-      options: [], // RME Posttest = essay, no MC options
+      options: [], 
       question_type: 'rme_posttest',
       rme_keys: {
         ref_diketahui: q.stage_diketahui.ref,
@@ -224,6 +306,8 @@ export const RmePosttestBuilder: React.FC<RmePosttestBuilderProps> = ({ onBack, 
         points_ditanya: q.stage_ditanya.points,
         points_pengerjaan: q.stage_pengerjaan.points,
         points_kesimpulan: q.stage_kesimpulan.points,
+        hints: q.stage_pengerjaan.hints || [],
+        finalNumericAnswer: q.stage_pengerjaan.finalNumericAnswer ? parseFloat(q.stage_pengerjaan.finalNumericAnswer) : null,
       },
     }));
 
@@ -248,224 +332,124 @@ export const RmePosttestBuilder: React.FC<RmePosttestBuilderProps> = ({ onBack, 
       setSaveMsg({ type: 'success', text: `✅ Paket Postest RME "${title}" berhasil disimpan!` });
       setTimeout(() => onSaved(), 2000);
     } catch (err: any) {
-      setSaveMsg({ type: 'error', text: `Gagal menyimpan: ${err.message}` });
+      setSaveMsg({ type: 'error', text: err.message || 'Terjadi kesalahan saat menyimpan.' });
     } finally {
       setIsSaving(false);
     }
   };
 
+  const headerBg = 'from-violet-600 to-fuchsia-500';
+
   return (
-    <div className="w-full font-sans space-y-6">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-rose-700 to-orange-600 rounded-2xl p-6 text-white flex items-center gap-4 shadow-lg">
-        <button onClick={onBack} className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center cursor-pointer transition-colors">
-          <span className="material-symbols-outlined text-[20px]">arrow_back</span>
-        </button>
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center">
-            <span className="material-symbols-outlined text-3xl">psychology</span>
-          </div>
+    <div className="flex flex-col w-full pb-20 font-sans">
+      <div className={`bg-gradient-to-r ${headerBg} px-4 py-5 text-white`}>
+        <div className="flex items-center gap-3 mb-1">
+          <button onClick={onBack} className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors cursor-pointer">
+            <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+          </button>
           <div>
-            <h1 className="text-xl font-black">Pembuat Soal Postest RME</h1>
-            <p className="text-orange-100 text-xs mt-0.5">4 Tahap: Diketahui · Ditanya · Pengerjaan · Kesimpulan · Penilaian AI</p>
+            <div className="text-[10px] font-black uppercase tracking-widest opacity-80">RME Postest Builder</div>
+            <h2 className="text-lg font-extrabold">Buat Studi Kasus RME</h2>
           </div>
         </div>
       </div>
 
-      {/* Metadata */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 space-y-4 shadow-sm">
-        <h2 className="text-sm font-black text-slate-700 dark:text-white uppercase tracking-widest flex items-center gap-2">
-          <span className="material-symbols-outlined text-[16px] text-rose-500">settings</span>
-          Pengaturan Paket Ujian
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1.5">Judul Paket Ujian</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Contoh: Postest RME – Bilangan Riil"
-              className="w-full p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-white font-semibold text-sm focus:border-rose-400 outline-none"
-            />
+      <div className="px-4 pt-5 space-y-6">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+          <div className="bg-slate-50 dark:bg-slate-800 px-5 py-3 border-b border-slate-200 dark:border-slate-700">
+            <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Informasi Utama</span>
           </div>
-          <div>
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1.5">Durasi (Menit)</label>
-            <input
-              type="number"
-              min={10}
-              max={180}
-              value={durationMinutes}
-              onChange={(e) => setDurationMinutes(parseInt(e.target.value) || 60)}
-              className="w-full p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-white font-semibold text-sm focus:border-rose-400 outline-none"
-            />
-          </div>
-        </div>
-        <div>
-          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">Bidang (Strand)</label>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-            {STRANDS.map(s => (
-              <button
-                key={s.value}
-                onClick={() => setStrand(s.value)}
-                className={`py-2 rounded-xl border-2 font-bold text-xs flex flex-col items-center gap-1 transition-all cursor-pointer ${strand === s.value ? 'border-rose-500 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-400' : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300 dark:hover:border-slate-600'}`}
-              >
-                <span className="material-symbols-outlined text-[18px]">{s.icon}</span>
-                {s.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Questions */}
-      <div className="space-y-6">
-        {questions.map((q, qIdx) => (
-          <div key={q.id} className="bg-white dark:bg-slate-800 rounded-2xl border-2 border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
-            {/* Question Header */}
-            <div className="bg-gradient-to-r from-slate-800 to-slate-700 p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-rose-500 flex items-center justify-center text-white font-black text-sm">{qIdx + 1}</div>
-                <input
-                  type="text"
-                  value={q.title}
-                  onChange={(e) => updateTitle(q.id, e.target.value)}
-                  placeholder={`Judul Soal ${qIdx + 1} (opsional)`}
-                  className="bg-transparent text-white font-bold text-sm placeholder:text-slate-400 outline-none flex-1"
-                />
+          <div className="p-5 space-y-4">
+            <div>
+              <label className="text-xs font-bold text-slate-500 block mb-1.5"><span className="material-symbols-outlined text-[12px] align-middle mr-1">title</span> Judul Paket</label>
+              <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Contoh: Analisis Ketinggian Roket (Aljabar)" className="w-full p-3 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-500 block mb-1.5">Kategori Materi</label>
+              <div className="flex flex-wrap gap-2">
+                {STRANDS.map(s => (
+                  <button key={s.value} onClick={() => setStrand(s.value)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${strand === s.value ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-100 text-slate-600 border-transparent hover:border-indigo-300'}`}>
+                    <span className="material-symbols-outlined text-[14px]">{s.icon}</span>{s.label}
+                  </button>
+                ))}
               </div>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-500 block mb-1.5">Durasi Waktu (Menit)</label>
+              <input type="number" value={durationMinutes} onChange={e => setDurationMinutes(Number(e.target.value))} className="w-24 p-2 rounded-xl border text-center font-bold outline-none focus:border-indigo-500" />
+            </div>
+          </div>
+        </div>
+
+        {questions.map((q, qIdx) => (
+          <div key={q.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="bg-slate-800 px-5 py-3 flex items-center justify-between text-white">
+              <span className="font-black text-sm">Soal Kasus {qIdx + 1}</span>
               {questions.length > 1 && (
-                <button onClick={() => removeQuestion(q.id)}
-                  className="w-8 h-8 rounded-lg bg-rose-500/20 text-rose-300 hover:bg-rose-500/40 flex items-center justify-center cursor-pointer transition-colors">
-                  <span className="material-symbols-outlined text-[16px]">delete</span>
+                <button onClick={() => removeQuestion(q.id)} className="text-white/60 hover:text-rose-400 text-xs flex items-center gap-1 cursor-pointer">
+                  <Trash2 size={14}/> Hapus
                 </button>
               )}
             </div>
-
-            <div className="p-5 space-y-5">
-              {/* Context/Problem Content */}
+            
+            <div className="p-5 space-y-6">
               <div>
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-3 flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[14px]">article</span>
-                  Konteks / Narasi Soal
-                </label>
-                <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Narasi Studi Kasus (Konten)</label>
+                <div className="space-y-3">
                   {q.content_blocks.map((block) => (
-                    <div key={block.id} className="relative">
-                      {block.type === 'text' && (
-                        <div className="flex gap-2">
-                          <textarea
-                            rows={3}
-                            value={block.value}
-                            onChange={(e) => updateBlock(q.id, block.id, e.target.value)}
-                            placeholder="Tuliskan narasi/konteks soal di sini..."
-                            className="flex-1 p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-white text-sm leading-relaxed focus:border-rose-400 outline-none resize-y placeholder:text-slate-400"
-                          />
-                          {q.content_blocks.length > 1 && (
-                            <button onClick={() => removeBlock(q.id, block.id)}
-                              className="w-8 h-8 self-start mt-2 rounded-lg bg-rose-50 text-rose-400 hover:bg-rose-100 flex items-center justify-center cursor-pointer">
-                              <span className="material-symbols-outlined text-[14px]">close</span>
-                            </button>
-                          )}
-                        </div>
-                      )}
-                      {block.type === 'latex' && (
-                        <div className="flex gap-2">
-                          <div className="flex-1 space-y-2">
-                            <textarea
-                              rows={2}
-                              value={block.value}
-                              onChange={(e) => updateBlock(q.id, block.id, e.target.value)}
-                              placeholder="Sintaks LaTeX, contoh: f(x) = \frac{x}{2}"
-                              className="w-full p-3 rounded-xl border-2 border-indigo-200 dark:border-indigo-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-white text-sm font-mono focus:border-indigo-400 outline-none resize-y"
-                            />
-                            {block.value.trim() && (
-                              <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 text-sm text-slate-800 dark:text-white overflow-x-auto">
-                                <InlineMath math={block.value} />
-                              </div>
-                            )}
-                          </div>
-                          {q.content_blocks.length > 1 && (
-                            <button onClick={() => removeBlock(q.id, block.id)}
-                              className="w-8 h-8 self-start mt-2 rounded-lg bg-rose-50 text-rose-400 hover:bg-rose-100 flex items-center justify-center cursor-pointer">
-                              <span className="material-symbols-outlined text-[14px]">close</span>
-                            </button>
-                          )}
-                        </div>
-                      )}
+                    <div key={block.id} className="flex gap-2">
+                      <div className="flex-1 relative">
+                        {block.type === 'text' && (
+                          <textarea rows={3} value={block.value} onChange={e => updateBlock(q.id, block.id, e.target.value)} placeholder="Deskripsikan studi kasus di sini. Bisa pakai Math: $\frac{1}{2}$" className="w-full p-3 rounded-xl border border-slate-200 outline-none focus:border-indigo-400 resize-y" />
+                        )}
+                        {block.type === 'latex' && (
+                          <input value={block.value} onChange={e => updateBlock(q.id, block.id, e.target.value)} placeholder="Latex syntax (legacy)" className="w-full p-3 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-800 font-mono outline-none" />
+                        )}
+                        {block.type === 'image' && (
+                          <input value={block.value} onChange={e => updateBlock(q.id, block.id, e.target.value)} placeholder="Image URL" className="w-full p-3 rounded-xl border border-violet-300 bg-violet-50 text-violet-800 outline-none" />
+                        )}
+                      </div>
+                      <button onClick={() => removeBlock(q.id, block.id)} className="mt-2 w-8 h-8 rounded-lg text-rose-500 hover:bg-rose-50 flex items-center justify-center shrink-0 cursor-pointer">
+                        <Trash2 size={16}/>
+                      </button>
                     </div>
                   ))}
-                </div>
-                <div className="flex gap-2 mt-2">
-                  <button onClick={() => addBlock(q.id, 'text')}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 text-xs font-bold hover:border-slate-300 cursor-pointer">
-                    <span className="material-symbols-outlined text-[14px]">text_fields</span> + Teks
-                  </button>
-                  <button onClick={() => addBlock(q.id, 'latex')}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-700 text-indigo-500 text-xs font-bold hover:border-indigo-300 cursor-pointer">
-                    <span className="material-symbols-outlined text-[14px]">function</span> + LaTeX
-                  </button>
+                  <div className="flex gap-2 pt-2">
+                    <button onClick={() => addBlock(q.id, 'text')} className="text-[11px] font-bold px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors border border-slate-200">+ Teks / Paragraf</button>
+                    <button onClick={() => addBlock(q.id, 'image')} className="text-[11px] font-bold px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors border border-slate-200">+ URL Gambar</button>
+                  </div>
                 </div>
               </div>
 
-              {/* 4 Stage Keys */}
-              <div>
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-3 flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[14px]">key</span>
-                  Kunci Jawaban Acuan Per Tahap (Digunakan Penilaian AI)
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {STAGES.map(stage => (
-                    <StageKeyPanel
-                      key={stage.key}
-                      stage={stage}
-                      value={(q as any)[`stage_${stage.key}`] as RmeStageKey}
-                      onChange={(val) => updateStage(q.id, stage.key, val)}
-                    />
-                  ))}
-                </div>
-                <div className="mt-3 flex items-center justify-end gap-2 text-xs text-slate-500 font-mono bg-slate-50 dark:bg-slate-900 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700">
-                  <span className="material-symbols-outlined text-[14px] text-indigo-400">calculate</span>
-                  Total Poin Soal ini:
-                  <span className="font-black text-indigo-600 dark:text-indigo-400">
-                    {q.stage_diketahui.points + q.stage_ditanya.points + q.stage_pengerjaan.points + q.stage_kesimpulan.points}
-                  </span>
-                </div>
+              <div className="border-t border-slate-200 pt-6 space-y-4">
+                <h4 className="text-sm font-black text-slate-800 flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-md bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs">4</span>
+                  Tahapan RME & Rubrik AI
+                </h4>
+                
+                <StageKeyPanel stage={STAGES[0]} value={q.stage_diketahui} onChange={v => updateStage(q.id, 'diketahui', v)} />
+                <StageKeyPanel stage={STAGES[1]} value={q.stage_ditanya} onChange={v => updateStage(q.id, 'ditanya', v)} />
+                <StageKeyPanel stage={STAGES[2]} value={q.stage_pengerjaan} onChange={v => updateStage(q.id, 'pengerjaan', v)} />
+                <StageKeyPanel stage={STAGES[3]} value={q.stage_kesimpulan} onChange={v => updateStage(q.id, 'kesimpulan', v)} />
               </div>
             </div>
           </div>
         ))}
-      </div>
 
-      {/* Add Question */}
-      <button onClick={addQuestion}
-        className="w-full py-4 rounded-2xl border-2 border-dashed border-rose-300 dark:border-rose-700 text-rose-500 dark:text-rose-400 font-bold text-sm hover:bg-rose-50 dark:hover:bg-rose-900/10 transition-colors cursor-pointer flex items-center justify-center gap-2">
-        <span className="material-symbols-outlined text-[20px]">add_circle</span>
-        Tambah Soal RME Baru
-      </button>
-
-      {/* Footer Save */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+        <button onClick={addQuestion} className="w-full py-4 rounded-2xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all flex items-center justify-center gap-2 cursor-pointer">
+          <Plus size={18}/> Tambah Studi Kasus Baru
+        </button>
+        
         {saveMsg && (
-          <div className={`flex-1 p-3 rounded-xl text-sm font-bold flex items-center gap-2 ${saveMsg.type === 'success' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400'}`}>
-            <span className="material-symbols-outlined text-[18px]">{saveMsg.type === 'success' ? 'check_circle' : 'error'}</span>
+          <div className={`p-4 rounded-xl text-sm font-bold flex items-center gap-2 ${saveMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>
+            <span className="material-symbols-outlined">{saveMsg.type === 'success' ? 'check_circle' : 'error'}</span>
             {saveMsg.text}
           </div>
         )}
-        <div className="flex gap-3 ml-auto">
-          <button onClick={onBack}
-            className="px-5 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-bold text-sm hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer">
-            Batal
-          </button>
-          <button onClick={handleSave} disabled={isSaving}
-            className={`px-6 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg transition-all ${isSaving ? 'bg-slate-400 text-white cursor-wait' : 'bg-rose-600 hover:bg-rose-500 text-white cursor-pointer active:scale-95'}`}>
-            {isSaving ? (
-              <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Menyimpan...</>
-            ) : (
-              <><span className="material-symbols-outlined text-[18px]">save</span>Simpan Paket Postest RME</>
-            )}
-          </button>
-        </div>
+
+        <button onClick={handleSave} disabled={isSaving} className={`w-full py-4 rounded-2xl font-black text-white shadow-xl shadow-indigo-200 transition-all cursor-pointer ${isSaving ? 'bg-slate-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 hover:-translate-y-1'}`}>
+          {isSaving ? 'Menyimpan Paket...' : 'SIMPAN PAKET RME'}
+        </button>
       </div>
     </div>
   );
