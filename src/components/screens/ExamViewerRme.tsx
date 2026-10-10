@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { InlineMath } from 'react-katex';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../Auth/AuthProvider';
-import { nilaiJawaban } from '../../lib/aiScoring';
+import { nilaiTahap } from '../../lib/aiScoring';
 import { useRiwayat } from '../../hooks/useRiwayat';
 import html2pdf from 'html2pdf.js';
 
@@ -213,21 +213,22 @@ export const ExamViewerRme: React.FC<ExamViewerRmeProps> = ({ examId, onBack }) 
         if (!keys) continue;
         const answers = essayAnswers[q.id] || { diketahui: '', ditanya: '', pengerjaan: '', kesimpulan: '' };
 
-        // Hanya kirim soal_id + jawaban — rubrik & skor_maks diambil server dari DB
+        // Kirim jawaban + rubrik + skorMaks ke server
         const STAGE_KEYS = ['diketahui', 'ditanya', 'pengerjaan', 'kesimpulan'] as const;
         const evalResults = await Promise.all(
-          STAGE_KEYS.map(stage =>
-            nilaiJawaban({
-              soal_id: `${q.id}_${stage}`,
+          STAGE_KEYS.map(stage => {
+            const rubrikText = keys[`ref_${stage}` as keyof RmeKeys] as string || `Berikan nilai untuk tahap ${stage}`;
+            const maxPoints = keys[`points_${stage}` as keyof RmeKeys] as number || 0;
+            return nilaiTahap({
+              soalId: q.id,
+              tahap: stage,
               jawaban: answers[stage] || '',
+              rubrik: rubrikText,
+              skorMaks: maxPoints,
             }).catch((e: Error) => {
-              // 409 = sudah pernah submit — anggap skor penuh agar UI tidak error
-              if (e.message.includes('sudah pernah dikumpulkan')) {
-                return { skor: keys[`points_${stage}` as keyof RmeKeys] as unknown as number, alasan: '(sudah pernah dikumpulkan)' };
-              }
               throw e;
-            })
-          )
+            });
+          })
         );
 
         const [evalDiketahui, evalDitanya, evalPengerjaan, evalKesimpulan] = evalResults;
