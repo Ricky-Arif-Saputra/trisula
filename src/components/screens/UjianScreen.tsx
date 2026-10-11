@@ -554,6 +554,7 @@ const QuestionCard: React.FC<{
   onDownload: () => void;
 }> = ({ q, attempt, isAdmin, colorClass, onStart, onEdit, onDelete, onDownload }) => {
   const isDone = !!attempt;
+  const isPretest = q.test_type === 'pretest';
   const c = colorClass === 'amber'
     ? { badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', btn: 'bg-amber-500 hover:bg-amber-600', strip: 'from-amber-500 to-orange-400', glow: 'shadow-amber-500/10' }
     : { badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400', btn: 'bg-emerald-600 hover:bg-emerald-700', strip: 'from-emerald-500 to-teal-400', glow: 'shadow-emerald-500/10' };
@@ -575,12 +576,15 @@ const QuestionCard: React.FC<{
           <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest ${c.badge}`}>
             {q.test_type === 'pretest' ? 'Pretest' : 'Posttest'}
           </span>
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
-            isDone ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800' : 'bg-slate-50 text-slate-500 border border-slate-200 dark:bg-slate-700 dark:text-slate-400 dark:border-slate-600'
-          }`}>
-            <span className="material-symbols-outlined text-[11px]">{isDone ? 'check_circle' : 'pending'}</span>
-            {isDone ? 'Selesai' : 'Belum'}
-          </span>
+          {/* Status hanya untuk posttest */}
+          {!isPretest && (
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+              isDone ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800' : 'bg-slate-50 text-slate-500 border border-slate-200 dark:bg-slate-700 dark:text-slate-400 dark:border-slate-600'
+            }`}>
+              <span className="material-symbols-outlined text-[11px]">{isDone ? 'check_circle' : 'pending'}</span>
+              {isDone ? 'Selesai' : 'Belum'}
+            </span>
+          )}
         </div>
 
         {/* Judul ujian */}
@@ -610,21 +614,13 @@ const QuestionCard: React.FC<{
           {totalPoints > 0 && <span>🏆 {totalPoints} poin</span>}
         </div>
 
-        {/* Score */}
-        {isDone && attempt && (
-          <div className="px-3 py-2 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-700 flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500">Nilai Akhir</span>
-            <span className={`text-xl font-black ${attempt.score >= 70 ? 'text-emerald-600' : 'text-amber-600'}`}>{attempt.score}</span>
-          </div>
-        )}
-
         {/* Actions */}
         <div className="flex gap-2 mt-auto">
           <button onClick={onStart}
             className={`flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
-              isDone ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600' : `${c.btn} text-white shadow-md`
+              isPretest || !isDone ? `${c.btn} text-white shadow-md` : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
             }`}>
-            {isDone ? <><Eye size={13} /> Lihat Hasil</> : <><Play size={13} /> Kerjakan</>}
+            {!isPretest && isDone ? <><Eye size={13} /> Lihat Hasil</> : <><Play size={13} /> Kerjakan</>}
           </button>
           {isAdmin && (
             <>
