@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import { useAuth } from '../Auth/AuthProvider';
 import type { Question } from '../../hooks/useQuestions';
 import { MathRenderer } from '../MathRenderer';
 import {
@@ -108,6 +109,7 @@ const AnswerBlockAdder: React.FC<{ onAdd: (t: BlockType) => void; colorCls?: str
 // Main component
 // ─────────────────────────────────────────────────────────────
 export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questionId, onFinish }) => {
+  const { user, userName, userNisn } = useAuth();
   const [question, setQuestion] = useState<Question | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -199,9 +201,47 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
   const color = STAGE_COLORS[stage.color];
   const isLast = stageIdx === STAGES.length - 1;
 
-  const handleSubmit = () => {
-    setNumericCorrect(numbersMatch(finalNumber, keys.finalNumericAnswer));
+  const handleSubmit = async () => {
+    const isCorrect = numbersMatch(finalNumber, keys.finalNumericAnswer);
+    setNumericCorrect(isCorrect);
     setSubmitted(true);
+
+    // Simpan jawaban ke tabel jawaban agar admin bisa download ZIP
+    if (user && question) {
+      try {
+        // Gabungkan semua jawaban 4 tahap menjadi satu teks
+        const jawabanGabungan = STAGES.map(s => {
+          const blocks = answerBlocks[s.key as StageKey];
+          const teks = blocks.map(b => b.value.trim()).filter(Boolean).join('\n');
+          return `[${s.label}]\n${teks || '—'}`;
+        }).join('\n\n');
+
+        // Hitung skor berdasarkan jawaban angka akhir saja (AI scoring tidak dijalankan di sini)
+        // Simpan juga sebagai JSON lengkap untuk keperluan PDF
+        const answerJson = JSON.stringify({
+          diketahui:  answerBlocks.diketahui.map(b => b.value).join('\n'),
+          ditanya:    answerBlocks.ditanya.map(b => b.value).join('\n'),
+          pengerjaan: answerBlocks.pengerjaan.map(b => b.value).join('\n'),
+          kesimpulan: answerBlocks.kesimpulan.map(b => b.value).join('\n'),
+          finalNumber,
+          isCorrect,
+          student_name: userName,
+          student_nisn: userNisn,
+        });
+
+        await supabase.from('jawaban').insert([{
+          user_id:    user.id,
+          soal_id:    question.id,
+          jawaban:    answerJson,
+          skor:       isCorrect ? (keys.finalNumericAnswer != null ? 100 : null) : 0,
+          skor_maks:  100,
+          alasan:     isCorrect ? 'Jawaban angka akhir benar.' : 'Jawaban angka akhir tidak tepat.',
+        }]);
+      } catch (e) {
+        // Gagal simpan tidak harus error ke user
+        console.error('Gagal menyimpan jawaban:', e);
+      }
+    }
   };
 
   const openHints = () => {

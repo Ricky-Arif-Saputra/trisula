@@ -157,18 +157,57 @@ const DownloadModal: React.FC<{
       const zip = new JSZip();
       for (let i = 0; i < attempts.length; i++) {
         const att = attempts[i];
-        const name = (att.student_name || att.id).replace(/[^a-zA-Z0-9 _\-]/g, '').trim();
-        const nisn = (att.student_nisn || `id${i}`).replace(/\D/g, '') || `id${i}`;
+        const name = (() => {
+            let n = att.student_name || '';
+            try { const j = JSON.parse((att as any).jawaban || '{}'); if (j.student_name) n = j.student_name; } catch {}
+            return (n || att.id).replace(/[^a-zA-Z0-9 _\-]/g, '').trim();
+          })();
+          const nisn = (() => {
+            let ns = att.student_nisn || '';
+            try { const j = JSON.parse((att as any).jawaban || '{}'); if (j.student_nisn) ns = j.student_nisn; } catch {}
+            return (ns || `id${i}`).replace(/\D/g, '') || `id${i}`;
+          })();
         const filename = `${name}_${nisn}.pdf`;
         setProgress(`PDF ${i + 1}/${attempts.length}: ${name}...`);
 
-        // Build minimal answer object
+        // Build minimal answer object — parse JSON jawaban
+        let parsedAns: Record<string, string> = {};
+        let studentName = att.student_name || '';
+        let studentNisn = att.student_nisn || '';
+        try {
+          const j = JSON.parse((att as any).jawaban || '{}');
+          parsedAns = j;
+          if (j.student_name) studentName = j.student_name;
+          if (j.student_nisn) studentNisn = j.student_nisn;
+        } catch { parsedAns = {}; }
+
         const mockAttempt: Attempt = {
           ...att,
-          essay_answers: { [question.id]: { diketahui: (att as any).jawaban || '', ditanya: '', pengerjaan: '', kesimpulan: '' } },
-          ai_scores: { [question.id]: { evaluation: { diketahui: { score: (att as any).skor || 0, max_score: (att as any).skor_maks || 0, reason: (att as any).alasan || '' } } } },
+          student_name: studentName,
+          student_nisn: studentNisn,
+          essay_answers: {
+            [question.id]: {
+              diketahui:  parsedAns.diketahui  || (att as any).jawaban || '',
+              ditanya:    parsedAns.ditanya    || '',
+              pengerjaan: parsedAns.pengerjaan || '',
+              kesimpulan: parsedAns.kesimpulan || '',
+            }
+          },
+          ai_scores: {
+            [question.id]: {
+              evaluation: {
+                pengerjaan: {
+                  score:     parsedAns.isCorrect ? 100 : 0,
+                  max_score: 100,
+                  reason:    parsedAns.isCorrect
+                    ? `Jawaban angka akhir benar: ${parsedAns.finalNumber}`
+                    : `Jawaban angka akhir tidak tepat. Siswa menjawab: ${parsedAns.finalNumber || '—'}`,
+                }
+              }
+            }
+          },
           total_essay_score: (att as any).skor || 0,
-          total_max_points: (att as any).skor_maks || 0,
+          total_max_points: (att as any).skor_maks || 100,
           score: (att as any).skor || 0,
         };
 
@@ -228,18 +267,27 @@ const DownloadModal: React.FC<{
             </div>
           ) : (
             <div className="space-y-2">
-              {attempts.map((att, i) => (
-                <div key={att.id} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
-                  <div className="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[11px] font-bold text-slate-600 dark:text-slate-300 shrink-0">{i + 1}</div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-slate-800 dark:text-white truncate">{att.student_name || 'Tanpa Nama'}</p>
-                    <p className="text-[10px] text-slate-400">NISN: {att.student_nisn || '—'} · {new Date(att.created_at).toLocaleDateString('id-ID')}</p>
-                  </div>
-                  <span className={`text-base font-black shrink-0 ${(att as any).skor >= 70 ? 'text-emerald-600' : (att as any).skor >= 50 ? 'text-amber-600' : 'text-rose-500'}`}>
-                    {(att as any).skor ?? '—'}
-                  </span>
-                </div>
-              ))}
+              {attempts.map((att, i) => {
+                  let displayName = att.student_name || 'Tanpa Nama';
+                  let displayNisn = att.student_nisn || '—';
+                  try {
+                    const j = JSON.parse((att as any).jawaban || '{}');
+                    if (j.student_name) displayName = j.student_name;
+                    if (j.student_nisn) displayNisn = j.student_nisn;
+                  } catch {}
+                  return (
+                    <div key={att.id} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
+                      <div className="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[11px] font-bold text-slate-600 dark:text-slate-300 shrink-0">{i + 1}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-slate-800 dark:text-white truncate">{displayName}</p>
+                        <p className="text-[10px] text-slate-400">NISN: {displayNisn} · {new Date(att.created_at).toLocaleDateString('id-ID')}</p>
+                      </div>
+                      <span className={`text-base font-black shrink-0 ${(att as any).skor >= 70 ? 'text-emerald-600' : (att as any).skor >= 50 ? 'text-amber-600' : 'text-rose-500'}`}>
+                        {(att as any).skor ?? '—'}
+                      </span>
+                    </div>
+                  );
+                })}
             </div>
           )}
         </div>
