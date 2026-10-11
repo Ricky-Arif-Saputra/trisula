@@ -1,632 +1,555 @@
-import React, { useState, useEffect } from 'react';
-import { ASSETS, COGNITIVE_ASPECTS, STRANDS_DATA, TRISULA_BADGES, INITIAL_STUDENT_PROFILE } from '../../data';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ScreenType, MathCategory } from '../../types';
 import { useAuth } from '../Auth/AuthProvider';
 import { supabase } from '../../lib/supabaseClient';
-
-interface ExamPackage {
-  id: string;
-  title: string;
-  test_type: 'pretest' | 'postest';
-  strand: string;
-  duration_minutes: number;
-}
+import {
+  LogOut, RefreshCw, TrendingUp, Award, BookOpen, Zap,
+  Clock, CheckCircle, XCircle, BarChart2, Calendar,
+  ChevronRight, Star, Target, User,
+} from 'lucide-react';
 
 interface DashboardScreenProps {
   initialPerspective?: 'siswa' | 'guru';
   onNavigate?: (screen: ScreenType, category?: MathCategory | null, examId?: string) => void;
 }
 
-export const DashboardScreen: React.FC<DashboardScreenProps> = ({
-  initialPerspective = 'siswa',
-  onNavigate,
-}) => {
-  const { userName } = useAuth();
-  const [perspective, setPerspective] = useState<'siswa' | 'guru'>(initialPerspective);
-  const [taskAssigned, setTaskAssigned] = useState<boolean>(false);
-  const [bookmarked, setBookmarked] = useState<boolean>(false);
+interface JawabanRow {
+  id: string;
+  soal_id: string;
+  skor: number | null;
+  skor_maks: number | null;
+  alasan: string | null;
+  created_at: string;
+  jawaban: string;
+}
 
-  const [exams, setExams] = useState<ExamPackage[]>([]);
+interface DailyActivity {
+  date: string;       // 'YYYY-MM-DD'
+  count: number;
+  avgScore: number;
+}
 
-  useEffect(() => {
-    const fetchExams = async () => {
-      const { data } = await supabase.from('exam_packages').select('id, title, test_type, strand, duration_minutes').order('created_at', { ascending: false }).limit(5);
-      if (data) setExams(data as ExamPackage[]);
-    };
-    fetchExams();
-  }, []);
+interface SubjectStat {
+  strand: string;
+  count: number;
+  avgScore: number;
+  topScore: number;
+}
 
-  const profile = INITIAL_STUDENT_PROFILE;
+// ─────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────
+const STRAND_ICONS: Record<string, { icon: string; color: string; bg: string }> = {
+  bilangan:     { icon: 'tag',            color: 'text-blue-600',    bg: 'bg-blue-50 dark:bg-blue-900/20' },
+  aljabar:      { icon: 'functions',      color: 'text-violet-600',  bg: 'bg-violet-50 dark:bg-violet-900/20' },
+  geometri:     { icon: 'category',       color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+  trigonometri: { icon: 'change_history', color: 'text-amber-600',   bg: 'bg-amber-50 dark:bg-amber-900/20' },
+  peluang:      { icon: 'bar_chart',      color: 'text-rose-600',    bg: 'bg-rose-50 dark:bg-rose-900/20' },
+};
+
+const fmt = (iso: string) =>
+  new Date(iso).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+const fmtShort = (iso: string) =>
+  new Date(iso).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+const fmtTime = (iso: string) =>
+  new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+function getDateKey(iso: string) {
+  return iso.slice(0, 10);
+}
+
+function last7Days(): string[] {
+  const arr: string[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    arr.push(d.toISOString().slice(0, 10));
+  }
+  return arr;
+}
+
+// ─────────────────────────────────────────────
+// Mini bar chart (SVG, no deps)
+// ─────────────────────────────────────────────
+const ActivityChart: React.FC<{ data: DailyActivity[] }> = ({ data }) => {
+  const maxCount = Math.max(...data.map(d => d.count), 1);
+  const BAR_H = 80;
+  const BAR_W = 28;
+  const GAP = 6;
+  const totalW = data.length * (BAR_W + GAP);
 
   return (
-    <div className="flex flex-col w-full pb-12">
-      <div className="px-margin-mobile pt-space-md pb-space-2xl space-y-space-lg">
-        {/* Mode Guru / Siswa Quick Toggle */}
-        <div className="flex items-center justify-between bg-surface-container-low rounded-xl p-space-sm shadow-sm">
-          <div className="flex items-center gap-space-sm pl-space-xs">
-            <span className="material-symbols-outlined text-primary-container dark:text-primary-fixed text-[20px]">
-              swap_horiz
-            </span>
-            <div className="flex flex-col">
-              <span className="text-xs font-semibold text-on-surface">Perspektif Tampilan</span>
-              <span className="text-[11px] text-on-surface-variant">
-                {perspective === 'guru' ? 'Mode Pengajar (Guru)' : 'Mode Siswa Aktif'}
-              </span>
-            </div>
-          </div>
-          <div className="flex bg-surface-container-highest rounded-lg p-0.5">
-            <button
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                perspective === 'siswa'
-                  ? 'bg-surface dark:bg-surface-container text-primary-container dark:text-primary-fixed shadow-sm'
-                  : 'text-on-surface-variant hover:text-on-surface'
-              }`}
-              onClick={() => setPerspective('siswa')}
-            >
-              Siswa
-            </button>
-            <button
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                perspective === 'guru'
-                  ? 'bg-surface dark:bg-surface-container text-primary-container dark:text-primary-fixed shadow-sm'
-                  : 'text-on-surface-variant hover:text-on-surface'
-              }`}
-              onClick={() => setPerspective('guru')}
-            >
-              Guru
-            </button>
-          </div>
-        </div>
+    <div className="overflow-x-auto">
+      <svg width={totalW} height={BAR_H + 32} style={{ display: 'block' }}>
+        {data.map((d, i) => {
+          const barH = Math.max(4, Math.round((d.count / maxCount) * BAR_H));
+          const x = i * (BAR_W + GAP);
+          const y = BAR_H - barH;
+          const isEmpty = d.count === 0;
+          return (
+            <g key={d.date}>
+              <rect
+                x={x} y={y} width={BAR_W} height={barH}
+                rx={4}
+                fill={isEmpty ? '#e2e8f0' : '#6366f1'}
+                opacity={isEmpty ? 0.4 : 1}
+              />
+              {d.count > 0 && (
+                <text x={x + BAR_W / 2} y={y - 4} textAnchor="middle" fontSize={9} fill="#6366f1" fontWeight="700">
+                  {d.count}
+                </text>
+              )}
+              <text x={x + BAR_W / 2} y={BAR_H + 16} textAnchor="middle" fontSize={9} fill="#94a3b8">
+                {fmtShort(d.date + 'T00:00:00')}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+};
 
-        {/* 1. Profil & Ringkasan Siswa Card */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-primary-container via-[#14365d] to-primary rounded-xl p-space-lg text-on-primary shadow-md">
-          <div className="absolute -right-8 -bottom-8 w-44 h-44 rounded-full bg-secondary-container/10 blur-2xl pointer-events-none"></div>
-          <div className="absolute top-0 right-1/4 w-32 h-32 rounded-full bg-tertiary-fixed/10 blur-xl pointer-events-none"></div>
+// ─────────────────────────────────────────────
+// Score donut (SVG)
+// ─────────────────────────────────────────────
+const ScoreDonut: React.FC<{ score: number; size?: number; color?: string }> = ({
+  score, size = 72, color = '#6366f1',
+}) => {
+  const r = (size - 10) / 2;
+  const circ = 2 * Math.PI * r;
+  const dash = circ * (score / 100);
+  return (
+    <svg width={size} height={size}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e2e8f0" strokeWidth={8} />
+      <circle
+        cx={size / 2} cy={size / 2} r={r} fill="none"
+        stroke={color} strokeWidth={8}
+        strokeDasharray={`${dash} ${circ}`}
+        strokeLinecap="round"
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+      />
+      <text x={size / 2} y={size / 2 + 1} textAnchor="middle" dominantBaseline="middle"
+        fontSize={size < 60 ? 12 : 16} fontWeight="900" fill={color}>
+        {score}
+      </text>
+    </svg>
+  );
+};
 
-          <div className="relative z-10 flex flex-col gap-space-md">
-            {/* Top row: Avatar & Identity */}
-            <div className="flex items-start justify-between gap-space-sm">
-              <div className="flex items-center gap-space-md">
-                <div className="relative">
-                  <div className="w-14 h-14 rounded-xl bg-surface-container-lowest/15 backdrop-blur-md p-1 flex items-center justify-center shadow-inner">
-                    <img
-                      className="w-full h-full object-cover rounded-lg"
-                      alt="Student Ahmad Fauzan"
-                      src={ASSETS.ahmadAvatar}
-                    />
-                  </div>
-                  <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-secondary flex items-center justify-center shadow-sm">
-                    <span className="material-symbols-outlined text-on-secondary text-[12px] fill-1">
-                      verified
-                    </span>
-                  </span>
-                </div>
-                <div className="min-w-0">
-                  <span className="px-2 py-0.5 rounded-full bg-secondary-container/20 text-secondary-fixed text-[11px] font-bold uppercase tracking-wide">
-                    {profile.className}
-                  </span>
-                  <h2 className="text-base sm:text-lg font-bold text-on-primary truncate mt-0.5">
-                    {userName || profile.name}
-                  </h2>
-                  <p className="text-xs text-surface-container-highest/90 flex items-center gap-1 mt-0.5">
-                    <span className="material-symbols-outlined text-tertiary-fixed-dim text-[16px] fill-1">
-                      military_tech
-                    </span>
-                    <span>{profile.level}</span>
-                  </p>
-                </div>
-              </div>
+// ─────────────────────────────────────────────
+// Stat card
+// ─────────────────────────────────────────────
+const StatCard: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+  sub?: string;
+  color?: string;
+}> = ({ icon, label, value, sub, color = 'text-indigo-600' }) => (
+  <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 p-4 flex items-start gap-3 shadow-sm">
+    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${color.replace('text-', 'bg-').replace('-600', '-50').replace('-400', '-900/20')} dark:bg-opacity-20`}>
+      <span className={color}>{icon}</span>
+    </div>
+    <div className="min-w-0">
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">{label}</p>
+      <p className={`text-2xl font-black leading-none ${color}`}>{value}</p>
+      {sub && <p className="text-[11px] text-slate-400 mt-0.5">{sub}</p>}
+    </div>
+  </div>
+);
 
-              {/* Trophy / Rank Badge */}
-              <div className="flex flex-col items-center bg-surface-container-lowest/10 backdrop-blur-md px-3 py-2 rounded-xl text-center shadow-sm flex-shrink-0">
-                <span className="text-[10px] uppercase tracking-wider text-surface-container-highest">
-                  Rank Kelas
-                </span>
-                <div className="flex items-baseline gap-0.5">
-                  <span className="text-lg font-extrabold text-tertiary-fixed">
-                    #{profile.rank}
-                  </span>
-                  <span className="text-[11px] text-surface-container-highest">
-                    /{profile.totalStudents}
-                  </span>
-                </div>
-              </div>
-            </div>
+// ─────────────────────────────────────────────
+// Logout confirmation modal
+// ─────────────────────────────────────────────
+const LogoutModal: React.FC<{ onConfirm: () => void; onCancel: () => void }> = ({ onConfirm, onCancel }) => (
+  <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
+      <div className="w-14 h-14 rounded-2xl bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center mx-auto mb-4">
+        <LogOut size={24} className="text-rose-600" />
+      </div>
+      <h3 className="text-base font-extrabold text-slate-800 dark:text-white text-center mb-1">Keluar dari Akun?</h3>
+      <p className="text-sm text-slate-500 dark:text-slate-400 text-center mb-6">
+        Semua sesi aktif akan dihentikan. Anda perlu login kembali untuk mengakses aplikasi.
+      </p>
+      <div className="flex gap-3">
+        <button onClick={onCancel}
+          className="flex-1 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-sm cursor-pointer hover:bg-slate-200 transition-colors">
+          Batal
+        </button>
+        <button onClick={onConfirm}
+          className="flex-1 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm cursor-pointer transition-colors flex items-center justify-center gap-2">
+          <LogOut size={15} /> Keluar
+        </button>
+      </div>
+    </div>
+  </div>
+);
 
-            {/* Metric Ribbon (XP, Streak, Milestone) */}
-            <div className="grid grid-cols-3 gap-space-xs pt-space-xs">
-              <div className="bg-surface-container-lowest/10 backdrop-blur-md rounded-lg p-2.5 flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase tracking-wide text-surface-container-highest">
-                    Total XP
-                  </span>
-                  <span className="material-symbols-outlined text-secondary-fixed-dim text-[16px]">
-                    bolt
-                  </span>
-                </div>
-                <p className="text-base font-extrabold text-on-primary mt-1">
-                  {profile.totalXp.toLocaleString('id-ID')}
-                </p>
-              </div>
+// ─────────────────────────────────────────────
+// DashboardScreen
+// ─────────────────────────────────────────────
+export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigate }) => {
+  const { user, userName, userNisn, isAdmin, signOut } = useAuth();
 
-              <div className="bg-surface-container-lowest/10 backdrop-blur-md rounded-lg p-2.5 flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase tracking-wide text-surface-container-highest">
-                    Streak
-                  </span>
-                  <span className="text-[14px]">🔥</span>
-                </div>
-                <p className="text-base font-extrabold text-tertiary-fixed mt-1">
-                  {profile.streakDays} Hari
-                </p>
-              </div>
+  const [rows, setRows] = useState<JawabanRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showLogout, setShowLogout] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
-              <div className="bg-surface-container-lowest/10 backdrop-blur-md rounded-lg p-2.5 flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase tracking-wide text-surface-container-highest">
-                    RME Index
-                  </span>
-                  <span className="material-symbols-outlined text-secondary-fixed text-[16px]">
-                    insights
-                  </span>
-                </div>
-                <p className="text-base font-extrabold text-secondary-fixed mt-1">
-                  {profile.rmeIndex}%
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
+  const fetchData = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const { data } = await supabase
+        .from('jawaban')
+        .select('id, soal_id, skor, skor_maks, alasan, created_at, jawaban')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(200);
+      setRows((data || []) as JawabanRow[]);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  }, [user]);
 
-        {/* 2. Guru Perspective Insight Drawer (visible when perspective === 'guru') */}
-        {perspective === 'guru' && (
-          <section className="bg-surface-container-high rounded-xl p-space-lg shadow-md space-y-space-md animate-in fade-in">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-space-sm">
-                <div className="w-9 h-9 rounded-lg bg-primary-container text-on-primary flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[20px]">school</span>
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  // ── Computed stats ──
+  const totalPengerjaan = rows.length;
+  const withScore = rows.filter(r => r.skor !== null && r.skor_maks && r.skor_maks > 0);
+  const avgScore = withScore.length
+    ? Math.round(withScore.reduce((s, r) => s + (r.skor! / r.skor_maks!) * 100, 0) / withScore.length)
+    : 0;
+  const topScore = withScore.length
+    ? Math.round(Math.max(...withScore.map(r => (r.skor! / r.skor_maks!) * 100)))
+    : 0;
+  const benarCount = rows.filter(r => {
+    try { return JSON.parse(r.jawaban || '{}').isCorrect === true; } catch { return false; }
+  }).length;
+  const completionRate = totalPengerjaan > 0 ? Math.round((benarCount / totalPengerjaan) * 100) : 0;
+
+  // Daily activity last 7 days
+  const days = last7Days();
+  const dailyActivity: DailyActivity[] = days.map(date => {
+    const dayRows = rows.filter(r => getDateKey(r.created_at) === date);
+    const scores = dayRows.filter(r => r.skor !== null && r.skor_maks && r.skor_maks > 0);
+    return {
+      date,
+      count: dayRows.length,
+      avgScore: scores.length
+        ? Math.round(scores.reduce((s, r) => s + (r.skor! / r.skor_maks!) * 100, 0) / scores.length)
+        : 0,
+    };
+  });
+
+  // Per-subject stats (dari soal_id prefix — fallback ke parsed jawaban.strand)
+  const strandMap: Record<string, JawabanRow[]> = {};
+  rows.forEach(r => {
+    let strand = 'lainnya';
+    try {
+      const j = JSON.parse(r.jawaban || '{}');
+      if (j.strand) strand = j.strand;
+    } catch {}
+    if (!strandMap[strand]) strandMap[strand] = [];
+    strandMap[strand].push(r);
+  });
+  const subjectStats: SubjectStat[] = Object.entries(strandMap).map(([strand, srows]) => {
+    const sc = srows.filter(r => r.skor !== null && r.skor_maks && r.skor_maks > 0);
+    return {
+      strand,
+      count: srows.length,
+      avgScore: sc.length ? Math.round(sc.reduce((s, r) => s + (r.skor! / r.skor_maks!) * 100, 0) / sc.length) : 0,
+      topScore: sc.length ? Math.round(Math.max(...sc.map(r => (r.skor! / r.skor_maks!) * 100))) : 0,
+    };
+  }).sort((a, b) => b.count - a.count);
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    await signOut();
+  };
+
+  const recentRows = rows.slice(0, 15);
+
+  return (
+    <div className="flex flex-col w-full pb-16 font-sans">
+      {showLogout && (
+        <LogoutModal
+          onConfirm={handleLogout}
+          onCancel={() => setShowLogout(false)}
+        />
+      )}
+
+      {/* ── HERO PROFILE ── */}
+      <section className="px-4 pt-4 pb-3">
+        <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-6 text-white shadow-2xl border border-white/10">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(99,102,241,0.2),transparent_60%)]" />
+          <div className="relative z-10">
+            {/* Top row: avatar + actions */}
+            <div className="flex items-start justify-between gap-3 mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center shadow-lg shrink-0">
+                  <User size={26} className="text-white" />
                 </div>
                 <div>
-                  <h3 className="text-sm sm:text-base font-bold text-on-surface">
-                    Insight Guru: XII MIPA 2
-                  </h3>
-                  <p className="text-xs text-on-surface-variant">
-                    Analitik agregat komparatif Ahmad vs Rata-rata Kelas
-                  </p>
-                </div>
-              </div>
-              <span className="px-2 py-0.5 rounded bg-primary-container text-on-primary text-[10px] uppercase font-bold">
-                Admin Guru
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-space-sm">
-              <div className="p-3 bg-surface-container-lowest rounded-xl">
-                <span className="text-[11px] text-outline">Rata-rata Kelas (Refleksi)</span>
-                <p className="text-sm sm:text-base font-bold text-on-surface mt-1">68.4%</p>
-                <span className="text-[11px] text-secondary font-bold">Ahmad +9.6% lebih tinggi</span>
-              </div>
-              <div className="p-3 bg-surface-container-lowest rounded-xl">
-                <span className="text-[11px] text-outline">Status Ketuntasan Materi</span>
-                <p className="text-sm sm:text-base font-bold text-secondary mt-1">Tuntas (4/5)</p>
-                <span className="text-[11px] text-on-tertiary-container font-bold">
-                  1 Remidial Dimensi Tiga
-                </span>
-              </div>
-            </div>
-
-            <div className="bg-surface-container-lowest p-space-sm rounded-xl flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-secondary">
-                  assignment_turned_in
-                </span>
-                <span className="text-xs text-on-surface font-medium">
-                  {taskAssigned
-                    ? 'Tugas pengayaan Geometri berhasil dikirim ke Ahmad'
-                    : 'Kirim tugas pengayaan Geometri khusus Ahmad'}
-                </span>
-              </div>
-              <button
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all cursor-pointer ${
-                  taskAssigned
-                    ? 'bg-surface-container text-on-surface-variant'
-                    : 'bg-secondary text-on-secondary hover:opacity-90'
-                }`}
-                onClick={() => setTaskAssigned(true)}
-              >
-                {taskAssigned ? 'Terkirim' : 'Tugaskan'}
-              </button>
-            </div>
-          </section>
-        )}
-
-        {/* --- DAFTAR UJIAN TERSEDIA --- */}
-        {exams.length > 0 && (
-          <section className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm space-y-space-sm">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <span className="text-xs text-primary-container dark:text-primary-fixed font-bold uppercase tracking-wider">
-                  Uji Kompetensi
-                </span>
-                <h3 className="text-base font-bold text-on-surface">Ujian Tersedia</h3>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {exams.map(exam => (
-                <div key={exam.id} onClick={() => onNavigate && onNavigate('ujian', null, exam.id)}
-                  className="bg-surface-container-low hover:bg-surface-container p-4 rounded-xl border border-outline-variant/30 cursor-pointer transition-colors shadow-sm flex items-start gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-inner flex-shrink-0 ${exam.test_type === 'pretest' ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                    <span className="material-symbols-outlined text-[24px]">{exam.test_type === 'pretest' ? 'assignment' : 'assignment_turned_in'}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${exam.test_type === 'pretest' ? 'bg-amber-200 text-amber-800' : 'bg-emerald-200 text-emerald-800'}`}>
-                        {exam.test_type}
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-extrabold leading-tight">{userName}</h2>
+                    {isAdmin && (
+                      <span className="text-[9px] font-black uppercase tracking-widest bg-amber-500/20 border border-amber-500/40 text-amber-300 px-2 py-0.5 rounded-full">
+                        Admin
                       </span>
-                      <span className="text-[10px] font-medium text-on-surface-variant capitalize">{exam.strand}</span>
-                    </div>
-                    <h4 className="text-sm font-bold text-on-surface truncate">{exam.title}</h4>
-                    <p className="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px]">timer</span> {exam.duration_minutes} Menit
-                    </p>
+                    )}
                   </div>
-                  <button className="self-center w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center hover:opacity-80 transition-opacity flex-shrink-0">
-                    <span className="material-symbols-outlined text-[18px]">play_arrow</span>
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* 3. Rekomendasi Latihan Harian RME */}
-        <section className="bg-gradient-to-r from-surface-container via-surface-container-low to-surface-container-high rounded-xl p-space-md shadow-sm space-y-space-sm relative overflow-hidden">
-          <div className="flex items-start gap-space-sm">
-            <div className="w-10 h-10 rounded-xl bg-tertiary-container flex items-center justify-center flex-shrink-0 text-tertiary-fixed shadow-sm">
-              <span className="material-symbols-outlined text-[22px] fill-1">auto_awesome</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container text-[10px] uppercase font-bold">
-                  AI Rekomendasi Hari Ini
-                </span>
-                <span className="text-[11px] text-outline">Estimasi 15 Menit</span>
-              </div>
-              <p className="text-xs sm:text-sm text-on-surface font-bold mt-1 leading-snug">
-                Perkuat Validasi Solusi pada Soal Dimensi Tiga Ruang Atap
-              </p>
-              <p className="text-xs text-on-surface-variant mt-0.5 line-clamp-2">
-                Konsep segitiga proyeksi ortogonal dari kerangka atap rumah adat Tongkonan memerlukan
-                verifikasi dalil proyeksi.
-              </p>
-            </div>
-          </div>
-
-          <div className="pt-1 flex items-center gap-space-sm">
-            <button
-              className="flex-1 h-12 rounded-lg bg-primary-container text-on-primary text-xs sm:text-sm font-bold flex items-center justify-center gap-space-xs shadow-sm hover:opacity-95 active:scale-[0.98] transition-all cursor-pointer"
-              onClick={() => onNavigate && onNavigate('materi', 'geometri')}
-            >
-              <span className="material-symbols-outlined text-[18px]">play_circle</span>
-              <span>Mulai Latihan Harian (15 Menit)</span>
-            </button>
-            <button
-              className={`w-12 h-12 rounded-lg flex items-center justify-center shadow-sm transition-colors cursor-pointer ${
-                bookmarked
-                  ? 'bg-secondary text-on-secondary'
-                  : 'bg-surface-container-highest text-primary-container dark:text-primary-fixed hover:bg-surface-variant'
-              }`}
-              onClick={() => setBookmarked(!bookmarked)}
-              title="Simpan untuk nanti"
-            >
-              <span className="material-symbols-outlined text-[20px]">
-                {bookmarked ? 'bookmark' : 'bookmark_border'}
-              </span>
-            </button>
-          </div>
-        </section>
-
-        {/* 4. Radar Chart Kemampuan Pemecahan Masalah (5 Aspek RME) */}
-        <section className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm space-y-space-md">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-xs text-secondary font-bold uppercase tracking-wider">
-                Analitik Kognitif
-              </span>
-              <h3 className="text-base font-bold text-on-surface">5 Aspek Standar RME</h3>
-            </div>
-            <span className="px-2.5 py-1 rounded-full bg-secondary-container/40 text-on-secondary-container text-[11px] font-bold flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
-              <span>Sangat Kuat di Pemodelan</span>
-            </span>
-          </div>
-
-          {/* Radar SVG Chart */}
-          <div className="relative w-full aspect-square max-w-[320px] mx-auto flex items-center justify-center my-2">
-            <svg className="w-full h-full overflow-visible" viewBox="0 0 300 300">
-              {/* Concentric Pentagons */}
-              <polygon
-                points="150,126 173,142 164,169 136,169 127,142"
-                fill="none"
-                stroke="#dae2fd"
-                strokeWidth="1"
-                strokeDasharray="2 2"
-              />
-              <polygon
-                points="150,102 196,134 178,188 122,188 104,134"
-                fill="none"
-                stroke="#dae2fd"
-                strokeWidth="1"
-                strokeDasharray="2 2"
-              />
-              <polygon
-                points="150,78 218,127 192,207 108,207 82,127"
-                fill="none"
-                stroke="#dae2fd"
-                strokeWidth="1"
-              />
-              <polygon
-                points="150,54 241,120 206,226 94,226 59,120"
-                fill="none"
-                stroke="#c4c6ce"
-                strokeWidth="1"
-              />
-              <polygon
-                points="150,30 264,113 221,245 79,245 36,113"
-                fill="none"
-                stroke="#74777e"
-                strokeWidth="1.2"
-                opacity="0.6"
-              />
-
-              {/* Spokes */}
-              <line x1="150" y1="150" x2="150" y2="30" stroke="#dae2fd" strokeWidth="1" />
-              <line x1="150" y1="150" x2="264" y2="113" stroke="#dae2fd" strokeWidth="1" />
-              <line x1="150" y1="150" x2="221" y2="245" stroke="#dae2fd" strokeWidth="1" />
-              <line x1="150" y1="150" x2="79" y2="245" stroke="#dae2fd" strokeWidth="1" />
-              <line x1="150" y1="150" x2="36" y2="113" stroke="#dae2fd" strokeWidth="1" />
-
-              {/* Student Data Polygon */}
-              <polygon
-                points="150,44.4 243.5,119.7 214.6,236.4 94.6,224.1 53.1,118.5"
-                fill="rgba(101, 250, 222, 0.28)"
-                stroke="#007262"
-                strokeWidth="2.5"
-                strokeLinejoin="round"
-              />
-
-              {/* Data points */}
-              <circle cx="150" cy="44.4" r="4.5" fill="#007262" stroke="#ffffff" strokeWidth="2" />
-              <circle cx="243.5" cy="119.7" r="4.5" fill="#007262" stroke="#ffffff" strokeWidth="2" />
-              <circle cx="214.6" cy="236.4" r="4.5" fill="#007262" stroke="#ffffff" strokeWidth="2" />
-              <circle cx="94.6" cy="224.1" r="4.5" fill="#007262" stroke="#ffffff" strokeWidth="2" />
-              <circle cx="53.1" cy="118.5" r="4.5" fill="#007262" stroke="#ffffff" strokeWidth="2" />
-
-              {/* Text labels */}
-              <text x="150" y="24" textAnchor="middle" className="fill-primary dark:fill-primary-fixed text-[10px] font-bold">
-                Konteks (88%)
-              </text>
-              <text x="272" y="115" textAnchor="start" className="fill-primary dark:fill-primary-fixed text-[10px] font-bold">
-                Pemodelan (82%)
-              </text>
-              <text x="226" y="260" textAnchor="middle" className="fill-primary dark:fill-primary-fixed text-[10px] font-bold">
-                Komputasi (91%)
-              </text>
-              <text x="74" y="260" textAnchor="middle" className="fill-primary dark:fill-primary-fixed text-[10px] font-bold">
-                Refleksi (78%)
-              </text>
-              <text x="28" y="115" textAnchor="end" className="fill-primary dark:fill-primary-fixed text-[10px] font-bold">
-                Komunikasi (85%)
-              </text>
-            </svg>
-          </div>
-
-          {/* Detailed breakdown bars */}
-          <div className="space-y-space-sm pt-space-xs">
-            {COGNITIVE_ASPECTS.map((aspect) => (
-              <div key={aspect.label} className="flex items-center justify-between text-xs">
-                <span className="text-on-surface flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-secondary text-[16px]">
-                    {aspect.icon}
-                  </span>
-                  <span>{aspect.label}</span>
-                </span>
-                <div className="flex items-center gap-2">
-                  <div className="w-24 h-2 rounded-full bg-surface-container overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${
-                        aspect.score < 80 ? 'bg-on-tertiary-container' : 'bg-secondary'
-                      }`}
-                      style={{ width: `${aspect.score}%` }}
-                    ></div>
-                  </div>
-                  <span
-                    className={`font-bold w-8 text-right ${
-                      aspect.score < 80 ? 'text-on-tertiary-container' : 'text-on-surface'
-                    }`}
-                  >
-                    {aspect.score}%
-                  </span>
+                  {userNisn && <p className="text-[11px] text-indigo-300 mt-0.5">NISN: {userNisn}</p>}
+                  <p className="text-[11px] text-slate-400 mt-0.5">{user?.email}</p>
                 </div>
               </div>
-            ))}
-          </div>
-        </section>
 
-        {/* 5. Statistik Penguasaan 5 Materi Pokok */}
-        <section className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm space-y-space-md">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-xs text-primary-container dark:text-primary-fixed font-bold uppercase tracking-wider">
-                Kurikulum Merdeka SMA XII
-              </span>
-              <h3 className="text-base font-bold text-on-surface">5 Materi Pokok</h3>
-            </div>
-            <button
-              onClick={() => onNavigate && onNavigate('materi')}
-              className="text-secondary text-xs font-bold flex items-center gap-0.5 hover:underline cursor-pointer"
-            >
-              <span>Detail Silabus</span>
-              <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-            </button>
-          </div>
-
-          <div className="space-y-space-md">
-            {STRANDS_DATA.map((strand) => (
-              <div
-                key={strand.id}
-                onClick={() => onNavigate && onNavigate('materi', strand.id)}
-                className="p-space-sm bg-surface-container-low rounded-xl space-y-1.5 cursor-pointer hover:bg-surface-container transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-space-sm">
-                    <div className="w-8 h-8 rounded-lg bg-surface-container-highest flex items-center justify-center text-primary-container dark:text-primary-fixed font-bold">
-                      <span className="material-symbols-outlined text-[18px]">
-                        {strand.id === 'bilangan'
-                          ? 'percent'
-                          : strand.id === 'aljabar'
-                          ? 'functions'
-                          : strand.id === 'geometri'
-                          ? 'deployed_code'
-                          : strand.id === 'trigonometri'
-                          ? 'change_history'
-                          : 'bar_chart'}
-                      </span>
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <h4 className="text-xs font-bold text-on-surface">{strand.name}</h4>
-                        {strand.isPriority && (
-                          <span className="px-1.5 py-0.2 rounded bg-tertiary-fixed-dim/30 text-on-tertiary-container text-[10px] font-bold">
-                            Prioritas
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-on-surface-variant font-medium">
-                        {strand.statusText}
-                      </p>
-                    </div>
-                  </div>
-                  <span
-                    className={`text-sm font-extrabold ${
-                      strand.isPriority
-                        ? 'text-on-tertiary-container'
-                        : strand.percentage >= 90
-                        ? 'text-secondary'
-                        : 'text-primary-container dark:text-primary-fixed'
-                    }`}
-                  >
-                    {strand.percentage}%
-                  </span>
-                </div>
-                <div className="w-full h-2 rounded-full bg-surface-container overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${
-                      strand.isPriority
-                        ? 'bg-on-tertiary-container'
-                        : strand.percentage >= 90
-                        ? 'bg-secondary'
-                        : 'bg-primary-container'
-                    }`}
-                    style={{ width: `${strand.percentage}%` }}
-                  ></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* 6. Lencana & Badge Koleksi Trisula */}
-        <section className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm space-y-space-md">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-xs text-secondary font-bold uppercase tracking-wider">
-                Pencapaian Gamifikasi
-              </span>
-              <h3 className="text-base font-bold text-on-surface">Lencana Koleksi Trisula</h3>
-            </div>
-            <span className="text-xs font-bold text-on-surface-variant">3/4 Terbuka</span>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-space-sm">
-            {TRISULA_BADGES.map((badge) => (
-              <div
-                key={badge.id}
-                className={`p-space-sm rounded-xl flex flex-col items-center text-center relative overflow-hidden ${
-                  badge.status === 'in_progress'
-                    ? 'bg-surface-container-low border-2 border-dashed border-outline-variant'
-                    : 'bg-surface-container-low'
-                }`}
-              >
-                <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center shadow-sm mb-2"
-                  style={{
-                    backgroundColor:
-                      badge.status === 'in_progress'
-                        ? 'var(--color-surface-container-highest)'
-                        : badge.id === 'konteks'
-                        ? 'rgba(101, 250, 222, 0.4)'
-                        : badge.id === 'pemodelan'
-                        ? '#d2e4ff'
-                        : '#ffdcbc',
-                    color: badge.color,
-                  }}
+              {/* Account actions */}
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => setShowLogout(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-300 text-[11px] font-bold cursor-pointer hover:bg-rose-500/30 transition-colors whitespace-nowrap"
                 >
-                  <span className="material-symbols-outlined text-[26px] fill-1">
-                    {badge.icon}
-                  </span>
-                </div>
-
-                <span className="text-xs font-bold text-on-surface line-clamp-1">
-                  {badge.name}
-                </span>
-                <span className="text-[11px] text-on-surface-variant mt-0.5">
-                  {badge.subtext}
-                </span>
-
-                {badge.status === 'unlocked' ? (
-                  <div className="mt-2 w-full flex justify-center">
-                    <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-secondary bg-secondary-container/40 px-2 py-0.5 rounded-full">
-                      <span className="material-symbols-outlined text-[12px]">check_circle</span>
-                      <span>Terverifikasi</span>
-                    </span>
-                  </div>
-                ) : (
-                  <div className="w-full mt-2 space-y-1">
-                    <div className="w-full h-1.5 rounded-full bg-surface-container">
-                      <div
-                        className="h-full rounded-full bg-tertiary-fixed-dim"
-                        style={{ width: `${badge.progress}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-[10px] text-outline block">
-                      {badge.progress}% Diselesaikan
-                    </span>
-                  </div>
-                )}
+                  <LogOut size={13} /> Keluar
+                </button>
+                <button
+                  onClick={() => setShowLogout(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-slate-300 text-[11px] font-bold cursor-pointer hover:bg-white/20 transition-colors whitespace-nowrap"
+                >
+                  <RefreshCw size={13} /> Ganti Akun
+                </button>
               </div>
-            ))}
-          </div>
-        </section>
+            </div>
 
-        {/* 7. Ethnomathematics Footer Note */}
-        <div className="bg-surface-container-low rounded-xl p-space-md flex items-center gap-space-sm">
-          <div className="w-12 h-12 rounded-lg bg-surface-container-highest flex items-center justify-center flex-shrink-0 overflow-hidden">
-            <img
-              className="w-full h-full object-cover rounded-lg"
-              alt="Tongkonan architectural sketch"
-              src={ASSETS.tongkonanSketch}
-            />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h5 className="text-xs font-bold text-on-surface">Penerapan Etnomatematika Aktif</h5>
-            <p className="text-xs text-on-surface-variant line-clamp-2 leading-relaxed">
-              Semua metrik dan skor pemodelan Ahmad diintegrasikan dari modul arsitektur vernakular
-              Nusantara dan aplikasi ekonomi maritim.
-            </p>
+            {/* Quick stats row */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-white/10 border border-white/15 rounded-xl p-3 text-center">
+                <p className="text-2xl font-black text-white">{totalPengerjaan}</p>
+                <p className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider mt-0.5">Pengerjaan</p>
+              </div>
+              <div className="bg-white/10 border border-white/15 rounded-xl p-3 text-center">
+                <p className="text-2xl font-black text-white">{avgScore}</p>
+                <p className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider mt-0.5">Rata-rata</p>
+              </div>
+              <div className="bg-white/10 border border-white/15 rounded-xl p-3 text-center">
+                <p className="text-2xl font-black text-white">{completionRate}%</p>
+                <p className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider mt-0.5">Benar</p>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-20 text-slate-400">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-4 border-slate-200 border-t-indigo-500 rounded-full animate-spin" />
+            <span className="text-sm font-bold">Memuat data...</span>
+          </div>
+        </div>
+      ) : totalPengerjaan === 0 ? (
+        /* Empty state */
+        <div className="px-4 py-12 flex flex-col items-center text-center gap-4">
+          <div className="w-20 h-20 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+            <BookOpen size={36} className="text-slate-300 dark:text-slate-600" />
+          </div>
+          <div>
+            <p className="font-bold text-slate-600 dark:text-slate-300 text-base">Belum ada aktivitas</p>
+            <p className="text-sm text-slate-400 mt-1">Mulai kerjakan soal latihan atau ujian untuk melihat statistik di sini.</p>
+          </div>
+          <button onClick={() => onNavigate?.('latihan')}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold cursor-pointer hover:bg-indigo-700 transition-colors">
+            <Zap size={15} /> Mulai Berlatih
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* ── STAT CARDS ── */}
+          <section className="px-4 py-3">
+            <div className="grid grid-cols-2 gap-3">
+              <StatCard icon={<Award size={18} />} label="Nilai Tertinggi" value={topScore}
+                sub="dari semua pengerjaan" color="text-amber-500" />
+              <StatCard icon={<Target size={18} />} label="Rata-rata Nilai" value={avgScore}
+                sub={`dari ${withScore.length} soal`} color="text-indigo-600" />
+              <StatCard icon={<CheckCircle size={18} />} label="Jawaban Benar" value={benarCount}
+                sub={`dari ${totalPengerjaan} soal`} color="text-emerald-600" />
+              <StatCard icon={<TrendingUp size={18} />} label="Tingkat Benar" value={`${completionRate}%`}
+                sub="dari seluruh pengerjaan" color="text-violet-600" />
+            </div>
+          </section>
+
+          {/* ── GRAFIK AKTIVITAS 7 HARI ── */}
+          <section className="px-4 py-3">
+            <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <BarChart2 size={16} className="text-indigo-500" />
+                  <h3 className="text-sm font-extrabold text-slate-800 dark:text-white">Aktivitas 7 Hari Terakhir</h3>
+                </div>
+                <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">
+                  {dailyActivity.reduce((s, d) => s + d.count, 0)} soal
+                </span>
+              </div>
+              <ActivityChart data={dailyActivity} />
+              {/* Legend */}
+              <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 text-[11px] text-slate-400">
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-indigo-500 inline-block" /> Jumlah soal dikerjakan</span>
+              </div>
+            </div>
+          </section>
+
+          {/* ── PER TOPIK ── */}
+          {subjectStats.length > 0 && (
+            <section className="px-4 py-3">
+              <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 p-5 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <Star size={16} className="text-amber-500" />
+                  <h3 className="text-sm font-extrabold text-slate-800 dark:text-white">Statistik Per Topik</h3>
+                </div>
+                <div className="space-y-3">
+                  {subjectStats.map(s => {
+                    const meta = STRAND_ICONS[s.strand] || { icon: 'school', color: 'text-slate-600', bg: 'bg-slate-50 dark:bg-slate-800' };
+                    const pct = s.avgScore;
+                    return (
+                      <div key={s.strand} className="flex items-center gap-3">
+                        <div className={`w-9 h-9 rounded-xl ${meta.bg} flex items-center justify-center shrink-0`}>
+                          <span className={`material-symbols-outlined text-[18px] ${meta.color}`}>{meta.icon}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-bold text-slate-700 dark:text-slate-200 capitalize">{s.strand}</span>
+                            <span className="text-[11px] font-black text-slate-500">{s.count} soal</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full transition-all"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <span className={`text-[11px] font-black w-8 text-right ${pct >= 70 ? 'text-emerald-600' : pct >= 50 ? 'text-amber-600' : 'text-rose-500'}`}>
+                              {pct}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-center">
+                          <ScoreDonut score={s.topScore} size={40} color={s.topScore >= 70 ? '#16a34a' : s.topScore >= 50 ? '#d97706' : '#dc2626'} />
+                          <p className="text-[9px] text-slate-400 mt-0.5">best</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* ── RIWAYAT PENGERJAAN ── */}
+          <section className="px-4 py-3">
+            <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <Clock size={16} className="text-indigo-500" />
+                  <h3 className="text-sm font-extrabold text-slate-800 dark:text-white">Riwayat Pengerjaan</h3>
+                </div>
+                <span className="text-[10px] font-bold text-slate-400">{totalPengerjaan} total</span>
+              </div>
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                {recentRows.map((r) => {
+                  let isCorrect = false;
+                  let strand = '';
+                  let examType = 'Latihan';
+                  try {
+                    const j = JSON.parse(r.jawaban || '{}');
+                    isCorrect = !!j.isCorrect;
+                    strand = j.strand || '';
+                    if (j.test_type === 'pretest') examType = 'Pretest';
+                    else if (j.test_type === 'postest') examType = 'Posttest';
+                  } catch {}
+
+                  const score = r.skor !== null && r.skor_maks && r.skor_maks > 0
+                    ? Math.round((r.skor / r.skor_maks) * 100)
+                    : null;
+
+                  return (
+                    <div key={r.id} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                        isCorrect ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-rose-50 dark:bg-rose-900/20'
+                      }`}>
+                        {isCorrect
+                          ? <CheckCircle size={16} className="text-emerald-600" />
+                          : <XCircle size={16} className="text-rose-500" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">
+                          {examType}{strand ? ` — ${strand}` : ''}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <Calendar size={10} className="text-slate-400 shrink-0" />
+                          <span className="text-[10px] text-slate-400">{fmt(r.created_at)} · {fmtTime(r.created_at)}</span>
+                        </div>
+                      </div>
+                      {score !== null && (
+                        <span className={`text-sm font-black shrink-0 ${score >= 70 ? 'text-emerald-600' : score >= 50 ? 'text-amber-600' : 'text-rose-500'}`}>
+                          {score}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              {rows.length > 15 && (
+                <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-800 text-center">
+                  <p className="text-[11px] text-slate-400">Menampilkan 15 dari {rows.length} pengerjaan</p>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* ── NAVIGASI CEPAT ── */}
+          <section className="px-4 py-3 pb-6">
+            <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 p-4 shadow-sm">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Akses Cepat</p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { icon: <Zap size={16} />, label: 'Latihan', sub: 'Soal RME interaktif', screen: 'latihan' as ScreenType, color: 'text-indigo-600' },
+                  { icon: <BookOpen size={16} />, label: 'Materi', sub: 'Bahan ajar topik', screen: 'materi' as ScreenType, color: 'text-emerald-600' },
+                  { icon: <Award size={16} />, label: 'Ujian', sub: 'Pretest & Posttest', screen: 'ujian' as ScreenType, color: 'text-amber-600' },
+                ].map(item => (
+                  <button key={item.screen} onClick={() => onNavigate?.(item.screen)}
+                    className="text-left flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/40 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors group">
+                    <span className={item.color}>{item.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-200">{item.label}</p>
+                      <p className="text-[10px] text-slate-400">{item.sub}</p>
+                    </div>
+                    <ChevronRight size={13} className="text-slate-300 group-hover:text-slate-500 shrink-0" />
+                  </button>
+                ))}
+                {/* Logout shortcut */}
+                <button onClick={() => setShowLogout(true)}
+                  className="text-left flex items-center gap-3 p-3 rounded-xl bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 dark:hover:bg-rose-900/30 cursor-pointer transition-colors group">
+                  <LogOut size={16} className="text-rose-600" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-rose-700 dark:text-rose-400">Keluar</p>
+                    <p className="text-[10px] text-rose-400 dark:text-rose-500">Logout / ganti akun</p>
+                  </div>
+                  <ChevronRight size={13} className="text-rose-300 group-hover:text-rose-500 shrink-0" />
+                </button>
+              </div>
+            </div>
+          </section>
+        </>
+      )}
+
+      {loggingOut && (
+        <div className="fixed inset-0 z-50 bg-white dark:bg-slate-900 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-10 h-10 border-4 border-slate-200 border-t-rose-500 rounded-full animate-spin" />
+            <p className="text-sm font-bold text-slate-500">Keluar dari akun...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
