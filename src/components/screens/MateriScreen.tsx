@@ -185,18 +185,18 @@ const PostCard: React.FC<{
 }> = ({ post, isAdmin, accentGradient, onOpen, onEdit, onDelete }) => {
   const attTypes = [...new Set(post.attachments.map(a => a.type))];
   return (
-    <div className="group bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col">
+    <div className="group bg-white dark:bg-slate-800/90 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 overflow-hidden flex flex-col">
       {/* Color top strip */}
       <div className={`h-1 w-full bg-gradient-to-r ${accentGradient}`} />
 
-      <div className="p-4 flex-1 flex flex-col">
+      <div className="p-4 flex-1 flex flex-col gap-2.5">
         {/* Meta row */}
-        <div className="flex items-center gap-2 mb-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400">
             <Calendar size={10} /> {formatDate(post.created_at)}
           </span>
           {post.tags.length > 0 && post.tags.slice(0, 2).map(tag => (
-            <span key={tag} className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
+            <span key={tag} className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800">
               {tag}
             </span>
           ))}
@@ -208,20 +208,20 @@ const PostCard: React.FC<{
         </div>
 
         {/* Title */}
-        <h3 className="text-sm font-extrabold text-slate-800 dark:text-white leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors mb-1.5 line-clamp-2">
+        <h3 className="text-sm font-extrabold text-slate-800 dark:text-white leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2">
           {post.title}
         </h3>
 
         {/* Description */}
         {post.description && (
-          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed mb-3">
+          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
             {post.description}
           </p>
         )}
 
         {/* Attachment type badges */}
         {attTypes.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-3 mt-auto">
+          <div className="flex flex-wrap gap-1.5 mt-auto pt-1">
             {attTypes.map(type => {
               const m = ATTACHMENT_META[type];
               return (
@@ -234,19 +234,19 @@ const PostCard: React.FC<{
         )}
 
         {/* Actions */}
-        <div className={`flex gap-2 ${attTypes.length === 0 ? 'mt-auto' : ''}`}>
+        <div className="flex gap-2 mt-auto pt-1">
           <button onClick={onOpen}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold cursor-pointer hover:opacity-90 transition-opacity">
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-slate-900 dark:bg-white/10 dark:border dark:border-white/20 text-white text-xs font-bold cursor-pointer hover:bg-slate-700 dark:hover:bg-white/20 transition-colors">
             <Eye size={13} /> Buka Materi
           </button>
           {isAdmin && (
             <>
               <button onClick={onEdit}
-                className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-indigo-600 hover:border-indigo-300 flex items-center justify-center cursor-pointer transition-colors">
+                className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 flex items-center justify-center cursor-pointer transition-colors">
                 <Edit3 size={14} />
               </button>
               <button onClick={onDelete}
-                className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-rose-600 hover:border-rose-300 flex items-center justify-center cursor-pointer transition-colors">
+                className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 flex items-center justify-center cursor-pointer transition-colors">
                 <Trash2 size={14} />
               </button>
             </>
@@ -870,46 +870,49 @@ export const MateriScreen: React.FC<MateriScreenProps> = ({
   return (
     <div className="flex flex-col w-full pb-16 font-sans">
       {/* Hero */}
-      <section className="px-4 pt-4 pb-2">
-        <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-slate-900 to-slate-800 p-6 text-white shadow-2xl border border-slate-700">
-          <div className="absolute -right-10 -top-10 w-52 h-52 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
-          <div className="absolute right-5 bottom-0 opacity-5 select-none text-[100px] font-black leading-none pointer-events-none">∑</div>
-          <div className="relative z-10 flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center shadow-lg shrink-0">
-              <BookOpen size={26} className="text-white" />
+      <section className="px-4 pt-4 pb-3">
+        <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-7 text-white shadow-2xl border border-white/10">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(99,102,241,0.15),transparent_60%)]" />
+          <div className="absolute right-0 bottom-0 opacity-[0.04] select-none text-[120px] font-black leading-none pointer-events-none pr-4 pb-2">∑</div>
+          <div className="relative z-10">
+            <div className="inline-flex items-center gap-2 bg-indigo-500/20 border border-indigo-500/30 rounded-full px-3 py-1 mb-4">
+              <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-indigo-300">Bahan Ajar</span>
             </div>
-            <div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-indigo-300 mb-0.5">Bahan Ajar</div>
-              <h2 className="text-2xl font-extrabold tracking-tight leading-tight">Materi Pembelajaran</h2>
-              <p className="text-xs text-slate-400 mt-1">5 topik matematika · Dikelola langsung oleh pengajar</p>
-            </div>
+            <h2 className="text-2xl font-extrabold tracking-tight leading-tight mb-2">Materi Pembelajaran</h2>
+            <p className="text-sm text-slate-400">5 topik matematika · Bahan ajar dikelola langsung oleh pengajar</p>
           </div>
         </div>
       </section>
 
       {/* Grid 5 topik */}
-      <section className="px-4 py-4">
+      <section className="px-4 py-3">
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Pilih Topik</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {TOPICS.map((t, i) => (
             <button key={t.id} onClick={() => handleSelectCat(t.id)}
-              className="text-left p-5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer group flex flex-col gap-3">
-              <div className="flex items-start justify-between">
-                <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${t.gradient} flex items-center justify-center shadow-md`}>
-                  <span className="material-symbols-outlined text-white text-[22px]">{t.icon}</span>
+              className="text-left rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200 cursor-pointer group overflow-hidden flex flex-col">
+              {/* Top gradient bar */}
+              <div className={`h-1 w-full bg-gradient-to-r ${t.gradient}`} />
+              <div className="p-5 flex flex-col gap-3 flex-1">
+                <div className="flex items-start justify-between">
+                  <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${t.gradient} flex items-center justify-center shadow-lg`}>
+                    <span className="material-symbols-outlined text-white text-[22px]">{t.icon}</span>
+                  </div>
+                  <span className="text-[10px] font-black text-slate-300 dark:text-slate-600 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full tracking-wider">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
                 </div>
-                <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">
-                  0{i + 1}
-                </span>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-sm font-extrabold text-slate-800 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                  {t.label}
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{t.desc}</p>
-              </div>
-              <div className="flex items-center gap-1 text-xs font-bold text-slate-400 group-hover:text-indigo-500 transition-colors">
-                Lihat materi <ChevronRight size={14} />
+                <div className="flex-1">
+                  <h3 className="text-sm font-extrabold text-slate-800 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors leading-snug">
+                    {t.label}
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">{t.desc}</p>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors">
+                  Lihat bahan ajar
+                  <ChevronRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+                </div>
               </div>
             </button>
           ))}

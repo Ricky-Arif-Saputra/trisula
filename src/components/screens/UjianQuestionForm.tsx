@@ -52,6 +52,10 @@ export interface UjianQuestionFormProps {
   testType: 'pretest' | 'postest';
   /** Daftar soal yang sudah ada (saat edit paket) */
   existingQuestions?: ExistingQuestion[];
+  /** Judul ujian yang sudah ada (saat edit) */
+  existingExamTitle?: string;
+  /** Durasi ujian dalam menit yang sudah ada (saat edit) */
+  existingDuration?: number;
   onCancel: () => void;
   onSaved: () => void;
 }
@@ -329,9 +333,13 @@ const QuestionItemEditor: React.FC<{
 // Main Form
 // ─────────────────────────────────────────────
 export const UjianQuestionForm: React.FC<UjianQuestionFormProps> = ({
-  strand, testType, existingQuestions, onCancel, onSaved,
+  strand, testType, existingQuestions, existingExamTitle, existingDuration, onCancel, onSaved,
 }) => {
   const { user } = useAuth();
+
+  // Judul & durasi ujian (level paket, bukan level soal)
+  const [examTitle, setExamTitle] = useState(existingExamTitle || '');
+  const [examDuration, setExamDuration] = useState<number>(existingDuration ?? 60);
 
   const [questionItems, setQuestionItems] = useState<QuestionItem[]>(
     existingQuestions && existingQuestions.length > 0
@@ -348,6 +356,7 @@ export const UjianQuestionForm: React.FC<UjianQuestionFormProps> = ({
 
   const handleSave = async () => {
     setMsg(null);
+    if (!examTitle.trim()) { setMsg({ type: 'error', text: 'Judul ujian wajib diisi.' }); return; }
     // Validasi semua soal
     for (let i = 0; i < questionItems.length; i++) {
       const q = questionItems[i];
@@ -366,7 +375,7 @@ export const UjianQuestionForm: React.FC<UjianQuestionFormProps> = ({
         for (const q of questionItems) {
           const rme_keys: RmeKeys = buildRmeKeys(q);
           const content_blocks = embedRmeKeys(q.blocks, rme_keys);
-          const payload = { title: q.title.trim(), test_type: testType, strand, category: 'sedang', content_blocks, options: [], has_simulation: false, created_by: user?.email || 'admin', rme_keys };
+          const payload = { title: q.title.trim(), test_type: testType, strand, category: 'sedang', content_blocks, options: [], has_simulation: false, created_by: user?.email || 'admin', rme_keys, exam_title: examTitle.trim(), exam_duration: examDuration };
           const { error } = await supabase.from('questions').update(payload).eq('id', q.id!);
           if (error) throw error;
         }
@@ -375,13 +384,13 @@ export const UjianQuestionForm: React.FC<UjianQuestionFormProps> = ({
         const rows = questionItems.map(q => {
           const rme_keys: RmeKeys = buildRmeKeys(q);
           const content_blocks = embedRmeKeys(q.blocks, rme_keys);
-          return { id: q.id || crypto.randomUUID(), title: q.title.trim(), test_type: testType, strand, category: 'sedang', content_blocks, options: [], has_simulation: false, created_by: user?.email || 'admin', rme_keys };
+          return { id: q.id || crypto.randomUUID(), title: q.title.trim(), test_type: testType, strand, category: 'sedang', content_blocks, options: [], has_simulation: false, created_by: user?.email || 'admin', rme_keys, exam_title: examTitle.trim(), exam_duration: examDuration };
         });
         const { error } = await supabase.from('questions').insert(rows);
         if (error) {
-          // fallback: try without rme_keys column
-          const rowsNoRme = rows.map(({ rme_keys: _r, ...rest }) => rest);
-          const { error: e2 } = await supabase.from('questions').insert(rowsNoRme);
+          // fallback: try without extra columns
+          const rowsBase = rows.map(({ rme_keys: _r, exam_title: _et, exam_duration: _ed, ...rest }) => rest);
+          const { error: e2 } = await supabase.from('questions').insert(rowsBase);
           if (e2) throw e2;
         }
       }
@@ -417,6 +426,37 @@ export const UjianQuestionForm: React.FC<UjianQuestionFormProps> = ({
       </div>
 
       <div className="p-4 space-y-4">
+        {/* Judul & Durasi Ujian */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="sm:col-span-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">
+              Judul {testType === 'pretest' ? 'Pretest' : 'Posttest'} *
+            </label>
+            <input
+              value={examTitle}
+              onChange={e => setExamTitle(e.target.value)}
+              placeholder={`Contoh: ${testType === 'pretest' ? 'Pretest' : 'Posttest'} ${strand.charAt(0).toUpperCase() + strand.slice(1)} Semester 1`}
+              className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm outline-none focus:border-indigo-400"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">
+              Waktu (menit)
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                min={5}
+                max={300}
+                value={examDuration}
+                onChange={e => setExamDuration(Math.max(5, Number(e.target.value)))}
+                className="w-full p-3 pr-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-bold outline-none focus:border-indigo-400"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">mnt</span>
+            </div>
+          </div>
+        </div>
+
         {/* Daftar soal */}
         {questionItems.map((q, i) => (
           <QuestionItemEditor

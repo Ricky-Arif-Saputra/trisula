@@ -117,3 +117,10 @@ $$;
 create or replace trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- Tambahkan kolom exam_title dan exam_duration ke questions (untuk pretest/posttest)
+alter table if exists public.questions
+  add column if not exists exam_title text default '';
+
+alter table if exists public.questions
+  add column if not exists exam_duration integer default 60;
