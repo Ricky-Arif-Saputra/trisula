@@ -179,30 +179,6 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
           </div>
-
-          {/* Profile button */}
-          {onOpenProfile ? (
-            <button
-              onClick={onOpenProfile}
-              className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center cursor-pointer hover:bg-indigo-700 transition-all duration-200 overflow-hidden ml-1 shadow-md shadow-indigo-500/20"
-              title="Profil Pengguna"
-            >
-              <span className="font-black text-sm">{displayInitial}</span>
-            </button>
-          ) : (
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center overflow-hidden ml-1 shadow-md shadow-indigo-500/20 flex-shrink-0">
-              <span className="font-black text-sm">{displayInitial}</span>
-            </div>
-          )}
-
-          {/* Logout */}
-          <button
-            onClick={() => signOut()}
-            className="w-9 h-9 rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center cursor-pointer transition-all duration-200 overflow-hidden ml-1"
-            title="Keluar / Logout"
-          >
-            <span className="material-symbols-outlined text-[16px]">logout</span>
-          </button>
         </div>
       </div>
 
