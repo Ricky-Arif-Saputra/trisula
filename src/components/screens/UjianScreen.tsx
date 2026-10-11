@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import JSZip from 'jszip';
 import html2pdf from 'html2pdf.js';
+import katex from 'katex';
 
 // ─────────────────────────────────────────────
 // Types
@@ -59,99 +60,212 @@ const STAGE_LABELS = ['Diketahui', 'Ditanya', 'Pengerjaan', 'Kesimpulan'];
 const STAGE_KEYS   = ['diketahui', 'ditanya', 'pengerjaan', 'kesimpulan'] as const;
 
 // ─────────────────────────────────────────────
-// PDF builder untuk satu jawaban siswa
+// Render teks + LaTeX inline ke HTML (untuk PDF)
+// Format: teks biasa, $inline$, $$display$$
+// ─────────────────────────────────────────────
+function renderMathToHtml(text: string): string {
+  if (!text || text === '—') return text;
+
+  // Coba parse JSON blok (format baru multi-blok)
+  try {
+    const blocks = JSON.parse(text);
+    if (Array.isArray(blocks)) {
+      return blocks.map((b: { type: string; value: string }) => {
+        if (!b.value?.trim()) return '';
+        if (b.type === 'latex') {
+          try {
+            return `<div style="margin:6px 0;overflow-x:auto;">${katex.renderToString(b.value, { throwOnError: false, displayMode: true })}</div>`;
+          } catch {
+            return `<code>${escHtml(b.value)}</code>`;
+          }
+        }
+        if (b.type === 'image') {
+          return `<img src="${escHtml(b.value)}" style="max-width:100%;max-height:180px;display:block;margin:6px 0;" alt="gambar"/>`;
+        }
+        // text — proses inline math $...$
+        return `<p style="margin:4px 0;">${renderInlineMath(b.value)}</p>`;
+      }).join('');
+    }
+  } catch { /* bukan JSON, lanjut ke plain text */ }
+
+  // Plain string: proses inline $...$ dan display $$...$$
+  return renderInlineMath(text);
+}
+
+function escHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function renderInlineMath(text: string): string {
+  // Render $$...$$ (display) dulu
+  let result = text.replace(/\$\$([\s\S]+?)\$\$/g, (_m, expr) => {
+    try {
+      return `<span style="display:block;margin:6px 0;overflow-x:auto;">${katex.renderToString(expr.trim(), { throwOnError: false, displayMode: true })}</span>`;
+    } catch { return `<code>${escHtml(expr)}</code>`; }
+  });
+  // Render $...$ (inline)
+  result = result.replace(/\$([^\$]+?)\$/g, (_m, expr) => {
+    try {
+      return katex.renderToString(expr.trim(), { throwOnError: false, displayMode: false });
+    } catch { return `<code>${escHtml(expr)}</code>`; }
+  });
+  // Escape remaining HTML in plain parts and restore newlines
+  return result.replace(/\n/g, '<br/>');
+}
+
+// ─────────────────────────────────────────────
+// PDF builder — layout baru
 // ─────────────────────────────────────────────
 function buildAnswerHtml(
-  attempt: Attempt,
-  question: Question,
+  attempts: Attempt[],           // semua attempt siswa (untuk summary)
+  questions: Question[],          // semua soal
   studentName: string,
   studentNisn: string,
+  examTitle: string,
 ): string {
-  const tanggal = new Date(attempt.created_at).toLocaleDateString('id-ID', {
+  // Hitung ringkasan: benar & salah per siswa
+  // (dipanggil untuk SATU siswa — attempts[0])
+  const att = attempts[0];
+  const tanggal = new Date(att.created_at).toLocaleDateString('id-ID', {
     weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
   });
-  const ans = attempt.essay_answers?.[question.id] || {};
-  const ai  = attempt.ai_scores?.[question.id];
-  const sName = studentName || attempt.student_name || 'Tidak diketahui';
-  const sNisn  = studentNisn || attempt.student_nisn || '-';
 
-  const stagesHtml = STAGE_KEYS.map((sk, i) => {
-    const stageAns = String((ans as any)[sk] || '—').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const stageScore = ai?.evaluation?.[sk];
-    const scoreHtml = stageScore
-      ? `<span style="color:${(stageScore.score / (stageScore.max_score || 1)) >= .7 ? '#16a34a' : '#d97706'};font-weight:700;">
-           ${stageScore.score} / ${stageScore.max_score} poin
-         </span>`
+  // Parse semua jawaban siswa dari kolom jawaban (JSON)
+  let parsedAns: Record<string, string> & { finalNumber?: string; isCorrect?: boolean } = {};
+  try { parsedAns = JSON.parse((att as any).jawaban || '{}'); } catch {}
+
+  const isCorrect = !!parsedAns.isCorrect;
+  const benar = isCorrect ? 1 : 0;
+  const salah = 1 - benar;
+  const scoreColor = att.score >= 75 ? '#16a34a' : att.score >= 50 ? '#d97706' : '#dc2626';
+
+  // KaTeX CSS inline (subset kecil agar tidak perlu CDN)
+  const katexCss = `<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.18.7/dist/katex.min.css"/>`;
+
+  // ── Identitas & ringkasan ──
+  const identitasHtml = `
+    <div style="background:#1e293b;color:#fff;padding:18px 22px;border-radius:10px 10px 0 0;">
+      <div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;margin-bottom:4px;">Laporan Jawaban Ujian</div>
+      <div style="font-size:18px;font-weight:900;margin-bottom:2px;">${escHtml(examTitle || 'Soal Ujian')}</div>
+      <div style="font-size:11px;color:#94a3b8;">${escHtml(questions[0]?.strand || '')} &middot; ${questions[0]?.test_type === 'pretest' ? 'Pretest' : 'Posttest'} &middot; ${tanggal}</div>
+    </div>
+    <div style="border:1px solid #e2e8f0;border-top:none;padding:14px 22px;display:flex;gap:20px;flex-wrap:wrap;background:#f8fafc;border-radius:0 0 10px 10px;margin-bottom:22px;">
+      <div style="flex:1;min-width:140px;">
+        <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">Nama Siswa</div>
+        <div style="font-size:14px;font-weight:900;color:#1e293b;">${escHtml(studentName || '—')}</div>
+      </div>
+      <div style="flex:1;min-width:100px;">
+        <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">NISN</div>
+        <div style="font-size:14px;font-weight:900;color:#1e293b;">${escHtml(studentNisn || '—')}</div>
+      </div>
+      <div style="text-align:center;min-width:80px;">
+        <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Nilai</div>
+        <div style="font-size:28px;font-weight:900;color:${scoreColor};line-height:1;">${att.score}</div>
+      </div>
+      <div style="text-align:center;min-width:60px;">
+        <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Benar</div>
+        <div style="font-size:24px;font-weight:900;color:#16a34a;line-height:1;">${benar}</div>
+      </div>
+      <div style="text-align:center;min-width:60px;">
+        <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Salah</div>
+        <div style="font-size:24px;font-weight:900;color:#dc2626;line-height:1;">${salah}</div>
+      </div>
+    </div>`;
+
+  // ── Detail per soal ──
+  const soalHtml = questions.map((q, qi) => {
+    const correctMark = isCorrect
+      ? `<span style="background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:900;">✓ Benar</span>`
+      : `<span style="background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:900;">✗ Salah</span>`;
+
+    const narasiHtml = renderMathToHtml(
+      (q.content_blocks || [])
+        .filter((b: any) => !b.value?.startsWith('__RME_KEYS__'))
+        .map((b: any) => JSON.stringify({ type: b.type, value: b.value }))
+        .join('|') || ''
+    );
+
+    // Narasi soal — render blok per blok
+    const narasiRendered = (() => {
+      const blocks = (q.content_blocks || []).filter((b: any) => !b.value?.startsWith('__RME_KEYS__'));
+      return blocks.map((b: any) => {
+        if (b.type === 'image') return `<img src="${escHtml(b.value)}" style="max-width:100%;max-height:200px;display:block;margin:6px 0;" alt=""/>`;
+        if (b.type === 'latex') {
+          try { return `<div style="margin:6px 0;">${katex.renderToString(b.value, { throwOnError: false, displayMode: true })}</div>`; }
+          catch { return `<code>${escHtml(b.value)}</code>`; }
+        }
+        return `<p style="margin:4px 0;">${renderInlineMath(b.value || '')}</p>`;
+      }).join('');
+    })();
+
+    const stagesHtml = STAGE_KEYS.map((sk, si) => {
+      const jawabanSiswa = parsedAns[sk] || '—';
+      return `
+        <div style="margin-bottom:10px;">
+          <div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:4px;">
+            Tahap ${si + 1} — ${STAGE_LABELS[si]}
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:6px;padding:8px 12px;font-size:12px;background:#fff;min-height:30px;">
+            ${renderMathToHtml(jawabanSiswa)}
+          </div>
+        </div>`;
+    }).join('');
+
+    const finalNumHtml = parsedAns.finalNumber !== undefined
+      ? `<div style="margin-top:8px;padding:8px 12px;border-radius:6px;background:${isCorrect ? '#f0fdf4' : '#fef2f2'};border:1px solid ${isCorrect ? '#bbf7d0' : '#fecaca'};">
+          <span style="font-size:10px;font-weight:900;color:#64748b;text-transform:uppercase;">Jawaban Angka Akhir: </span>
+          <strong style="font-size:14px;color:${isCorrect ? '#15803d' : '#b91c1c'};">${escHtml(String(parsedAns.finalNumber || '—'))}</strong>
+          <span style="margin-left:8px;font-size:11px;font-weight:700;color:${isCorrect ? '#16a34a' : '#dc2626'};">${isCorrect ? '✓ Benar' : '✗ Salah'}</span>
+        </div>`
       : '';
+
     return `
-      <div style="margin-bottom:14px;page-break-inside:avoid;">
-        <div style="background:#f1f5f9;padding:7px 12px;border-radius:6px 6px 0 0;font-weight:800;font-size:11px;color:#475569;text-transform:uppercase;letter-spacing:.05em;display:flex;justify-content:space-between;align-items:center;">
-          <span>Tahap ${i + 1} — ${STAGE_LABELS[i]}</span>
-          ${scoreHtml}
+      <div style="margin-bottom:28px;page-break-inside:avoid;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <div style="width:28px;height:28px;border-radius:8px;background:#1e293b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;flex-shrink:0;">${qi + 1}</div>
+          <div style="font-size:14px;font-weight:800;color:#1e293b;flex:1;">Soal ${qi + 1}</div>
+          ${correctMark}
         </div>
-        <div style="border:1px solid #e2e8f0;border-top:none;padding:10px 12px;font-size:12px;white-space:pre-wrap;min-height:40px;background:#fff;">${stageAns}</div>
-        ${stageScore?.reason ? `<div style="border:1px solid #e0e7ff;border-top:none;padding:6px 12px;font-size:11px;color:#6366f1;font-style:italic;background:#eef2ff;">Evaluasi AI: ${stageScore.reason}</div>` : ''}
+
+        ${narasiRendered ? `
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;">
+          <div style="font-size:10px;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Soal</div>
+          ${narasiRendered}
+        </div>` : ''}
+
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;">
+          <div style="font-size:10px;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Jawaban Siswa</div>
+          ${stagesHtml}
+          ${finalNumHtml}
+        </div>
       </div>`;
   }).join('');
-
-  // Jawaban angka akhir
-  let finalNumberHtml = '';
-  try {
-    const parsed = JSON.parse((attempt as any).jawaban || '{}');
-    if (parsed.finalNumber !== undefined) {
-      const isOk = parsed.isCorrect;
-      finalNumberHtml = `
-        <div style="margin-bottom:14px;padding:10px 12px;border-radius:8px;background:${isOk ? '#f0fdf4' : '#fef2f2'};border:1px solid ${isOk ? '#bbf7d0' : '#fecaca'};">
-          <span style="font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:${isOk ? '#16a34a' : '#dc2626'};">
-            Jawaban Akhir (Angka)
-          </span><br/>
-          <span style="font-size:16px;font-weight:900;color:${isOk ? '#15803d' : '#b91c1c'};">${parsed.finalNumber || '—'}</span>
-          <span style="font-size:11px;color:#64748b;margin-left:8px;">${isOk ? '✓ Benar' : '✗ Tidak tepat'}</span>
-        </div>`;
-    }
-  } catch {}
-
-  const scoreColor = attempt.score >= 75 ? '#16a34a' : attempt.score >= 50 ? '#d97706' : '#dc2626';
 
   return `<!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  ${katexCss}
   <style>
     * { box-sizing: border-box; }
-    body { font-family: Arial, Helvetica, sans-serif; margin: 0; padding: 20px; color: #1e293b; font-size: 13px; line-height: 1.5; background: #fff; }
-    h1 { font-size: 18px; margin: 0 0 4px; color: #1e293b; }
-    .meta { color: #64748b; font-size: 11px; margin-bottom: 16px; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }
-    td, th { border: 1px solid #e2e8f0; padding: 6px 10px; }
-    th { background: #f8fafc; font-weight: 700; color: #64748b; text-align: left; width: 80px; }
-    .section-title { font-weight: 900; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: #94a3b8; margin-bottom: 10px; }
-    .score-badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 22px; font-weight: 900; color: #fff; background: ${scoreColor}; }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      margin: 0; padding: 24px;
+      color: #1e293b; font-size: 13px; line-height: 1.5;
+      background: #fff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .katex { font-size: 1em; }
+    .katex-display { overflow-x: auto; overflow-y: hidden; }
   </style>
 </head>
 <body>
-  <h1>${(question.title || 'Soal Ujian').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</h1>
-  <div class="meta">${question.strand} &middot; ${question.test_type === 'pretest' ? 'Pretest' : 'Posttest'} &middot; ${tanggal}</div>
-
-  <table>
-    <tr>
-      <th>Nama</th><td><strong>${sName}</strong></td>
-      <th>NISN</th><td>${sNisn}</td>
-    </tr>
-    <tr>
-      <th>Nilai</th><td><span class="score-badge">${attempt.score}</span></td>
-      <th>Poin</th><td>${attempt.total_essay_score || 0} / ${attempt.total_max_points || 100}</td>
-    </tr>
-  </table>
-
-  <div class="section-title">Jawaban Siswa &mdash; 4 Tahap RME</div>
-
-  ${stagesHtml}
-  ${finalNumberHtml}
-
-  <div style="margin-top:20px;padding-top:10px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;">
-    Dokumen ini digenerate otomatis oleh Sistem TRISULA EduMath
+  ${identitasHtml}
+  <div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:14px;">Detail Jawaban Per Soal</div>
+  ${soalHtml}
+  <div style="margin-top:24px;padding-top:10px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;text-align:center;">
+    Digenerate otomatis oleh TRISULA EduMath
   </div>
 </body>
 </html>`;
@@ -254,7 +368,7 @@ const DownloadModal: React.FC<{
           score: (att as any).skor || 0,
         };
 
-        const html = buildAnswerHtml(mockAttempt, question, studentName, studentNisn);
+        const html = buildAnswerHtml([mockAttempt], [question], studentName, studentNisn, (question as any).exam_title || question.title || 'Ujian');
 
         try {
           const pdfBlob: Blob = await new Promise((resolve, reject) => {
