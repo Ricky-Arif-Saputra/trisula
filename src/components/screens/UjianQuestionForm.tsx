@@ -151,7 +151,10 @@ const StageEditor: React.FC<{
   onUpdateBlock: (id: string, val: string) => void;
   onRemoveBlock: (id: string) => void;
   onChangePoints: (val: number) => void;
-}> = ({ label, icon, color, blocks, points, onAddBlock, onUpdateBlock, onRemoveBlock, onChangePoints }) => (
+  // Hanya untuk Tahap Pengerjaan
+  finalNumericAnswer?: string;
+  onChangeFinalNumeric?: (val: string) => void;
+}> = ({ label, icon, color, blocks, points, onAddBlock, onUpdateBlock, onRemoveBlock, onChangePoints, finalNumericAnswer, onChangeFinalNumeric }) => (
   <div className={`rounded-xl border-2 ${color.border} ${color.bg} p-4 space-y-3`}>
     <div className="flex items-center justify-between gap-2">
       <div className="flex items-center gap-2">
@@ -173,6 +176,26 @@ const StageEditor: React.FC<{
         />
       </div>
     </div>
+
+    {/* Kunci jawaban akhir — hanya untuk Tahap Pengerjaan */}
+    {onChangeFinalNumeric !== undefined && (
+      <div className="bg-white rounded-lg border border-amber-200 p-3 space-y-1">
+        <label className="text-[10px] font-black text-amber-700 uppercase tracking-widest block">
+          Kunci jawaban akhir (angka)
+        </label>
+        <input
+          type="text"
+          inputMode="decimal"
+          value={finalNumericAnswer ?? ''}
+          onChange={e => onChangeFinalNumeric(e.target.value)}
+          placeholder="Contoh: 42 atau 12.5"
+          className="w-full p-2 rounded-lg border border-amber-200 bg-amber-50 text-sm font-mono outline-none focus:border-amber-400"
+        />
+        <p className="text-[10px] text-slate-400">
+          Akan dicocokkan persis dengan isian angka siswa untuk menentukan benar/salah.
+        </p>
+      </div>
+    )}
 
     <label className="text-[10px] font-bold text-slate-500 uppercase block">Kunci acuan tahap ini</label>
     <div className="space-y-2">
@@ -226,13 +249,16 @@ export const UjianQuestionForm: React.FC<UjianQuestionFormProps> = ({
     kesimpulan: parseStageBlocks(existingKeys.ref_kesimpulan, 'sk'),
   }));
 
-  // Poin per stage (tanpa kisi-kisi, tanpa jawaban akhir angka)
+  // Poin per stage + kunci jawaban akhir angka (untuk pengerjaan)
   const [points, setPoints] = useState({
     diketahui:  existingKeys.points_diketahui,
     ditanya:    existingKeys.points_ditanya,
     pengerjaan: existingKeys.points_pengerjaan,
     kesimpulan: existingKeys.points_kesimpulan,
   });
+  const [finalNumericAnswer, setFinalNumericAnswer] = useState<string>(
+    existingKeys.finalNumericAnswer != null ? String(existingKeys.finalNumericAnswer) : ''
+  );
 
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -250,7 +276,6 @@ export const UjianQuestionForm: React.FC<UjianQuestionFormProps> = ({
   const removeStageBlock = (sk: StageKey, id: string) =>
     setStageBlocks(prev => ({ ...prev, [sk]: prev[sk].filter(b => b.id !== id) }));
 
-  const totalPoints = Object.values(points).reduce((a, b) => a + b, 0);
 
   const handleSave = async () => {
     setMsg(null);
@@ -269,7 +294,11 @@ export const UjianQuestionForm: React.FC<UjianQuestionFormProps> = ({
       points_pengerjaan: points.pengerjaan,
       points_kesimpulan: points.kesimpulan,
       hints: [],
-      finalNumericAnswer: null,
+      finalNumericAnswer: finalNumericAnswer.trim()
+        ? (Number.isNaN(Number(finalNumericAnswer.replace(',', '.')))
+            ? finalNumericAnswer.trim()
+            : Number(finalNumericAnswer.replace(',', '.')))
+        : null,
     };
     const content_blocks = embedRmeKeys(blocks, rme_keys);
 
@@ -336,9 +365,6 @@ export const UjianQuestionForm: React.FC<UjianQuestionFormProps> = ({
           <h4 className="font-extrabold text-sm">{editing ? 'Edit Soal' : 'Tambah Soal'} RME</h4>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold bg-white/20 px-2 py-0.5 rounded-full">
-            Total: {totalPoints} poin
-          </span>
           <button onClick={onCancel}
             className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center hover:bg-white/30 cursor-pointer">
             <X size={16} />
@@ -370,6 +396,7 @@ export const UjianQuestionForm: React.FC<UjianQuestionFormProps> = ({
         {STAGES.map(stage => {
           const color = STAGE_COLORS[stage.color];
           const sk = stage.key as StageKey;
+          const isPengerjaan = sk === 'pengerjaan';
           return (
             <StageEditor
               key={sk}
@@ -382,6 +409,8 @@ export const UjianQuestionForm: React.FC<UjianQuestionFormProps> = ({
               onUpdateBlock={(id, val) => updateStageBlock(sk, id, val)}
               onRemoveBlock={id => removeStageBlock(sk, id)}
               onChangePoints={val => setPoints(prev => ({ ...prev, [sk]: val }))}
+              finalNumericAnswer={isPengerjaan ? finalNumericAnswer : undefined}
+              onChangeFinalNumeric={isPengerjaan ? setFinalNumericAnswer : undefined}
             />
           );
         })}

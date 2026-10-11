@@ -267,6 +267,41 @@ const DownloadModal: React.FC<{
 };
 
 // ─────────────────────────────────────────────
+// AddExamButton — satu tombol tengah dengan pilihan pretest/posttest
+// ─────────────────────────────────────────────
+const AddExamButton: React.FC<{
+  onSelectPretest: () => void;
+  onSelectPosttest: () => void;
+}> = ({ onSelectPretest, onSelectPosttest }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative flex justify-center mt-2">
+      {open ? (
+        <div className="flex gap-3 animate-in fade-in duration-150">
+          <button onClick={() => { setOpen(false); onSelectPretest(); }}
+            className="flex items-center gap-1.5 px-5 py-3 rounded-2xl bg-amber-500 text-white text-sm font-bold cursor-pointer hover:bg-amber-600 shadow-lg transition-colors">
+            <Plus size={15} /> Tambah Pretest
+          </button>
+          <button onClick={() => { setOpen(false); onSelectPosttest(); }}
+            className="flex items-center gap-1.5 px-5 py-3 rounded-2xl bg-emerald-600 text-white text-sm font-bold cursor-pointer hover:bg-emerald-700 shadow-lg transition-colors">
+            <Plus size={15} /> Tambah Posttest
+          </button>
+          <button onClick={() => setOpen(false)}
+            className="w-11 h-11 rounded-2xl border-2 border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 flex items-center justify-center cursor-pointer transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+      ) : (
+        <button onClick={() => setOpen(true)}
+          className="flex items-center gap-2 px-6 py-3 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 text-sm font-bold cursor-pointer hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-all">
+          <Plus size={16} /> Tambah Soal Ujian
+        </button>
+      )}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
 // QuestionCard — kartu satu soal
 // ─────────────────────────────────────────────
 const QuestionCard: React.FC<{
@@ -449,14 +484,7 @@ export const UjianScreen: React.FC<UjianScreenProps> = ({ onNavigateToViewer }) 
           </p>
         </div>
 
-        {/* Tombol tambah admin — HANYA di layar utama (sebelum strand dipilih) */}
-        {isAdmin && !selectedStrand && (
-          <div className="flex gap-2 flex-wrap justify-end">
-            <div className="text-[10px] font-bold text-slate-400 text-right mt-1">
-              Pilih topik dulu untuk menambah soal
-            </div>
-          </div>
-        )}
+        {/* Tombol tambah admin — hanya tampil saat belum pilih strand, di empty state dan bawah grid */}
       </div>
 
       {/* STRAND SELECTOR */}
@@ -482,31 +510,16 @@ export const UjianScreen: React.FC<UjianScreenProps> = ({ onNavigateToViewer }) 
         <div className="space-y-5">
 
           {/* Sub-header */}
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-3">
-              {currentStrand && (
-                <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${currentStrand.gradient} flex items-center justify-center shadow shrink-0`}>
-                  <span className="material-symbols-outlined text-white text-[18px]">{currentStrand.icon}</span>
-                </div>
-              )}
-              <div>
-                <h2 className="text-base font-extrabold text-slate-800 dark:text-white capitalize">{selectedStrand}</h2>
-                <p className="text-[10px] text-slate-400">{pretests.length} pretest · {posttests.length} posttest</p>
-              </div>
-            </div>
-            {/* Tombol tambah di sini — hanya muncul setelah strand dipilih */}
-            {isAdmin && !isFormOpen && (
-              <div className="flex gap-2">
-                <button onClick={() => setFormMode('new_pretest')}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold cursor-pointer hover:bg-amber-100 transition-colors">
-                  <Plus size={13} /> Tambah Pretest
-                </button>
-                <button onClick={() => setFormMode('new_postest')}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold cursor-pointer hover:bg-emerald-100 transition-colors">
-                  <Plus size={13} /> Tambah Posttest
-                </button>
+          <div className="flex items-center gap-3">
+            {currentStrand && (
+              <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${currentStrand.gradient} flex items-center justify-center shadow shrink-0`}>
+                <span className="material-symbols-outlined text-white text-[18px]">{currentStrand.icon}</span>
               </div>
             )}
+            <div>
+              <h2 className="text-base font-extrabold text-slate-800 dark:text-white capitalize">{selectedStrand}</h2>
+              <p className="text-[10px] text-slate-400">{pretests.length} pretest · {posttests.length} posttest</p>
+            </div>
           </div>
 
           {/* FORM tambah / edit */}
@@ -540,18 +553,14 @@ export const UjianScreen: React.FC<UjianScreenProps> = ({ onNavigateToViewer }) 
                   <span className="material-symbols-outlined text-[48px] text-slate-300 dark:text-slate-600 block mb-2">inventory_2</span>
                   <p className="font-bold text-slate-600 dark:text-slate-300 text-sm">Belum ada soal ujian</p>
                   <p className="text-xs text-slate-400 mt-1">
-                    {isAdmin ? 'Gunakan tombol "Tambah Pretest" atau "Tambah Posttest" di atas.' : 'Guru belum membuat soal untuk materi ini.'}
+                    {isAdmin ? 'Tambahkan soal pretest atau posttest.' : 'Guru belum membuat soal untuk materi ini.'}
                   </p>
                   {isAdmin && (
-                    <div className="flex gap-3 justify-center mt-5">
-                      <button onClick={() => setFormMode('new_pretest')}
-                        className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500 text-white text-xs font-bold cursor-pointer hover:bg-amber-600 shadow-md">
-                        <Plus size={13} /> Tambah Pretest
-                      </button>
-                      <button onClick={() => setFormMode('new_postest')}
-                        className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-bold cursor-pointer hover:bg-emerald-700 shadow-md">
-                        <Plus size={13} /> Tambah Posttest
-                      </button>
+                    <div className="mt-5">
+                      <AddExamButton
+                        onSelectPretest={() => setFormMode('new_pretest')}
+                        onSelectPosttest={() => setFormMode('new_postest')}
+                      />
                     </div>
                   )}
                 </div>
@@ -599,18 +608,12 @@ export const UjianScreen: React.FC<UjianScreenProps> = ({ onNavigateToViewer }) 
                     </div>
                   )}
 
-                  {/* Tombol tambah di bawah grid */}
-                  {isAdmin && (
-                    <div className="flex gap-3 pt-1">
-                      <button onClick={() => setFormMode('new_pretest')}
-                        className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-50 border-2 border-dashed border-amber-300 text-amber-700 text-xs font-bold cursor-pointer hover:bg-amber-100 transition-colors">
-                        <Plus size={13} /> Pretest Baru
-                      </button>
-                      <button onClick={() => setFormMode('new_postest')}
-                        className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-50 border-2 border-dashed border-emerald-300 text-emerald-700 text-xs font-bold cursor-pointer hover:bg-emerald-100 transition-colors">
-                        <Plus size={13} /> Posttest Baru
-                      </button>
-                    </div>
+                  {/* Satu tombol tambah di tengah bawah grid */}
+                  {isAdmin && !isFormOpen && (
+                    <AddExamButton
+                      onSelectPretest={() => setFormMode('new_pretest')}
+                      onSelectPosttest={() => setFormMode('new_postest')}
+                    />
                   )}
                 </div>
               )}

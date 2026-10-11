@@ -209,16 +209,6 @@ export default function App() {
             <ExamViewerRme examId={activeRmeExamId} onBack={handleBack} />
           )}
 
-          {/* Floating Admin Button */}
-          {isAdmin && currentScreen !== 'admin' && (
-            <button
-              onClick={() => handleNavigate('admin')}
-              className="fixed bottom-24 right-4 z-50 w-14 h-14 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-600/40 flex items-center justify-center cursor-pointer transition-all duration-200 active:scale-90 animate-in fade-in zoom-in"
-              title="Manajemen Soal (Admin)"
-            >
-              <span className="material-symbols-outlined text-2xl">admin_panel_settings</span>
-            </button>
-          )}
         </main>
 
         <BottomNav
