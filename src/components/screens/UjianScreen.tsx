@@ -267,39 +267,23 @@ const DownloadModal: React.FC<{
 };
 
 // ─────────────────────────────────────────────
-// AddExamButton — satu tombol tengah dengan pilihan pretest/posttest
+// DirectAddButtons — dua tombol langsung, selalu tampil
 // ─────────────────────────────────────────────
-const AddExamButton: React.FC<{
-  onSelectPretest: () => void;
-  onSelectPosttest: () => void;
-}> = ({ onSelectPretest, onSelectPosttest }) => {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="relative flex justify-center mt-2">
-      {open ? (
-        <div className="flex gap-3 animate-in fade-in duration-150">
-          <button onClick={() => { setOpen(false); onSelectPretest(); }}
-            className="flex items-center gap-1.5 px-5 py-3 rounded-2xl bg-amber-500 text-white text-sm font-bold cursor-pointer hover:bg-amber-600 shadow-lg transition-colors">
-            <Plus size={15} /> Tambah Pretest
-          </button>
-          <button onClick={() => { setOpen(false); onSelectPosttest(); }}
-            className="flex items-center gap-1.5 px-5 py-3 rounded-2xl bg-emerald-600 text-white text-sm font-bold cursor-pointer hover:bg-emerald-700 shadow-lg transition-colors">
-            <Plus size={15} /> Tambah Posttest
-          </button>
-          <button onClick={() => setOpen(false)}
-            className="w-11 h-11 rounded-2xl border-2 border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 flex items-center justify-center cursor-pointer transition-colors">
-            <X size={16} />
-          </button>
-        </div>
-      ) : (
-        <button onClick={() => setOpen(true)}
-          className="flex items-center gap-2 px-6 py-3 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 text-sm font-bold cursor-pointer hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-all">
-          <Plus size={16} /> Tambah Soal Ujian
-        </button>
-      )}
-    </div>
-  );
-};
+const DirectAddButtons: React.FC<{
+  onPretest: () => void;
+  onPosttest: () => void;
+}> = ({ onPretest, onPosttest }) => (
+  <div className="flex gap-3 justify-center flex-wrap">
+    <button onClick={onPretest}
+      className="flex items-center gap-1.5 px-5 py-3 rounded-2xl bg-amber-500 text-white text-sm font-bold cursor-pointer hover:bg-amber-600 shadow-md transition-colors">
+      <Plus size={15} /> Tambah Pretest
+    </button>
+    <button onClick={onPosttest}
+      className="flex items-center gap-1.5 px-5 py-3 rounded-2xl bg-emerald-600 text-white text-sm font-bold cursor-pointer hover:bg-emerald-700 shadow-md transition-colors">
+      <Plus size={15} /> Tambah Posttest
+    </button>
+  </div>
+);
 
 // ─────────────────────────────────────────────
 // QuestionCard — kartu satu soal
@@ -528,7 +512,7 @@ export const UjianScreen: React.FC<UjianScreenProps> = ({ onNavigateToViewer }) 
               <UjianQuestionForm
                 strand={selectedStrand as any}
                 testType={formTestType}
-                editing={editingQ}
+                existingQuestions={editingQ ? [editingQ] : undefined}
                 onCancel={() => setFormMode('closed')}
                 onSaved={() => { setFormMode('closed'); fetchQuestions(); }}
               />
@@ -557,9 +541,9 @@ export const UjianScreen: React.FC<UjianScreenProps> = ({ onNavigateToViewer }) 
                   </p>
                   {isAdmin && (
                     <div className="mt-5">
-                      <AddExamButton
-                        onSelectPretest={() => setFormMode('new_pretest')}
-                        onSelectPosttest={() => setFormMode('new_postest')}
+                      <DirectAddButtons
+                        onPretest={() => setFormMode('new_pretest')}
+                        onPosttest={() => setFormMode('new_postest')}
                       />
                     </div>
                   )}
@@ -608,11 +592,11 @@ export const UjianScreen: React.FC<UjianScreenProps> = ({ onNavigateToViewer }) 
                     </div>
                   )}
 
-                  {/* Satu tombol tambah di tengah bawah grid */}
+                  {/* Tombol tambah langsung di bawah grid */}
                   {isAdmin && !isFormOpen && (
-                    <AddExamButton
-                      onSelectPretest={() => setFormMode('new_pretest')}
-                      onSelectPosttest={() => setFormMode('new_postest')}
+                    <DirectAddButtons
+                      onPretest={() => setFormMode('new_pretest')}
+                      onPosttest={() => setFormMode('new_postest')}
                     />
                   )}
                 </div>
