@@ -414,7 +414,7 @@ export const UjianScreen: React.FC<UjianScreenProps> = ({ onNavigateToViewer }) 
   const [downloadQ, setDownloadQ] = useState<Question | null>(null);
 
   const fetchQuestions = useCallback(async () => {
-    if (!selectedStrand || !user) return;
+    if (!selectedStrand) return;
     setLoading(true);
     setError(null);
     try {
@@ -428,22 +428,24 @@ export const UjianScreen: React.FC<UjianScreenProps> = ({ onNavigateToViewer }) 
 
       setQuestions((qs || []) as Question[]);
 
-      // Coba fetch attempt dari jawaban table
-      try {
-        const ids = (qs || []).map((q: any) => q.id);
-        if (ids.length > 0) {
-          const { data: atts } = await supabase
-            .from('jawaban')
-            .select('id, soal_id, skor')
-            .eq('user_id', user.id)
-            .in('soal_id', ids);
-          const map: Record<string, QuestionAttempt> = {};
-          (atts || []).forEach((a: any) => {
-            if (!map[a.soal_id]) map[a.soal_id] = { id: a.id, question_id: a.soal_id, score: a.skor || 0 };
-          });
-          setAttempts(map);
-        }
-      } catch { /* skip */ }
+      // Coba fetch attempt hanya jika user login
+      if (user) {
+        try {
+          const ids = (qs || []).map((q: any) => q.id);
+          if (ids.length > 0) {
+            const { data: atts } = await supabase
+              .from('jawaban')
+              .select('id, soal_id, skor')
+              .eq('user_id', user.id)
+              .in('soal_id', ids);
+            const map: Record<string, QuestionAttempt> = {};
+            (atts || []).forEach((a: any) => {
+              if (!map[a.soal_id]) map[a.soal_id] = { id: a.id, question_id: a.soal_id, score: a.skor || 0 };
+            });
+            setAttempts(map);
+          }
+        } catch { /* skip */ }
+      }
     } catch (err: any) {
       setError(err.message || 'Gagal memuat soal');
     } finally { setLoading(false); }

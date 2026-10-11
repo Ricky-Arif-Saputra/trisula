@@ -267,8 +267,8 @@ const QuestionItemEditor: React.FC<{
           <div className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-sm font-black text-slate-700 dark:text-slate-300">
             {index + 1}
           </div>
-          <span className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate max-w-[200px]">
-            {q.title.trim() || `Soal ${index + 1}`}
+          <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+            Soal {index + 1}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -285,17 +285,9 @@ const QuestionItemEditor: React.FC<{
 
       {expanded && (
         <div className="p-4 space-y-5 bg-white dark:bg-slate-900">
-          {/* Judul soal */}
+          {/* Narasi soal — tanpa judul soal */}
           <div>
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Judul Soal {index + 1}</label>
-            <input value={q.title} onChange={e => upd({ title: e.target.value })}
-              placeholder={`Contoh: Analisis masalah kontekstual ${index + 1}`}
-              className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm outline-none focus:border-indigo-400" />
-          </div>
-
-          {/* Narasi soal */}
-          <div>
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Narasi Soal</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Narasi / Konteks Soal</label>
             <div className="space-y-2">
               {q.blocks.map(block => <BlockInput key={block.id} block={block} onChange={updateBlock} onRemove={removeBlock} />)}
               <BlockAdder onAdd={addBlock} />
@@ -360,9 +352,6 @@ export const UjianQuestionForm: React.FC<UjianQuestionFormProps> = ({
     // Validasi semua soal
     for (let i = 0; i < questionItems.length; i++) {
       const q = questionItems[i];
-      if (!q.title.trim()) {
-        setMsg({ type: 'error', text: `Judul Soal ${i + 1} wajib diisi.` }); return;
-      }
       if (!stripRmeMetaBlocks(q.blocks).some(b => b.value.trim())) {
         setMsg({ type: 'error', text: `Narasi Soal ${i + 1} wajib diisi.` }); return;
       }
@@ -375,16 +364,16 @@ export const UjianQuestionForm: React.FC<UjianQuestionFormProps> = ({
         for (const q of questionItems) {
           const rme_keys: RmeKeys = buildRmeKeys(q);
           const content_blocks = embedRmeKeys(q.blocks, rme_keys);
-          const payload = { title: q.title.trim(), test_type: testType, strand, category: 'sedang', content_blocks, options: [], has_simulation: false, created_by: user?.email || 'admin', rme_keys, exam_title: examTitle.trim(), exam_duration: examDuration };
+          const payload = { title: examTitle.trim() || `Soal Ujian`, test_type: testType, strand, category: 'sedang', content_blocks, options: [], has_simulation: false, created_by: user?.email || 'admin', rme_keys, exam_title: examTitle.trim(), exam_duration: examDuration };
           const { error } = await supabase.from('questions').update(payload).eq('id', q.id!);
           if (error) throw error;
         }
       } else {
         // Insert semua soal baru sekaligus
-        const rows = questionItems.map(q => {
+        const rows = questionItems.map((q, qi) => {
           const rme_keys: RmeKeys = buildRmeKeys(q);
           const content_blocks = embedRmeKeys(q.blocks, rme_keys);
-          return { id: q.id || crypto.randomUUID(), title: q.title.trim(), test_type: testType, strand, category: 'sedang', content_blocks, options: [], has_simulation: false, created_by: user?.email || 'admin', rme_keys, exam_title: examTitle.trim(), exam_duration: examDuration };
+          return { id: q.id || crypto.randomUUID(), title: `${examTitle.trim()} — Soal ${qi + 1}`, test_type: testType, strand, category: 'sedang', content_blocks, options: [], has_simulation: false, created_by: user?.email || 'admin', rme_keys, exam_title: examTitle.trim(), exam_duration: examDuration };
         });
         const { error } = await supabase.from('questions').insert(rows);
         if (error) {
@@ -455,6 +444,35 @@ export const UjianQuestionForm: React.FC<UjianQuestionFormProps> = ({
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">mnt</span>
             </div>
           </div>
+        </div>
+
+        {/* Panel teknis pengerjaan */}
+        <div className="rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-indigo-500 text-[18px]">info</span>
+            <h4 className="text-xs font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-widest">Teknis Pengerjaan Siswa</h4>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-indigo-800 dark:text-indigo-200">
+            <div className="flex items-start gap-2">
+              <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center font-black text-[10px] shrink-0 mt-0.5">1</span>
+              <div><span className="font-bold">Diketahui</span> — Siswa menuliskan data/informasi yang diketahui dari soal.</div>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="w-5 h-5 rounded-full bg-violet-600 text-white flex items-center justify-center font-black text-[10px] shrink-0 mt-0.5">2</span>
+              <div><span className="font-bold">Ditanya</span> — Siswa menuliskan apa yang ditanyakan/permasalahan utama.</div>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center font-black text-[10px] shrink-0 mt-0.5">3</span>
+              <div><span className="font-bold">Pengerjaan</span> — Siswa menuliskan langkah-langkah perhitungan dan menjawab angka akhir.</div>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center font-black text-[10px] shrink-0 mt-0.5">4</span>
+              <div><span className="font-bold">Kesimpulan</span> — Siswa menuliskan kesimpulan dari hasil pengerjaan.</div>
+            </div>
+          </div>
+          <p className="text-[10px] text-indigo-600 dark:text-indigo-400 border-t border-indigo-200 dark:border-indigo-700 pt-2 mt-1">
+            Setiap tahap dinilai oleh AI berdasarkan <span className="font-bold">kunci acuan</span> yang Anda isi di bawah. Tahap Pengerjaan memiliki <span className="font-bold">kunci jawaban angka</span> untuk pengecekan otomatis.
+          </p>
         </div>
 
         {/* Daftar soal */}
