@@ -229,7 +229,7 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
           student_nisn: userNisn,
         });
 
-        await supabase.from('jawaban').insert([{
+        const { error: insertErr } = await supabase.from('jawaban').insert([{
           user_id:    user.id,
           soal_id:    question.id,
           jawaban:    answerJson,
@@ -237,6 +237,9 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
           skor_maks:  100,
           alasan:     isCorrect ? 'Jawaban angka akhir benar.' : 'Jawaban angka akhir tidak tepat.',
         }]);
+        if (insertErr) {
+          console.error('Gagal menyimpan jawaban ke DB:', insertErr.message, insertErr.details, insertErr.hint);
+        }
       } catch (e) {
         // Gagal simpan tidak harus error ke user
         console.error('Gagal menyimpan jawaban:', e);
