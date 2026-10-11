@@ -72,46 +72,89 @@ function buildAnswerHtml(
   });
   const ans = attempt.essay_answers?.[question.id] || {};
   const ai  = attempt.ai_scores?.[question.id];
+  const sName = studentName || attempt.student_name || 'Tidak diketahui';
+  const sNisn  = studentNisn || attempt.student_nisn || '-';
 
   const stagesHtml = STAGE_KEYS.map((sk, i) => {
-    const stageAns  = (ans as any)[sk] || '—';
+    const stageAns = String((ans as any)[sk] || '—').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const stageScore = ai?.evaluation?.[sk];
+    const scoreHtml = stageScore
+      ? `<span style="color:${(stageScore.score / (stageScore.max_score || 1)) >= .7 ? '#16a34a' : '#d97706'};font-weight:700;">
+           ${stageScore.score} / ${stageScore.max_score} poin
+         </span>`
+      : '';
     return `
-      <div style="margin-bottom:12px;">
-        <div style="background:#f1f5f9;padding:6px 10px;border-radius:6px 6px 0 0;font-weight:700;font-size:11px;color:#475569;text-transform:uppercase;letter-spacing:.05em;display:flex;justify-content:space-between;">
+      <div style="margin-bottom:14px;page-break-inside:avoid;">
+        <div style="background:#f1f5f9;padding:7px 12px;border-radius:6px 6px 0 0;font-weight:800;font-size:11px;color:#475569;text-transform:uppercase;letter-spacing:.05em;display:flex;justify-content:space-between;align-items:center;">
           <span>Tahap ${i + 1} — ${STAGE_LABELS[i]}</span>
-          ${stageScore ? `<span style="color:${stageScore.score / stageScore.max_score >= .7 ? '#16a34a' : '#d97706'};">
-            ${stageScore.score} / ${stageScore.max_score} poin</span>` : ''}
+          ${scoreHtml}
         </div>
-        <div style="border:1px solid #e2e8f0;border-top:none;padding:8px 10px;font-size:12px;white-space:pre-wrap;min-height:32px;">${stageAns}</div>
-        ${stageScore?.reason ? `<div style="border:1px solid #e0e7ff;border-top:none;padding:6px 10px;font-size:11px;color:#6366f1;font-style:italic;">${stageScore.reason}</div>` : ''}
+        <div style="border:1px solid #e2e8f0;border-top:none;padding:10px 12px;font-size:12px;white-space:pre-wrap;min-height:40px;background:#fff;">${stageAns}</div>
+        ${stageScore?.reason ? `<div style="border:1px solid #e0e7ff;border-top:none;padding:6px 12px;font-size:11px;color:#6366f1;font-style:italic;background:#eef2ff;">Evaluasi AI: ${stageScore.reason}</div>` : ''}
       </div>`;
   }).join('');
 
+  // Jawaban angka akhir
+  let finalNumberHtml = '';
+  try {
+    const parsed = JSON.parse((attempt as any).jawaban || '{}');
+    if (parsed.finalNumber !== undefined) {
+      const isOk = parsed.isCorrect;
+      finalNumberHtml = `
+        <div style="margin-bottom:14px;padding:10px 12px;border-radius:8px;background:${isOk ? '#f0fdf4' : '#fef2f2'};border:1px solid ${isOk ? '#bbf7d0' : '#fecaca'};">
+          <span style="font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:${isOk ? '#16a34a' : '#dc2626'};">
+            Jawaban Akhir (Angka)
+          </span><br/>
+          <span style="font-size:16px;font-weight:900;color:${isOk ? '#15803d' : '#b91c1c'};">${parsed.finalNumber || '—'}</span>
+          <span style="font-size:11px;color:#64748b;margin-left:8px;">${isOk ? '✓ Benar' : '✗ Tidak tepat'}</span>
+        </div>`;
+    }
+  } catch {}
+
   const scoreColor = attempt.score >= 75 ? '#16a34a' : attempt.score >= 50 ? '#d97706' : '#dc2626';
 
-  return `<html><head><meta charset="utf-8"/><style>
-    body{font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:24px;color:#1e293b;font-size:13px;}
-    h1{font-size:17px;margin-bottom:4px;} .meta{color:#64748b;font-size:11px;margin-bottom:16px;}
-    table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:12px;}
-    td,th{border:1px solid #e2e8f0;padding:5px 10px;}
-    th{background:#f8fafc;font-weight:700;color:#64748b;text-align:left;}
-  </style></head><body>
-    <h1>${question.title || 'Soal Ujian'}</h1>
-    <div class="meta">${question.strand} · ${question.test_type === 'pretest' ? 'Pretest' : 'Posttest'} · ${tanggal}</div>
-    <table>
-      <tr><th>Nama</th><td>${studentName || attempt.student_name || '—'}</td>
-          <th>NISN</th><td>${studentNisn || attempt.student_nisn || '—'}</td></tr>
-      <tr><th>Nilai Akhir</th>
-          <td><b style="color:${scoreColor};font-size:18px;">${attempt.score}</b></td>
-          <th>Poin</th>
-          <td>${attempt.total_essay_score || 0} / ${attempt.total_max_points || '?'}</td></tr>
-    </table>
-    <div style="font-weight:900;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:10px;">
-      Jawaban Siswa — 4 Tahap RME
-    </div>
-    ${stagesHtml}
-  </body></html>`;
+  return `<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, Helvetica, sans-serif; margin: 0; padding: 20px; color: #1e293b; font-size: 13px; line-height: 1.5; background: #fff; }
+    h1 { font-size: 18px; margin: 0 0 4px; color: #1e293b; }
+    .meta { color: #64748b; font-size: 11px; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }
+    td, th { border: 1px solid #e2e8f0; padding: 6px 10px; }
+    th { background: #f8fafc; font-weight: 700; color: #64748b; text-align: left; width: 80px; }
+    .section-title { font-weight: 900; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: #94a3b8; margin-bottom: 10px; }
+    .score-badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 22px; font-weight: 900; color: #fff; background: ${scoreColor}; }
+  </style>
+</head>
+<body>
+  <h1>${(question.title || 'Soal Ujian').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</h1>
+  <div class="meta">${question.strand} &middot; ${question.test_type === 'pretest' ? 'Pretest' : 'Posttest'} &middot; ${tanggal}</div>
+
+  <table>
+    <tr>
+      <th>Nama</th><td><strong>${sName}</strong></td>
+      <th>NISN</th><td>${sNisn}</td>
+    </tr>
+    <tr>
+      <th>Nilai</th><td><span class="score-badge">${attempt.score}</span></td>
+      <th>Poin</th><td>${attempt.total_essay_score || 0} / ${attempt.total_max_points || 100}</td>
+    </tr>
+  </table>
+
+  <div class="section-title">Jawaban Siswa &mdash; 4 Tahap RME</div>
+
+  ${stagesHtml}
+  ${finalNumberHtml}
+
+  <div style="margin-top:20px;padding-top:10px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;">
+    Dokumen ini digenerate otomatis oleh Sistem TRISULA EduMath
+  </div>
+</body>
+</html>`;
 }
 
 // ─────────────────────────────────────────────
@@ -211,21 +254,27 @@ const DownloadModal: React.FC<{
           score: (att as any).skor || 0,
         };
 
-        const html = buildAnswerHtml(mockAttempt, question, att.student_name, att.student_nisn);
-        const el = document.createElement('div');
-        el.innerHTML = html;
-        el.style.cssText = 'position:absolute;left:-9999px;';
-        document.body.appendChild(el);
+        const html = buildAnswerHtml(mockAttempt, question, studentName, studentNisn);
+
         try {
           const pdfBlob: Blob = await new Promise((resolve, reject) => {
             (html2pdf as any)()
-              .set({ margin: 0, filename, image: { type: 'jpeg', quality: 0.9 },
-                html2canvas: { scale: 1.5, useCORS: true },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } })
-              .from(el).outputPdf('blob').then(resolve).catch(reject);
+              .set({
+                margin: [10, 10, 10, 10],
+                filename,
+                image: { type: 'jpeg', quality: 0.95 },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+              })
+              .from(html, 'string')
+              .outputPdf('blob')
+              .then(resolve)
+              .catch(reject);
           });
           zip.file(filename, pdfBlob);
-        } finally { document.body.removeChild(el); }
+        } catch (pdfErr: any) {
+          console.error(`Gagal buat PDF untuk ${name}:`, pdfErr);
+        }
       }
       setProgress('Mengemas ZIP...');
       const blob = await zip.generateAsync({ type: 'blob' });
