@@ -10,6 +10,7 @@ import { DashboardScreen } from './components/screens/DashboardScreen';
 import { AdminSoalManager } from './components/screens/AdminSoalManager';
 import { ExamViewer } from './components/screens/ExamViewer';
 import { ExamViewerRme } from './components/screens/ExamViewerRme';
+import { QuizQuestionDynamic } from './components/screens/QuizQuestionDynamic';
 import { useAuth } from './components/Auth/AuthProvider';
 import AuthLayout from './components/Auth/AuthLayout';
 import AuthTabs from './components/Auth/AuthTabs';
@@ -22,6 +23,7 @@ export default function App() {
   const [latihanCategory, setLatihanCategory] = useState<MathCategory | null>(null);
   const [activeExamId, setActiveExamId] = useState<string | null>(null);
   const [activeRmeExamId, setActiveRmeExamId] = useState<string | null>(null);
+  const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
   const [rmeExamOrigin, setRmeExamOrigin] = useState<'ujian' | 'materi'>('ujian');
   const [isDark, setIsDark] = useState<boolean>(false);
   const [userXp, setUserXp] = useState<number>(4850);
@@ -79,16 +81,20 @@ export default function App() {
       // catat asal navigasi supaya tombol back tahu harus ke mana
       setRmeExamOrigin(currentScreen === 'materi' ? 'materi' : 'ujian');
     }
+    if (screen === ('ujian-soal' as any) && examId) {
+      setActiveQuestionId(examId);
+    }
     setCurrentScreen(screen);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const isDetailView = (currentScreen === 'materi' && materiCategory !== null) || (currentScreen === 'latihan' && latihanCategory !== null) || currentScreen === 'ujian-rme';
+  const isDetailView = (currentScreen === 'materi' && materiCategory !== null) || (currentScreen === 'latihan' && latihanCategory !== null) || currentScreen === 'ujian-rme' || (currentScreen as string) === 'ujian-soal';
 
   const handleBack = () => {
     if (currentScreen === 'materi') setMateriCategory(null);
     if (currentScreen === 'latihan') setLatihanCategory(null);
     if (currentScreen === 'ujian-rme') { setActiveRmeExamId(null); setCurrentScreen(rmeExamOrigin); }
+    if ((currentScreen as string) === 'ujian-soal') { setActiveQuestionId(null); setCurrentScreen('ujian'); }
   };
 
   const getHeaderTitle = () => {
@@ -191,8 +197,11 @@ export default function App() {
               onNavigateToSimulasi={() => handleNavigate('simulasi')}
             />
           )}
-          {currentScreen === 'ujian' && !activeExamId && (
-            <UjianScreen onNavigateToViewer={(examId) => handleNavigate('ujian-rme', null, examId)} />
+          {currentScreen === 'ujian' && !activeExamId && !activeQuestionId && (
+            <UjianScreen onNavigateToViewer={(qId) => {
+              setActiveQuestionId(qId);
+              setCurrentScreen('ujian-soal' as any);
+            }} />
           )}
           {currentScreen === 'dashboard' && (
             <DashboardScreen onNavigate={(screen, cat, examId) => handleNavigate(screen, cat, examId)} />
@@ -207,6 +216,21 @@ export default function App() {
           )}
           {currentScreen === 'ujian-rme' && activeRmeExamId && (
             <ExamViewerRme examId={activeRmeExamId} onBack={handleBack} />
+          )}
+          {(currentScreen as string) === 'ujian-soal' && activeQuestionId && (
+            <div className="flex flex-col w-full pb-16 font-sans px-4 animate-in fade-in pt-4 relative">
+              <button
+                onClick={() => { setActiveQuestionId(null); setCurrentScreen('ujian'); }}
+                className="mb-4 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center gap-2 self-start hover:bg-slate-200 cursor-pointer transition-colors"
+              >
+                <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                Kembali ke Daftar Ujian
+              </button>
+              <QuizQuestionDynamic
+                questionId={activeQuestionId}
+                onFinish={() => { setActiveQuestionId(null); setCurrentScreen('ujian'); }}
+              />
+            </div>
           )}
 
         </main>
