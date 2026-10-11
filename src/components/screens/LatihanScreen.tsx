@@ -7,7 +7,7 @@ import { useAuth } from '../Auth/AuthProvider';
 import { LatihanQuestionForm } from './LatihanQuestionForm';
 import { DIFF_BADGE, parseRmeKeys, stripRmeMetaBlocks } from './LatihanTypes';
 import { supabase } from '../../lib/supabaseClient';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, ChevronRight } from 'lucide-react';
 
 interface LatihanScreenProps {
   initialCategory?: MathCategory | null;
