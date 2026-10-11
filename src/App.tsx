@@ -22,6 +22,7 @@ export default function App() {
   const [latihanCategory, setLatihanCategory] = useState<MathCategory | null>(null);
   const [activeExamId, setActiveExamId] = useState<string | null>(null);
   const [activeRmeExamId, setActiveRmeExamId] = useState<string | null>(null);
+  const [rmeExamOrigin, setRmeExamOrigin] = useState<'ujian' | 'materi'>('ujian');
   const [isDark, setIsDark] = useState<boolean>(false);
   const [userXp, setUserXp] = useState<number>(4850);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -75,6 +76,8 @@ export default function App() {
     }
     if (screen === 'ujian-rme' && examId) {
       setActiveRmeExamId(examId);
+      // catat asal navigasi supaya tombol back tahu harus ke mana
+      setRmeExamOrigin(currentScreen === 'materi' ? 'materi' : 'ujian');
     }
     setCurrentScreen(screen);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -85,7 +88,7 @@ export default function App() {
   const handleBack = () => {
     if (currentScreen === 'materi') setMateriCategory(null);
     if (currentScreen === 'latihan') setLatihanCategory(null);
-    if (currentScreen === 'ujian-rme') { setActiveRmeExamId(null); setCurrentScreen('materi'); }
+    if (currentScreen === 'ujian-rme') { setActiveRmeExamId(null); setCurrentScreen(rmeExamOrigin); }
   };
 
   const getHeaderTitle = () => {
@@ -189,7 +192,7 @@ export default function App() {
             />
           )}
           {currentScreen === 'ujian' && !activeExamId && (
-            <UjianScreen onNavigateToViewer={(examId) => handleNavigate('ujian', null, examId)} />
+            <UjianScreen onNavigateToViewer={(examId) => handleNavigate('ujian-rme', null, examId)} />
           )}
           {currentScreen === 'dashboard' && (
             <DashboardScreen onNavigate={(screen, cat, examId) => handleNavigate(screen, cat, examId)} />
@@ -203,7 +206,7 @@ export default function App() {
             <ExamViewer examId={activeExamId} onBack={() => { setActiveExamId(null); handleNavigate('ujian'); }} />
           )}
           {currentScreen === 'ujian-rme' && activeRmeExamId && (
-            <ExamViewerRme examId={activeRmeExamId} onBack={() => { setActiveRmeExamId(null); handleNavigate('materi'); }} />
+            <ExamViewerRme examId={activeRmeExamId} onBack={handleBack} />
           )}
 
           {/* Floating Admin Button */}
