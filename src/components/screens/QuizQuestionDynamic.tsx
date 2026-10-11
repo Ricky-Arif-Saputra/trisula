@@ -132,6 +132,7 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
   const [finalNumber, setFinalNumber] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [numericCorrect, setNumericCorrect] = useState(false);
+  const [startedAt] = useState<string>(new Date().toISOString());
 
   useEffect(() => {
     const fetchQ = async () => {
@@ -227,6 +228,8 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
           isCorrect,
           student_name: userName,
           student_nisn: userNisn,
+          started_at: startedAt,
+          finished_at: new Date().toISOString(),
         });
 
         const { error: insertErr } = await supabase.from('jawaban').insert([{
