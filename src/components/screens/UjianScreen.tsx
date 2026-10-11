@@ -136,10 +136,13 @@ function buildAnswerHtml(
   studentName: string,
   studentNisn: string,
   examTitle: string,
+  parsedAnsIn?: Record<string, any>,  // dikirim langsung dari caller
 ): string {
   const att = attempts[0];
-  let parsedAns: Record<string, any> = {};
-  try { parsedAns = JSON.parse((att as any).jawaban || '{}'); } catch {}
+  let parsedAns: Record<string, any> = parsedAnsIn || {};
+  if (!parsedAnsIn) {
+    try { parsedAns = JSON.parse((att as any).jawaban || '{}'); } catch {}
+  }
 
   const isCorrect = !!parsedAns.isCorrect;
   const benar = isCorrect ? 1 : 0;
@@ -402,17 +405,24 @@ const DownloadModal: React.FC<{
           score: (att as any).skor || 0,
         };
 
-        const html = buildAnswerHtml([mockAttempt], [question], studentName, studentNisn, (question as any).exam_title || question.title || 'Ujian');
+        const html = buildAnswerHtml([mockAttempt], [question], studentName, studentNisn, (question as any).exam_title || question.title || 'Ujian', parsedAns);
 
         try {
           const pdfBlob: Blob = await new Promise((resolve, reject) => {
             (html2pdf as any)()
               .set({
-                margin: [10, 10, 10, 10],
+                margin: 15,
                 filename,
-                image: { type: 'jpeg', quality: 0.95 },
-                html2canvas: { scale: 2, useCORS: true, logging: false },
+                image: { type: 'jpeg', quality: 0.97 },
+                html2canvas: {
+                  scale: 2,
+                  useCORS: true,
+                  logging: false,
+                  letterRendering: true,
+                  allowTaint: true,
+                },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
               })
               .from(html, 'string')
               .outputPdf('blob')
