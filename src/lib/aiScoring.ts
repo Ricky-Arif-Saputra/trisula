@@ -12,32 +12,42 @@ export interface NilaiJawabanOutput {
 }
 
 export async function nilaiTahap(input: NilaiJawabanInput): Promise<NilaiJawabanOutput> {
+  // Timeout 25 detik — jika API tidak merespons, jangan hang selamanya
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 25000);
+
   let response;
   try {
     response = await fetch('/api/nilai', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
+      signal: controller.signal,
     });
   } catch (e: any) {
-    throw new Error(`[Langkah: fetch /api/nilai] Gagal terhubung. Detail: ${e.name}: ${e.message}`);
+    clearTimeout(timeoutId);
+    if (e.name === 'AbortError') {
+      throw new Error('Waktu penilaian AI habis (timeout 25 detik). Coba lagi.');
+    }
+    // Endpoint tidak ada (development lokal) atau network error
+    throw new Error(`Tidak dapat terhubung ke server penilaian. Pastikan aplikasi sudah di-deploy ke Vercel.`);
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   let data;
   try {
     data = await response.json();
   } catch (e: any) {
-    throw new Error(`[Langkah: baca respons] Respons bukan JSON valid (Status: ${response.status}). Detail: ${e.name}: ${e.message}`);
+    throw new Error(`Respons server tidak valid (Status: ${response.status}).`);
   }
 
   if (!response.ok) {
-    throw new Error(`[Langkah: periksa status HTTP] Server membalas error (Status: ${response.status}). Pesan dari server: ${data?.error || 'Tidak ada pesan'}`);
+    throw new Error(`Server error (${response.status}): ${data?.error || 'Tidak ada pesan'}`);
   }
-  
+
   if (data.error) {
-    throw new Error(`[Langkah: periksa data error] Server mengembalikan error: ${data.error}`);
+    throw new Error(`AI error: ${data.error}`);
   }
 
   return data as NilaiJawabanOutput;

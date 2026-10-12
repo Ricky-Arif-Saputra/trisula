@@ -218,23 +218,31 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
     const stageKeys = ['diketahui', 'ditanya', 'pengerjaan', 'kesimpulan'] as const;
     const scoreMap: Record<string, { skor: number; skor_maks: number; alasan: string }> = {};
 
-    // Panggil AI per tahap secara berurutan
+    // Panggil AI per tahap — jika gagal (lokal/timeout), isi dengan fallback
     for (const sk of stageKeys) {
       const jawabanTahap = answerBlocks[sk].map(b => b.value.trim()).filter(Boolean).join('\n');
-      const rubrik = (keys as any)[`ref_${sk}`] as string || '';
+      const rubrik  = (keys as any)[`ref_${sk}`] as string || '';
       const skorMaks = (keys as any)[`points_${sk}`] as number || 20;
 
       try {
         const result = await nilaiTahap({
-          soalId: question.id,
-          tahap: sk,
-          jawaban: jawabanTahap || '—',
-          rubrik: rubrik || `Berikan nilai untuk tahap ${sk}`,
+          soalId:   question.id,
+          tahap:    sk,
+          jawaban:  jawabanTahap || '—',
+          rubrik:   rubrik || `Berikan nilai untuk tahap ${sk}`,
           skorMaks,
         });
         scoreMap[sk] = { skor: result.skor, skor_maks: skorMaks, alasan: result.alasan };
       } catch (e: any) {
-        scoreMap[sk] = { skor: 0, skor_maks: skorMaks, alasan: `Gagal dinilai AI: ${e.message}` };
+        // API tidak tersedia (dev lokal) atau timeout — beri skor 0 dengan keterangan
+        const isNetworkErr = e.message?.includes('Tidak dapat terhubung') || e.message?.includes('timeout');
+        scoreMap[sk] = {
+          skor: 0,
+          skor_maks: skorMaks,
+          alasan: isNetworkErr
+            ? 'Penilaian AI tidak tersedia (perlu deploy ke Vercel). Skor ini belum final.'
+            : `Gagal dinilai: ${e.message}`,
+        };
       }
     }
 
