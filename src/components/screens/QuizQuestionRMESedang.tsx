@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BlockMath, InlineMath } from 'react-katex';
+import { BlockMath, InlineMath } from '../KatexCompat';
 
 export const QuizQuestionRMESedang: React.FC = () => {
   const [selectedOption, setSelectedOption] = useState<number | null>(null);

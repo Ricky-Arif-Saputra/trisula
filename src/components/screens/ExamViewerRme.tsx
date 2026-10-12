@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { InlineMath } from 'react-katex';
+import { InlineMath } from '../KatexCompat';
 import { MathRenderer } from '../MathRenderer';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../Auth/AuthProvider';

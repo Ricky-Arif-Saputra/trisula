@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { InlineMath } from 'react-katex';
+import { InlineMath } from '../KatexCompat';
 
 export const QuizQuestionRMEInflasi: React.FC = () => {
   const [selectedOptions, setSelectedOptions] = useState<number[]>([]);

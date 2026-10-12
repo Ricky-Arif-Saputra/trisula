@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { InlineMath } from 'react-katex';
+import { InlineMath } from '../KatexCompat';
 
 export const QuizAljabarSPLTV: React.FC = () => {
   const [selectedOption, setSelectedOption] = useState<number | null>(null);

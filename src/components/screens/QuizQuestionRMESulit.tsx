@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { InlineMath } from 'react-katex';
+import { InlineMath } from '../KatexCompat';
 
 export const QuizQuestionRMESulit: React.FC = () => {
   const [selectedOptions, setSelectedOptions] = useState<number[]>([]);

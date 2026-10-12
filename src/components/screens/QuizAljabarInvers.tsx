@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { InlineMath } from 'react-katex';
+import { InlineMath } from '../KatexCompat';
 
 export const QuizAljabarInvers: React.FC = () => {
   const [selectedOptions, setSelectedOptions] = useState<number[]>([]);

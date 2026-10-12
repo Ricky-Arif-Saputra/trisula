@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MathCategory } from '../../types';
 import { useAuth } from '../Auth/AuthProvider';
 import { supabase } from '../../lib/supabaseClient';
@@ -10,9 +10,9 @@ import {
   GripVertical, UploadCloud,
 } from 'lucide-react';
 
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 // Types
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 type AttachmentType = 'pdf' | 'video' | 'image' | 'youtube' | 'link' | 'audio';
 
 interface Attachment {
@@ -35,9 +35,9 @@ interface MateriPost {
   updated_at: string;
 }
 
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 // Constants
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 const TOPICS: { id: MathCategory; label: string; icon: string; gradient: string; accent: string; desc: string }[] = [  { id: 'bilangan',     label: 'Bilangan',              icon: 'tag',            gradient: 'from-blue-600 to-cyan-500',     accent: '#2563eb', desc: 'Operasi hitung, FPB & KPK, rasio & sifat bilangan' },
   { id: 'aljabar',      label: 'Aljabar',               icon: 'functions',      gradient: 'from-violet-600 to-purple-500', accent: '#7c3aed', desc: 'Persamaan, pertidaksamaan & sistem fungsi' },
   { id: 'geometri',     label: 'Geometri & Pengukuran', icon: 'category',       gradient: 'from-emerald-600 to-teal-500',  accent: '#059669', desc: 'Bangun 2D/3D, transformasi & pengukuran' },
@@ -56,9 +56,9 @@ const ATTACHMENT_META: Record<AttachmentType, { label: string; icon: React.React
 let _aid = 0;
 const mkaid = () => `att-${++_aid}-${Date.now()}`;
 
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 // Helpers
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 const getYoutubeId = (url: string): string | null => {
   const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
   return m ? m[1] : null;
@@ -67,9 +67,9 @@ const getYoutubeId = (url: string): string | null => {
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
-// ─────────────────────────────────────────────────────────────
-// AttachmentViewer — untuk siswa melihat lampiran
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
+// AttachmentViewer � untuk siswa melihat lampiran
+// -------------------------------------------------------------
 const AttachmentViewer: React.FC<{ att: Attachment }> = ({ att }) => {
   const meta = ATTACHMENT_META[att.type];
   const label = att.label || meta.label;
@@ -172,9 +172,9 @@ const AttachmentViewer: React.FC<{ att: Attachment }> = ({ att }) => {
   );
 };
 
-// ─────────────────────────────────────────────────────────────
-// PostCard — card ringkasan materi untuk daftar
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
+// PostCard � card ringkasan materi untuk daftar
+// -------------------------------------------------------------
 const PostCard: React.FC<{
   post: MateriPost;
   isAdmin: boolean;
@@ -257,9 +257,9 @@ const PostCard: React.FC<{
   );
 };
 
-// ─────────────────────────────────────────────────────────────
-// PostDetail — tampilan penuh satu materi
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
+// PostDetail � tampilan penuh satu materi
+// -------------------------------------------------------------
 const PostDetail: React.FC<{
   post: MateriPost;
   accentGradient: string;
@@ -322,14 +322,14 @@ const PostDetail: React.FC<{
     )}
 
     <div className="text-xs text-slate-400 pt-4 border-t border-slate-100 dark:border-slate-800">
-      Diposting oleh {post.created_by} · Terakhir diperbarui {formatDate(post.updated_at)}
+      Diposting oleh {post.created_by} � Terakhir diperbarui {formatDate(post.updated_at)}
     </div>
   </div>
 );
 
-// ─────────────────────────────────────────────────────────────
-// AttachmentEditorRow — satu baris lampiran di form admin
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
+// AttachmentEditorRow � satu baris lampiran di form admin
+// -------------------------------------------------------------
 
 // Tipe yang bisa upload file fisik
 const FILE_UPLOAD_ACCEPT: Partial<Record<AttachmentType, string>> = {
@@ -423,7 +423,7 @@ const AttachmentEditorRow: React.FC<{
       {/* File upload fisik */}
       {canUploadFile && (
         <div className="space-y-1.5">
-          <p className="text-[10px] font-bold text-slate-400">— atau upload file langsung —</p>
+          <p className="text-[10px] font-bold text-slate-400">� atau upload file langsung �</p>
           <div
             onClick={() => !uploading && fileInputRef.current?.click()}
             className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 border-dashed transition-colors cursor-pointer
@@ -445,7 +445,7 @@ const AttachmentEditorRow: React.FC<{
                     {att.url ? 'Ganti dengan file baru' : 'Klik untuk pilih file'}
                   </p>
                   <p className="text-[10px] text-slate-400 truncate">
-                    {FILE_UPLOAD_ACCEPT[att.type]} · Maks. 50 MB
+                    {FILE_UPLOAD_ACCEPT[att.type]} � Maks. 50 MB
                   </p>
                 </div>
                 {att.url && <Check size={14} className="text-emerald-500 shrink-0" />}
@@ -482,9 +482,9 @@ const AttachmentEditorRow: React.FC<{
   );
 };
 
-// ─────────────────────────────────────────────────────────────
-// PostForm — form tambah / edit materi (admin)
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
+// PostForm � form tambah / edit materi (admin)
+// -------------------------------------------------------------
 const PostForm: React.FC<{
   strand: string;
   existing: MateriPost | null;
@@ -664,9 +664,9 @@ const PostForm: React.FC<{
   );
 };
 
-// ─────────────────────────────────────────────────────────────
-// TopicScreen — daftar & detail materi satu topik
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
+// TopicScreen � daftar & detail materi satu topik
+// -------------------------------------------------------------
 const TopicScreen: React.FC<{
   topic: typeof TOPICS[number];
   onBack: () => void;
@@ -706,7 +706,7 @@ const TopicScreen: React.FC<{
     : null;
   const isFormOpen = formMode !== 'closed';
 
-  // ── Render post detail ──
+  // -- Render post detail --
   if (openPost && !isFormOpen) {
     return (
       <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-900">
@@ -820,7 +820,7 @@ const TopicScreen: React.FC<{
                     />
                   ))}
                 </div>
-                {/* Tombol tambah — satu-satunya, di bawah grid */}
+                {/* Tombol tambah � satu-satunya, di bawah grid */}
                 {isAdmin && (
                   <button onClick={() => setFormMode('new')}
                     className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-sm font-bold cursor-pointer hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-all">
@@ -836,9 +836,9 @@ const TopicScreen: React.FC<{
   );
 };
 
-// ─────────────────────────────────────────────────────────────
-// MateriScreen — halaman pilih topik (5 materi pokok)
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
+// MateriScreen � halaman pilih topik (5 materi pokok)
+// -------------------------------------------------------------
 interface MateriScreenProps {
   initialCategory?: MathCategory | null;
   onSelectCategory?: (category: MathCategory | null) => void;
@@ -866,21 +866,21 @@ export const MateriScreen: React.FC<MateriScreenProps> = ({
     return <TopicScreen topic={topic} onBack={() => handleSelectCat(null)} />;
   }
 
-  // ── Halaman pilih topik ──
+  // -- Halaman pilih topik --
   return (
     <div className="flex flex-col w-full pb-16 font-sans">
       {/* Hero */}
       <section className="px-4 pt-4 pb-3">
         <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-7 text-white shadow-2xl border border-white/10">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(99,102,241,0.15),transparent_60%)]" />
-          <div className="absolute right-0 bottom-0 opacity-[0.04] select-none text-[120px] font-black leading-none pointer-events-none pr-4 pb-2">∑</div>
+          <div className="absolute right-0 bottom-0 opacity-[0.04] select-none text-[120px] font-black leading-none pointer-events-none pr-4 pb-2">?</div>
           <div className="relative z-10">
             <div className="inline-flex items-center gap-2 bg-indigo-500/20 border border-indigo-500/30 rounded-full px-3 py-1 mb-4">
               <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
               <span className="text-[10px] font-black uppercase tracking-widest text-indigo-300">Bahan Ajar</span>
             </div>
             <h2 className="text-2xl font-extrabold tracking-tight leading-tight mb-2">Materi Pembelajaran</h2>
-            <p className="text-sm text-slate-400">5 topik matematika · Bahan ajar dikelola langsung oleh pengajar</p>
+            <p className="text-sm text-slate-400">5 topik matematika � Bahan ajar dikelola langsung oleh pengajar</p>
           </div>
         </div>
       </section>

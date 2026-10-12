@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../Auth/AuthProvider';
 import { supabase } from '../../lib/supabaseClient';
 import { RmePosttestBuilder } from './RmePosttestBuilder';
@@ -38,9 +38,9 @@ const STAGES = [
   { key: 'kesimpulan', label: 'Kesimpulan' },
 ] as const;
 
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 // HTML template untuk satu PDF siswa
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 function buildAnswerHtml(attempt: Attempt, pkg: ExamPackageRow): string {
   const stages = STAGES;
   const questionsHtml = Object.entries(attempt.essay_answers || {}).map(([qId, ans], qi) => {
@@ -51,7 +51,7 @@ function buildAnswerHtml(attempt: Attempt, pkg: ExamPackageRow): string {
           Soal ${qi + 1}
         </div>
         ${stages.map(s => {
-          const stageAns = (ans as any)[s.key] || '—';
+          const stageAns = (ans as any)[s.key] || '�';
           const stageScore = ai?.evaluation?.[s.key];
           return `
             <div style="border:1px solid #e2e8f0;border-top:none;padding:10px 14px;font-size:12px;">
@@ -86,9 +86,9 @@ function buildAnswerHtml(attempt: Attempt, pkg: ExamPackageRow): string {
       th { background: #f8fafc; font-weight: 700; color: #64748b; text-align: left; }
     </style></head><body>
       <h1>${pkg.title}</h1>
-      <div class="meta">${pkg.strand} · ${pkg.test_type === 'pretest' ? 'Pretest' : 'Posttest'} · ${tanggal}</div>
+      <div class="meta">${pkg.strand} � ${pkg.test_type === 'pretest' ? 'Pretest' : 'Posttest'} � ${tanggal}</div>
       <table>
-        <tr><th>Nama</th><td>${attempt.student_name || '—'}</td><th>NISN</th><td>${attempt.student_nisn || '—'}</td></tr>
+        <tr><th>Nama</th><td>${attempt.student_name || '�'}</td><th>NISN</th><td>${attempt.student_nisn || '�'}</td></tr>
         <tr><th>Nilai Akhir</th><td><span class="score-badge">${attempt.score}</span></td>
           <th>Poin</th><td>${attempt.total_essay_score || 0} / ${attempt.total_max_points || '?'}</td></tr>
       </table>
@@ -100,9 +100,9 @@ function buildAnswerHtml(attempt: Attempt, pkg: ExamPackageRow): string {
   `;
 }
 
-// ─────────────────────────────────────────────────────────────
-// AnswerDownloadModal — tampilkan daftar attempt + download ZIP
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
+// AnswerDownloadModal � tampilkan daftar attempt + download ZIP
+// -------------------------------------------------------------
 const AnswerDownloadModal: React.FC<{
   pkg: ExamPackageRow;
   onClose: () => void;
@@ -178,9 +178,9 @@ const AnswerDownloadModal: React.FC<{
       a.download = `Jawaban_${pkg.test_type}_${pkg.strand}_${Date.now()}.zip`;
       a.click();
       URL.revokeObjectURL(url);
-      setProgress(`✅ Selesai! ${attempts.length} PDF dalam ZIP.`);
+      setProgress(`? Selesai! ${attempts.length} PDF dalam ZIP.`);
     } catch (err: any) {
-      setProgress(`❌ Gagal: ${err.message}`);
+      setProgress(`? Gagal: ${err.message}`);
     } finally {
       setZipping(false);
     }
@@ -220,7 +220,7 @@ const AnswerDownloadModal: React.FC<{
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-slate-200 truncate">{att.student_name || 'Tanpa Nama'}</p>
-                    <p className="text-[10px] text-slate-500">NISN: {att.student_nisn || '—'} · {new Date(att.created_at).toLocaleDateString('id-ID')}</p>
+                    <p className="text-[10px] text-slate-500">NISN: {att.student_nisn || '�'} � {new Date(att.created_at).toLocaleDateString('id-ID')}</p>
                   </div>
                   <div className={`text-lg font-black ${att.score >= 70 ? 'text-emerald-400' : att.score >= 50 ? 'text-amber-400' : 'text-rose-400'}`}>
                     {att.score}
@@ -261,9 +261,9 @@ const AnswerDownloadModal: React.FC<{
   );
 };
 
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 // AdminSoalManager
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 export const AdminSoalManager: React.FC = () => {
   const { user } = useAuth();
   const [packages, setPackages] = useState<ExamPackageRow[]>([]);
@@ -334,7 +334,7 @@ export const AdminSoalManager: React.FC = () => {
             <Package2 size={22} className="text-indigo-400" />
             Kelola Paket Ujian RME
           </h2>
-          <p className="text-sm text-slate-400 mt-1">Buat, edit, hapus paket · Download ZIP jawaban siswa untuk Pretest & Posttest.</p>
+          <p className="text-sm text-slate-400 mt-1">Buat, edit, hapus paket � Download ZIP jawaban siswa untuk Pretest & Posttest.</p>
         </div>
 
         {/* Filter tabs */}
@@ -410,7 +410,7 @@ export const AdminSoalManager: React.FC = () => {
           {isBuilderOpen ? (
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-black text-slate-300 uppercase tracking-widest">
-                Buat Paket — {builderTestType.charAt(0).toUpperCase() + builderTestType.slice(1)}
+                Buat Paket � {builderTestType.charAt(0).toUpperCase() + builderTestType.slice(1)}
               </span>
               <button onClick={() => setIsBuilderOpen(false)}
                 className="w-7 h-7 rounded-lg bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-600 cursor-pointer">
@@ -440,7 +440,7 @@ export const AdminSoalManager: React.FC = () => {
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-xl animate-in slide-in-from-bottom-4 fade-in duration-300">
           <div className="bg-slate-100 dark:bg-slate-800 px-5 py-3 flex items-center justify-between border-b border-slate-200 dark:border-slate-700">
             <span className="text-sm font-black text-slate-700 dark:text-slate-200">
-              Buat Paket — {builderTestType.charAt(0).toUpperCase() + builderTestType.slice(1)}
+              Buat Paket � {builderTestType.charAt(0).toUpperCase() + builderTestType.slice(1)}
             </span>
             <button onClick={() => setIsBuilderOpen(false)}
               className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer">

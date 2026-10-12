@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { InlineMath } from 'react-katex';
+import { InlineMath } from '../KatexCompat';
 
 export const QuizAljabarProgramLinear: React.FC = () => {
   const [answers, setAnswers] = useState<(boolean | null)[]>([null, null, null, null, null]);
