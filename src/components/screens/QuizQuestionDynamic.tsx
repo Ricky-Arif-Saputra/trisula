@@ -220,16 +220,44 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
 
     // Panggil AI per tahap — jika gagal (lokal/timeout), isi dengan fallback
     for (const sk of stageKeys) {
-      const jawabanTahap = answerBlocks[sk].map(b => b.value.trim()).filter(Boolean).join('\n');
-      const rubrik  = (keys as any)[`ref_${sk}`] as string || '';
+      // Flatten multi-blok ke teks yang bisa dibaca AI
+      // - blok teks: ambil apa adanya
+      // - blok latex: wrap dengan $$ agar AI tahu itu persamaan matematika
+      // - blok gambar: skip (AI tidak bisa memproses gambar)
+      const jawabanTahap = answerBlocks[sk]
+        .map(b => {
+          if (!b.value.trim()) return '';
+          if (b.type === 'latex') return `$$${b.value.trim()}$$`;
+          if (b.type === 'image') return '[gambar]';
+          return b.value.trim();
+        })
+        .filter(Boolean)
+        .join('\n');
+      const rubrik   = (keys as any)[`ref_${sk}`] as string || '';
       const skorMaks = (keys as any)[`points_${sk}`] as number || 20;
+
+      // Flatten rubrik: bisa berupa JSON blok array atau plain string
+      let rubrikText = rubrik;
+      try {
+        const parsed = JSON.parse(rubrik);
+        if (Array.isArray(parsed)) {
+          rubrikText = parsed
+            .map((b: { type: string; value: string }) => {
+              if (!b.value?.trim()) return '';
+              if (b.type === 'latex') return `$$${b.value.trim()}$$`;
+              return b.value.trim();
+            })
+            .filter(Boolean)
+            .join('\n');
+        }
+      } catch { /* plain string, pakai langsung */ }
 
       try {
         const result = await nilaiTahap({
           soalId:   question.id,
           tahap:    sk,
           jawaban:  jawabanTahap || '—',
-          rubrik:   rubrik || `Berikan nilai untuk tahap ${sk}`,
+          rubrik:   rubrikText || `Berikan nilai untuk tahap ${sk}`,
           skorMaks,
         });
         scoreMap[sk] = { skor: result.skor, skor_maks: skorMaks, alasan: result.alasan };
@@ -551,11 +579,22 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
                     {/* Jawaban siswa */}
                     <div>
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Jawabanmu</p>
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         {answerBlocks[s.key as StageKey].some(b => b.value.trim()) ? (
                           answerBlocks[s.key as StageKey].map(b => {
                             if (!b.value.trim()) return null;
-                            if (b.type === 'image') return <img key={b.id} src={b.value} alt="" className="max-h-32 rounded-lg border object-contain" />;
+                            if (b.type === 'image') {
+                              return <img key={b.id} src={b.value} alt="" className="max-h-32 rounded-lg border object-contain" />;
+                            }
+                            if (b.type === 'latex') {
+                              // Blok latex: value adalah pure expression, render sebagai display math
+                              return (
+                                <div key={b.id} className="overflow-x-auto py-1">
+                                  <MathRenderer text={`$$${b.value}$$`} className="text-sm" />
+                                </div>
+                              );
+                            }
+                            // Teks biasa (bisa mengandung $inline$ atau $$display$$)
                             return <div key={b.id} className="text-sm text-slate-700"><MathRenderer text={b.value} /></div>;
                           })
                         ) : (
