@@ -12,6 +12,7 @@ import {
   numbersMatch,
   type RmeHint,
 } from './LatihanTypes';
+import { nilaiTahap } from '../../lib/aiScoring';
 import { Lightbulb, CheckCircle, ChevronRight, Plus, Type, Sigma, ImageIcon, Trash2 } from 'lucide-react';
 
 interface QuizQuestionDynamicProps {
@@ -135,6 +136,10 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
   const [numericCorrect, setNumericCorrect] = useState(false);
   const [startedAt] = useState<string>(new Date().toISOString());
 
+  // AI scoring state
+  const [scoring, setScoring] = useState(false);  // sedang memanggil AI
+  const [aiScores, setAiScores] = useState<Record<string, { skor: number; skor_maks: number; alasan: string }>>({});
+
   useEffect(() => {
     const fetchQ = async () => {
       setLoading(true);
@@ -204,22 +209,46 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
   const isLast = stageIdx === STAGES.length - 1;
 
   const handleSubmit = async () => {
+    if (!question) return;
     const isCorrect = numbersMatch(finalNumber, keys.finalNumericAnswer);
     setNumericCorrect(isCorrect);
     setSubmitted(true);
+    setScoring(true);
 
-    // Simpan jawaban ke tabel jawaban agar admin bisa download ZIP
-    if (user && question) {
+    const stageKeys = ['diketahui', 'ditanya', 'pengerjaan', 'kesimpulan'] as const;
+    const scoreMap: Record<string, { skor: number; skor_maks: number; alasan: string }> = {};
+
+    // Panggil AI per tahap secara berurutan
+    for (const sk of stageKeys) {
+      const jawabanTahap = answerBlocks[sk].map(b => b.value.trim()).filter(Boolean).join('\n');
+      const rubrik = (keys as any)[`ref_${sk}`] as string || '';
+      const skorMaks = (keys as any)[`points_${sk}`] as number || 20;
+
       try {
-        // Gabungkan semua jawaban 4 tahap menjadi satu teks
-        const jawabanGabungan = STAGES.map(s => {
-          const blocks = answerBlocks[s.key as StageKey];
-          const teks = blocks.map(b => b.value.trim()).filter(Boolean).join('\n');
-          return `[${s.label}]\n${teks || '—'}`;
-        }).join('\n\n');
+        const result = await nilaiTahap({
+          soalId: question.id,
+          tahap: sk,
+          jawaban: jawabanTahap || '—',
+          rubrik: rubrik || `Berikan nilai untuk tahap ${sk}`,
+          skorMaks,
+        });
+        scoreMap[sk] = { skor: result.skor, skor_maks: skorMaks, alasan: result.alasan };
+      } catch (e: any) {
+        scoreMap[sk] = { skor: 0, skor_maks: skorMaks, alasan: `Gagal dinilai AI: ${e.message}` };
+      }
+    }
 
-        // Hitung skor berdasarkan jawaban angka akhir saja (AI scoring tidak dijalankan di sini)
-        // Simpan juga sebagai JSON lengkap untuk keperluan PDF
+    setAiScores(scoreMap);
+    setScoring(false);
+
+    // Hitung total skor
+    const totalSkor = Object.values(scoreMap).reduce((s, v) => s + v.skor, 0);
+    const totalMaks = Object.values(scoreMap).reduce((s, v) => s + v.skor_maks, 0);
+    const normScore = totalMaks > 0 ? Math.round((totalSkor / totalMaks) * 100) : 0;
+
+    // Simpan ke tabel jawaban
+    if (user) {
+      try {
         const answerJson = JSON.stringify({
           diketahui:  answerBlocks.diketahui.map(b => b.value).join('\n'),
           ditanya:    answerBlocks.ditanya.map(b => b.value).join('\n'),
@@ -227,27 +256,26 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
           kesimpulan: answerBlocks.kesimpulan.map(b => b.value).join('\n'),
           finalNumber,
           isCorrect,
+          ai_scores: scoreMap,
+          total_skor: totalSkor,
+          total_maks: totalMaks,
           student_name: userName,
           student_nisn: userNisn,
           started_at: startedAt,
           finished_at: new Date().toISOString(),
+          test_type: question.test_type,
+          strand: question.strand,
         });
-
         const { error: insertErr } = await supabase.from('jawaban').insert([{
-          user_id:    user.id,
-          soal_id:    question.id,
-          jawaban:    answerJson,
-          skor:       isCorrect ? (keys.finalNumericAnswer != null ? 100 : null) : 0,
-          skor_maks:  100,
-          alasan:     isCorrect ? 'Jawaban angka akhir benar.' : 'Jawaban angka akhir tidak tepat.',
+          user_id:   user.id,
+          soal_id:   question.id,
+          jawaban:   answerJson,
+          skor:      normScore,
+          skor_maks: 100,
+          alasan:    isCorrect ? 'Jawaban angka akhir benar.' : 'Jawaban angka akhir tidak tepat.',
         }]);
-        if (insertErr) {
-          console.error('Gagal menyimpan jawaban ke DB:', insertErr.message, insertErr.details, insertErr.hint);
-        }
-      } catch (e) {
-        // Gagal simpan tidak harus error ke user
-        console.error('Gagal menyimpan jawaban:', e);
-      }
+        if (insertErr) console.error('Gagal simpan jawaban:', insertErr.message);
+      } catch (e) { console.error(e); }
     }
   };
 
@@ -421,60 +449,137 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
                 <button onClick={handleSubmit} disabled={!finalNumber.trim()}
                   className="flex-1 py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm disabled:bg-slate-300 cursor-pointer flex items-center justify-center gap-2 hover:bg-emerald-700 transition-colors">
                   <CheckCircle size={16} /> Cek jawaban akhir
-                </button>
-              )}
+                </button>              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── LOADING AI ── */}
+        {submitted && scoring && (
+          <div className="p-8 flex flex-col items-center gap-4">
+            <div className="relative w-16 h-16">
+              <div className="absolute inset-0 rounded-full border-4 border-indigo-100" />
+              <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-indigo-600 animate-spin" />
+              <div className="absolute inset-3 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center">
+                <span className="material-symbols-outlined text-white text-[18px]">smart_toy</span>
+              </div>
+            </div>
+            <div className="text-center">
+              <p className="font-bold text-slate-700">AI sedang menilai jawabanmu...</p>
+              <p className="text-xs text-slate-400 mt-1">Ini mungkin memakan waktu 10–30 detik</p>
             </div>
           </div>
         )}
 
         {/* ── HASIL ── */}
-        {submitted && (
+        {submitted && !scoring && (
           <div className="p-5 space-y-4">
-            {/* Verdict */}
+            {/* Verdict jawaban angka */}
             <div className={`p-4 rounded-xl border flex items-start gap-3 ${numericCorrect ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
               <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0 ${numericCorrect ? 'bg-emerald-500' : 'bg-rose-500'}`}>
                 <span className="material-symbols-outlined">{numericCorrect ? 'verified' : 'close'}</span>
               </div>
               <div>
                 <h3 className={`font-bold ${numericCorrect ? 'text-emerald-700' : 'text-rose-700'}`}>
-                  {numericCorrect ? 'Jawaban akhir tepat!' : 'Jawaban akhir belum tepat'}
+                  {numericCorrect ? 'Jawaban angka tepat!' : 'Jawaban angka belum tepat'}
                 </h3>
                 <p className="text-sm text-slate-600 mt-0.5">
                   Isianmu: <span className="font-mono font-bold">{finalNumber || '—'}</span>
                   {' · '}Kunci: <span className="font-mono font-bold">{keys.finalNumericAnswer ?? '—'}</span>
                 </p>
-                <p className="text-xs text-slate-400 mt-1">Angka dicocokkan persis dengan kunci jawaban.</p>
               </div>
             </div>
 
-            {/* Rekap per tahap */}
-            {STAGES.map(s => (
-              <div key={s.key} className={`rounded-xl border ${STAGE_COLORS[s.color].border} p-4`}>
-                <div className={`text-xs font-black uppercase mb-2 ${STAGE_COLORS[s.color].label}`}>Tahap {s.label}</div>
-
-                {/* Jawaban siswa (render blok) */}
-                <div className="text-xs text-slate-500 mb-1">Jawabanmu</div>
-                <div className="space-y-1 mb-3">
-                  {answerBlocks[s.key as StageKey].some(b => b.value.trim()) ? (
-                    answerBlocks[s.key as StageKey].map(b => {
-                      if (!b.value.trim()) return null;
-                      if (b.type === 'image') return <img key={b.id} src={b.value} alt="" className="max-h-32 rounded-lg border border-slate-200 object-contain" />;
-                      return <div key={b.id} className="text-sm"><MathRenderer text={b.value} /></div>;
-                    })
-                  ) : (
-                    <p className="text-sm text-slate-400 italic">—</p>
-                  )}
+            {/* Skor total AI */}
+            {Object.keys(aiScores).length > 0 && (() => {
+              const total = Object.values(aiScores).reduce((s, v) => s + v.skor, 0);
+              const maks  = Object.values(aiScores).reduce((s, v) => s + v.skor_maks, 0);
+              const pct   = maks > 0 ? Math.round(total / maks * 100) : 0;
+              const c     = pct >= 75 ? 'text-emerald-600 bg-emerald-50 border-emerald-200'
+                          : pct >= 50 ? 'text-amber-600 bg-amber-50 border-amber-200'
+                          : 'text-rose-600 bg-rose-50 border-rose-200';
+              return (
+                <div className={`flex items-center justify-between p-4 rounded-xl border ${c}`}>
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-widest opacity-60">Total Skor AI</p>
+                    <p className="text-2xl font-black mt-0.5">{pct}<span className="text-sm font-bold">/100</span></p>
+                  </div>
+                  <div className="text-right text-xs opacity-70">
+                    <p>{total} / {maks} poin</p>
+                    <p className="mt-0.5">dari 4 tahap</p>
+                  </div>
                 </div>
+              );
+            })()}
 
-                {/* Kunci acuan */}
-                {keys[`ref_${s.key}` as 'ref_diketahui'] && (
-                  <>
-                    <div className="text-xs font-bold text-indigo-600 mb-1">Kunci acuan</div>
-                    <RefBlocks raw={String(keys[`ref_${s.key}` as 'ref_diketahui'])} />
-                  </>
-                )}
-              </div>
-            ))}
+            {/* Detail per tahap */}
+            {STAGES.map(s => {
+              const ai = aiScores[s.key];
+              const color = STAGE_COLORS[s.color];
+              return (
+                <div key={s.key} className={`rounded-xl border-2 ${color.border} overflow-hidden`}>
+                  {/* Header tahap */}
+                  <div className={`px-4 py-2.5 ${color.bg} flex items-center justify-between`}>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-6 h-6 rounded-lg ${color.badge} flex items-center justify-center`}>
+                        <span className="material-symbols-outlined text-white text-[12px]">{s.icon}</span>
+                      </div>
+                      <span className={`text-xs font-black uppercase ${color.label}`}>Tahap {s.label}</span>
+                    </div>
+                    {ai && (
+                      <span className={`text-xs font-black px-2 py-0.5 rounded-full ${
+                        ai.skor / ai.skor_maks >= 0.75
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : ai.skor / ai.skor_maks >= 0.5
+                          ? 'bg-amber-100 text-amber-700'
+                          : 'bg-rose-100 text-rose-700'
+                      }`}>
+                        {ai.skor} / {ai.skor_maks} poin
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="p-4 space-y-3 bg-white">
+                    {/* Jawaban siswa */}
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Jawabanmu</p>
+                      <div className="space-y-1">
+                        {answerBlocks[s.key as StageKey].some(b => b.value.trim()) ? (
+                          answerBlocks[s.key as StageKey].map(b => {
+                            if (!b.value.trim()) return null;
+                            if (b.type === 'image') return <img key={b.id} src={b.value} alt="" className="max-h-32 rounded-lg border object-contain" />;
+                            return <div key={b.id} className="text-sm text-slate-700"><MathRenderer text={b.value} /></div>;
+                          })
+                        ) : (
+                          <p className="text-sm text-slate-400 italic">—</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Feedback AI */}
+                    {ai && (
+                      <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3">
+                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[12px]">smart_toy</span>
+                          Evaluasi AI
+                        </p>
+                        <p className="text-xs text-slate-700 leading-relaxed">{ai.alasan}</p>
+                      </div>
+                    )}
+
+                    {/* Kunci acuan */}
+                    {keys[`ref_${s.key}` as 'ref_diketahui'] && (
+                      <div>
+                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">Kunci Acuan</p>
+                        <div className="bg-indigo-50/50 rounded-lg p-2">
+                          <RefBlocks raw={String(keys[`ref_${s.key}` as 'ref_diketahui'])} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
 
             <button onClick={onFinish}
               className="w-full py-3 rounded-xl bg-surface-container-high font-bold text-sm cursor-pointer hover:bg-surface-container-highest transition-colors">

@@ -147,7 +147,12 @@ function buildAnswerHtml(
   const isCorrect = !!parsedAns.isCorrect;
   const benar = isCorrect ? 1 : 0;
   const salah = questions.length - benar;
-  const score  = (att as any).skor ?? 0;
+  const rawScore = (att as any).skor ?? 0;
+  // Hitung nilai dari AI scores jika ada
+  const aiScoreMap = parsedAns.ai_scores as Record<string, { skor: number; skor_maks: number; alasan: string }> | undefined;
+  const aiTotal = aiScoreMap ? Object.values(aiScoreMap).reduce((s, v) => s + (v.skor || 0), 0) : null;
+  const aiMaks  = aiScoreMap ? Object.values(aiScoreMap).reduce((s, v) => s + (v.skor_maks || 0), 0) : null;
+  const score   = aiTotal !== null && aiMaks && aiMaks > 0 ? Math.round(aiTotal / aiMaks * 100) : rawScore;
   const scoreColor = score >= 75 ? '#16a34a' : score >= 50 ? '#d97706' : '#dc2626';
 
   const tanggal    = fmtDate(parsedAns.started_at || att.created_at);
@@ -182,6 +187,7 @@ function buildAnswerHtml(
     <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;border-right:1px solid #e2e8f0;text-align:center;width:14%;">
       <div style="font-size:8px;font-weight:900;text-transform:uppercase;color:#64748b;letter-spacing:.06em;">Nilai</div>
       <div style="font-size:26px;font-weight:900;color:${scoreColor};line-height:1.1;">${score}</div>
+      ${aiTotal !== null ? `<div style="font-size:9px;color:#64748b;margin-top:1px;">${aiTotal}/${aiMaks} poin</div>` : ''}
     </td>
     <td style="padding:10px 14px;border-bottom:1px solid #e2e8f0;border-right:1px solid #e2e8f0;text-align:center;width:12%;">
       <div style="font-size:8px;font-weight:900;text-transform:uppercase;color:#64748b;letter-spacing:.06em;">Benar</div>
@@ -228,13 +234,21 @@ function buildAnswerHtml(
 
     // 4 tahap jawaban — tabel 2 kolom
     const stageRows = STAGE_KEYS.map((sk, si) => {
-      const ans = renderMathToHtml(String(parsedAns[sk] || '—'));
+      const ans    = renderMathToHtml(String(parsedAns[sk] || '—'));
+      const aiData = parsedAns.ai_scores?.[sk] as { skor: number; skor_maks: number; alasan: string } | undefined;
+      const pct    = aiData && aiData.skor_maks > 0 ? Math.round(aiData.skor / aiData.skor_maks * 100) : null;
+      const scolor = pct !== null ? (pct >= 75 ? '#16a34a' : pct >= 50 ? '#d97706' : '#dc2626') : '#94a3b8';
+
       return `<tr>
         <td valign="top" style="border:1px solid #e2e8f0;padding:7px 10px;background:#f8fafc;width:90px;">
           <div style="font-size:8px;font-weight:900;text-transform:uppercase;color:#64748b;">Tahap ${si + 1}</div>
           <div style="font-size:11px;font-weight:700;color:#334155;">${STAGE_LABELS[si]}</div>
+          ${aiData ? `<div style="font-size:13px;font-weight:900;color:${scolor};margin-top:4px;">${aiData.skor}/${aiData.skor_maks}</div><div style="font-size:9px;color:${scolor};">poin</div>` : ''}
         </td>
-        <td valign="top" style="border:1px solid #e2e8f0;border-left:none;padding:7px 10px;background:#fff;font-size:12px;line-height:1.5;">${ans}</td>
+        <td valign="top" style="border:1px solid #e2e8f0;border-left:none;padding:7px 10px;background:#fff;">
+          <div style="font-size:12px;line-height:1.5;color:#1e293b;margin-bottom:6px;">${ans}</div>
+          ${aiData?.alasan ? `<div style="background:#eef2ff;border-left:3px solid #6366f1;padding:5px 8px;font-size:10px;color:#4338ca;font-style:italic;line-height:1.5;">🤖 ${escHtml(aiData.alasan)}</div>` : ''}
+        </td>
       </tr>`;
     }).join('');
 
