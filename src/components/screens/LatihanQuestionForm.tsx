@@ -88,23 +88,22 @@ const BlockInput: React.FC<{
           )}
         </div>
       ) : block.type === 'latex' ? (
-        /* LaTeX block: monospace textarea + auto live preview */
+        /* LaTeX: textarea mono + preview hasil render */
         <MathInput
           value={block.value}
           onChange={v => onChange(block.id, v)}
           rows={2}
-          accent="violet"
           placeholder={meta.placeholder}
-          inputClassName="border-violet-200 font-mono"
+          displayMode={true}
         />
       ) : (
-        /* Text block: textarea dengan live preview otomatis jika ada $...$ */
-        <MathInput
-          value={block.value}
-          onChange={v => onChange(block.id, v)}
+        /* Text: textarea biasa, tidak perlu preview */
+        <textarea
           rows={3}
-          accent="indigo"
+          value={block.value}
+          onChange={e => onChange(block.id, e.target.value)}
           placeholder={meta.placeholder}
+          className="w-full p-2 rounded-lg border border-slate-200 bg-white text-sm outline-none resize-y focus:border-indigo-400"
         />
       )}
     </div>

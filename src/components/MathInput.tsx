@@ -1,16 +1,13 @@
 /**
- * MathInput — textarea + live LaTeX preview yang selalu tampil
+ * MathInput — untuk blok tipe LATEX saja.
  *
- * Layout:
- *  [textarea — input syntax]
- *  ─────────────────────────
- *  [preview — hasil render]   ← selalu tampil jika ada konten
- *
- * Preview muncul realtime tanpa klik tombol apapun.
- * Mendukung: teks biasa, $inline$, $$display$$.
+ * - Input dianggap pure LaTeX expression (tanpa $ wrapper)
+ * - Preview hasil render selalu tampil di bawah textarea
+ * - Textarea pakai font mono untuk mengetik syntax
  */
 import React from 'react';
-import { MathRenderer } from './MathRenderer';
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
 
 interface MathInputProps {
   value: string;
@@ -20,57 +17,71 @@ interface MathInputProps {
   inputClassName?: string;
   accent?: 'indigo' | 'amber' | 'violet' | 'emerald' | 'sky';
   disabled?: boolean;
-  /** Label area preview */
-  previewLabel?: string;
+  displayMode?: boolean; // true = block/center, false = inline
 }
 
 const ACCENT_CLS: Record<string, string> = {
-  indigo:  'focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200',
-  amber:   'focus:border-amber-400  focus:ring-1 focus:ring-amber-200',
-  violet:  'focus:border-violet-400 focus:ring-1 focus:ring-violet-200',
-  emerald: 'focus:border-emerald-400 focus:ring-1 focus:ring-emerald-200',
-  sky:     'focus:border-sky-400   focus:ring-1 focus:ring-sky-200',
+  indigo:  'focus:border-indigo-400',
+  amber:   'focus:border-amber-400',
+  violet:  'focus:border-violet-500',
+  emerald: 'focus:border-emerald-400',
+  sky:     'focus:border-sky-400',
 };
+
+function renderKatex(expr: string, display: boolean): string {
+  if (!expr.trim()) return '';
+  try {
+    return katex.renderToString(expr.trim(), {
+      throwOnError: false,
+      displayMode: display,
+      output: 'html',
+    });
+  } catch {
+    return `<code style="color:#ef4444;font-size:0.8em;font-family:monospace">${expr}</code>`;
+  }
+}
 
 export const MathInput: React.FC<MathInputProps> = ({
   value,
   onChange,
-  placeholder = 'Ketik teks atau LaTeX: $x^2$ atau $$\\frac{a}{b}$$',
-  rows = 3,
+  placeholder = '\\frac{a}{b} + x^2',
+  rows = 2,
   inputClassName = '',
-  accent = 'indigo',
+  accent = 'violet',
   disabled = false,
-  previewLabel = 'Tampilan',
+  displayMode = true,
 }) => {
   const hasContent = value.trim().length > 0;
-  const ac = ACCENT_CLS[accent] ?? ACCENT_CLS.indigo;
+  const rendered = hasContent ? renderKatex(value, displayMode) : '';
+  const ac = ACCENT_CLS[accent] ?? ACCENT_CLS.violet;
 
   return (
-    <div className="flex flex-col gap-1.5">
-      {/* ── Textarea (selalu tampil untuk edit) ── */}
+    <div className="space-y-1.5">
+      {/* Textarea — ketik LaTeX syntax */}
       <textarea
         rows={rows}
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         disabled={disabled}
-        className={`w-full px-3 py-2 rounded-lg border border-slate-200 bg-white
-          text-sm font-mono outline-none resize-y transition-colors
+        spellCheck={false}
+        className={`w-full px-3 py-2 rounded-lg border border-violet-200 bg-white
+          text-xs font-mono outline-none resize-y transition-colors
           ${ac}
-          disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed
+          disabled:bg-slate-50 disabled:cursor-not-allowed
           ${inputClassName}`}
       />
 
-      {/* ── Preview realtime — muncul otomatis jika ada konten ── */}
-      {hasContent && (
-        <div className="rounded-lg border border-dashed border-indigo-200 bg-indigo-50/60 px-3 py-2.5">
-          <p className="text-[9px] font-black uppercase tracking-widest text-indigo-400 mb-1.5 flex items-center gap-1">
-            <svg width="9" height="9" viewBox="0 0 9 9" fill="none" className="inline"><circle cx="4.5" cy="4.5" r="4.5" fill="#818cf8"/></svg>
-            {previewLabel}
+      {/* Preview hasil render — selalu tampil jika ada konten */}
+      {hasContent && rendered && (
+        <div className="px-4 py-3 rounded-lg border border-violet-200 bg-violet-50/70 overflow-x-auto">
+          <p className="text-[9px] font-black uppercase tracking-widest text-violet-400 mb-1.5">
+            ∫ Tampilan LaTeX
           </p>
-          <div className="text-sm text-slate-800 leading-relaxed">
-            <MathRenderer text={value} />
-          </div>
+          <div
+            className="text-slate-800 katex-preview"
+            dangerouslySetInnerHTML={{ __html: rendered }}
+          />
         </div>
       )}
     </div>

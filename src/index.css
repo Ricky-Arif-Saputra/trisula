@@ -1,6 +1,22 @@
 @import "tailwindcss";
 @import 'katex/dist/katex.min.css';
 
+/* ── KaTeX protection: pastikan styling KaTeX tidak di-override Tailwind ── */
+.katex, .katex * {
+  box-sizing: content-box !important;
+  border: 0 !important;
+  margin: 0;
+  padding: 0;
+}
+.katex .base, .katex .strut {
+  display: inline-block;
+}
+.katex-display {
+  display: block;
+  text-align: center;
+  margin: 0.5em 0;
+}
+
 @theme {
   --color-surface: #faf8ff;
   --color-surface-dim: #d2d9f4;
