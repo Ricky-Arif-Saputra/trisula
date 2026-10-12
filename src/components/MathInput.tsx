@@ -1,16 +1,15 @@
 /**
- * MathInput
- * ──────────────────────────────────────────────────────────────
- * Textarea dengan live-preview LaTeX selalu aktif.
+ * MathInput — textarea + live LaTeX preview yang selalu tampil
  *
- * Cara kerja:
- *  • User mengetik di textarea (value disimpan as-is, misal "$x^2 + 1$")
- *  • Selama ada konten, DI BAWAH textarea langsung tampil hasil render
- *    LaTeX — bukan syntax mentah.
- *  • Tidak perlu klik tombol apapun; preview muncul realtime.
- *  • Mendukung: teks biasa, $inline$, dan $$display$$.
+ * Layout:
+ *  [textarea — input syntax]
+ *  ─────────────────────────
+ *  [preview — hasil render]   ← selalu tampil jika ada konten
+ *
+ * Preview muncul realtime tanpa klik tombol apapun.
+ * Mendukung: teks biasa, $inline$, $$display$$.
  */
-import React, { useRef } from 'react';
+import React from 'react';
 import { MathRenderer } from './MathRenderer';
 
 interface MathInputProps {
@@ -18,19 +17,19 @@ interface MathInputProps {
   onChange: (v: string) => void;
   placeholder?: string;
   rows?: number;
-  /** Extra className untuk textarea */
   inputClassName?: string;
-  /** Warna aksen border-fokus */
   accent?: 'indigo' | 'amber' | 'violet' | 'emerald' | 'sky';
   disabled?: boolean;
+  /** Label area preview */
+  previewLabel?: string;
 }
 
-const ACCENT: Record<string, string> = {
-  indigo:  'focus:border-indigo-400',
-  amber:   'focus:border-amber-400',
-  violet:  'focus:border-violet-400',
-  emerald: 'focus:border-emerald-400',
-  sky:     'focus:border-sky-400',
+const ACCENT_CLS: Record<string, string> = {
+  indigo:  'focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200',
+  amber:   'focus:border-amber-400  focus:ring-1 focus:ring-amber-200',
+  violet:  'focus:border-violet-400 focus:ring-1 focus:ring-violet-200',
+  emerald: 'focus:border-emerald-400 focus:ring-1 focus:ring-emerald-200',
+  sky:     'focus:border-sky-400   focus:ring-1 focus:ring-sky-200',
 };
 
 export const MathInput: React.FC<MathInputProps> = ({
@@ -41,34 +40,37 @@ export const MathInput: React.FC<MathInputProps> = ({
   inputClassName = '',
   accent = 'indigo',
   disabled = false,
+  previewLabel = 'Tampilan',
 }) => {
-  const ref = useRef<HTMLTextAreaElement>(null);
   const hasContent = value.trim().length > 0;
+  const ac = ACCENT_CLS[accent] ?? ACCENT_CLS.indigo;
 
   return (
-    <div className="space-y-1">
-      {/* Input area */}
+    <div className="flex flex-col gap-1.5">
+      {/* ── Textarea (selalu tampil untuk edit) ── */}
       <textarea
-        ref={ref}
         rows={rows}
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         disabled={disabled}
-        className={`w-full p-2.5 rounded-lg border border-slate-200 bg-white text-sm
-          outline-none resize-y transition-colors font-mono
-          ${ACCENT[accent] ?? ACCENT.indigo}
+        className={`w-full px-3 py-2 rounded-lg border border-slate-200 bg-white
+          text-sm font-mono outline-none resize-y transition-colors
+          ${ac}
           disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed
           ${inputClassName}`}
       />
 
-      {/* Live preview — always shown when there's content */}
+      {/* ── Preview realtime — muncul otomatis jika ada konten ── */}
       {hasContent && (
-        <div className="px-3 py-2 rounded-lg border border-indigo-100 bg-slate-50 min-h-[32px]">
-          <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-1">
-            Tampilan
-          </span>
-          <MathRenderer text={value} className="text-sm text-slate-800" />
+        <div className="rounded-lg border border-dashed border-indigo-200 bg-indigo-50/60 px-3 py-2.5">
+          <p className="text-[9px] font-black uppercase tracking-widest text-indigo-400 mb-1.5 flex items-center gap-1">
+            <svg width="9" height="9" viewBox="0 0 9 9" fill="none" className="inline"><circle cx="4.5" cy="4.5" r="4.5" fill="#818cf8"/></svg>
+            {previewLabel}
+          </p>
+          <div className="text-sm text-slate-800 leading-relaxed">
+            <MathRenderer text={value} />
+          </div>
         </div>
       )}
     </div>

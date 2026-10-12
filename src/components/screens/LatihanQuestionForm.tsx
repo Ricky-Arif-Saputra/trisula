@@ -440,21 +440,24 @@ export const LatihanQuestionForm: React.FC<LatihanQuestionFormProps> = ({
                             <Trash2 size={14} />
                           </button>
                           <span className="text-xs font-bold text-amber-600 mb-2 block">Kisi-kisi #{i + 1}</span>
-                          <MathInput
-                            value={h.question}
-                            onChange={v => updateHint(h.id, 'question', v)}
+                          {/* Pertanyaan kisi-kisi — tulisan biasa, tanpa LaTeX */}
+                          <textarea
                             rows={2}
-                            accent="amber"
-                            placeholder="Tulisan pemandu / pertanyaan (boleh LaTeX: $x^2$)"
+                            value={h.question}
+                            onChange={e => updateHint(h.id, 'question', e.target.value)}
+                            placeholder="Tulisan pemandu / pertanyaan (muncul ke siswa)"
+                            className="w-full p-2 rounded-md border border-amber-200 bg-white text-xs outline-none resize-y focus:border-amber-400"
                           />
+                          {/* Jawaban kisi-kisi — dukung LaTeX dengan live preview */}
                           <div className="mt-1.5">
+                            <p className="text-[9px] font-bold text-amber-700 uppercase tracking-widest mb-1">Kunci Jawaban Kisi-kisi</p>
                             <MathInput
                               value={h.answer}
                               onChange={v => updateHint(h.id, 'answer', v)}
                               rows={2}
                               accent="amber"
-                              placeholder="Jawaban kisi-kisi (boleh LaTeX, muncul setelah siswa klik 'Lihat Jawaban')"
-                              inputClassName="bg-amber-50/60 italic"
+                              placeholder="Kunci jawaban (boleh LaTeX: $x^2$ atau $$\frac{a}{b}$$)"
+                              previewLabel="Tampilan Jawaban"
                             />
                           </div>
                         </div>
