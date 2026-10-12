@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { MathRenderer } from '../MathRenderer';
+import { MathInput } from '../MathInput';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../Auth/AuthProvider';
 import type { Strand } from '../../hooks/useQuestions';
@@ -13,7 +14,7 @@ import {
   parseRmeKeys,
   stripRmeMetaBlocks,
 } from './LatihanTypes';
-import { Trash2, Eye, X, Type, Sigma, ImageIcon, Check, AlertCircle, Loader2, Plus, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trash2, X, Type, Sigma, ImageIcon, Check, AlertCircle, Loader2, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 
 // ─────────────────────────────────────────────
 // Types
@@ -75,25 +76,16 @@ const BlockInput: React.FC<{
   onRemove: (id: string) => void;
 }> = ({ block, onChange, onRemove }) => {
   const meta = BLOCK_META[block.type];
-  const [showPreview, setShowPreview] = useState(false);
   return (
     <div className={`rounded-xl border ${meta.border} ${meta.bg} p-2.5 space-y-1.5`}>
       <div className="flex items-center justify-between">
         <span className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest ${block.type === 'latex' ? 'text-violet-600' : block.type === 'image' ? 'text-sky-600' : 'text-slate-500'}`}>
           {meta.icon} {meta.label}
         </span>
-        <div className="flex items-center gap-1">
-          {(block.type === 'latex' || block.type === 'text') && (
-            <button type="button" onClick={() => setShowPreview(v => !v)}
-              className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold cursor-pointer ${showPreview ? 'bg-slate-200 text-slate-700' : 'text-slate-400 hover:text-slate-600'}`}>
-              <Eye size={11} /> Preview
-            </button>
-          )}
-          <button type="button" onClick={() => onRemove(block.id)}
-            className="w-6 h-6 rounded-md text-rose-400 hover:bg-rose-100 flex items-center justify-center cursor-pointer">
-            <X size={12} />
-          </button>
-        </div>
+        <button type="button" onClick={() => onRemove(block.id)}
+          className="w-6 h-6 rounded-md text-rose-400 hover:bg-rose-100 flex items-center justify-center cursor-pointer">
+          <X size={12} />
+        </button>
       </div>
       {block.type === 'image' ? (
         <div className="space-y-1.5">
@@ -101,13 +93,23 @@ const BlockInput: React.FC<{
             className="w-full p-2 rounded-lg border border-sky-200 bg-white text-sm outline-none focus:border-sky-400 font-mono text-xs" />
           {block.value.trim() && <img src={block.value} alt="" className="max-h-40 rounded-lg border border-sky-200 object-contain" />}
         </div>
-      ) : showPreview ? (
-        <div className="p-2 rounded-lg border border-slate-200 bg-white min-h-[56px]">
-          {block.value.trim() ? <MathRenderer text={block.value} className="text-sm" /> : <span className="text-slate-400 text-xs italic">Kosong</span>}
-        </div>
+      ) : block.type === 'latex' ? (
+        <MathInput
+          value={block.value}
+          onChange={v => onChange(block.id, v)}
+          rows={2}
+          accent="violet"
+          inputClassName="border-violet-200 font-mono"
+          placeholder={meta.placeholder}
+        />
       ) : (
-        <textarea rows={block.type === 'latex' ? 2 : 3} value={block.value} onChange={e => onChange(block.id, e.target.value)} placeholder={meta.placeholder}
-          className={`w-full p-2 rounded-lg border text-sm outline-none resize-y ${block.type === 'latex' ? 'border-violet-200 bg-white focus:border-violet-400 font-mono' : 'border-slate-200 focus:border-indigo-400'}`} />
+        <MathInput
+          value={block.value}
+          onChange={v => onChange(block.id, v)}
+          rows={3}
+          accent="indigo"
+          placeholder={meta.placeholder}
+        />
       )}
     </div>
   );

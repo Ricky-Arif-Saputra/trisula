@@ -15,7 +15,8 @@ import {
   parseRmeKeys,
   stripRmeMetaBlocks,
 } from './LatihanTypes';
-import { Plus, Trash2, Eye, Edit3, X, Type, Sigma, ImageIcon } from 'lucide-react';
+import { Plus, Trash2, X, Type, Sigma, ImageIcon } from 'lucide-react';
+import { MathInput } from '../MathInput';
 
 // ─────────────────────────────────────────────
 // Types
@@ -54,38 +55,26 @@ const BlockInput: React.FC<{
   onRemove: (id: string) => void;
 }> = ({ block, onChange, onRemove }) => {
   const meta = BLOCK_META[block.type];
-  const [showPreview, setShowPreview] = useState(false);
 
   return (
     <div className={`rounded-xl border ${meta.border} ${meta.bg} p-2.5 space-y-1.5`}>
+      {/* Header row */}
       <div className="flex items-center justify-between">
         <span className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest ${
           block.type === 'latex' ? 'text-violet-600' : block.type === 'image' ? 'text-sky-600' : 'text-slate-500'
         }`}>
           {meta.icon} {meta.label}
         </span>
-        <div className="flex items-center gap-1">
-          {(block.type === 'latex' || block.type === 'text') && (
-            <button
-              type="button"
-              onClick={() => setShowPreview(v => !v)}
-              className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold cursor-pointer transition-colors ${
-                showPreview ? 'bg-slate-200 text-slate-700' : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              <Eye size={11} /> Preview
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => onRemove(block.id)}
-            className="w-6 h-6 rounded-md text-rose-400 hover:bg-rose-100 flex items-center justify-center cursor-pointer"
-          >
-            <X size={12} />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => onRemove(block.id)}
+          className="w-6 h-6 rounded-md text-rose-400 hover:bg-rose-100 flex items-center justify-center cursor-pointer"
+        >
+          <X size={12} />
+        </button>
       </div>
 
+      {/* Content */}
       {block.type === 'image' ? (
         <div className="space-y-1.5">
           <input
@@ -98,23 +87,24 @@ const BlockInput: React.FC<{
             <img src={block.value} alt="preview" className="max-h-40 rounded-lg border border-sky-200 object-contain" />
           )}
         </div>
-      ) : showPreview ? (
-        <div className="p-2 rounded-lg border border-slate-200 bg-white min-h-[56px]">
-          {block.value.trim()
-            ? <MathRenderer text={block.value} className="text-sm" />
-            : <span className="text-slate-400 text-xs italic">Kosong</span>}
-        </div>
-      ) : (
-        <textarea
-          rows={block.type === 'latex' ? 2 : 3}
+      ) : block.type === 'latex' ? (
+        /* LaTeX block: monospace textarea + auto live preview */
+        <MathInput
           value={block.value}
-          onChange={e => onChange(block.id, e.target.value)}
+          onChange={v => onChange(block.id, v)}
+          rows={2}
+          accent="violet"
           placeholder={meta.placeholder}
-          className={`w-full p-2 rounded-lg border text-sm outline-none resize-y ${
-            block.type === 'latex'
-              ? 'border-violet-200 bg-white focus:border-violet-400 font-mono'
-              : 'border-slate-200 focus:border-indigo-400'
-          }`}
+          inputClassName="border-violet-200 font-mono"
+        />
+      ) : (
+        /* Text block: textarea dengan live preview otomatis jika ada $...$ */
+        <MathInput
+          value={block.value}
+          onChange={v => onChange(block.id, v)}
+          rows={3}
+          accent="indigo"
+          placeholder={meta.placeholder}
         />
       )}
     </div>
@@ -450,20 +440,23 @@ export const LatihanQuestionForm: React.FC<LatihanQuestionFormProps> = ({
                             <Trash2 size={14} />
                           </button>
                           <span className="text-xs font-bold text-amber-600 mb-2 block">Kisi-kisi #{i + 1}</span>
-                          <textarea
-                            rows={2}
+                          <MathInput
                             value={h.question}
-                            onChange={e => updateHint(h.id, 'question', e.target.value)}
-                            placeholder="Tulisan pemandu / pertanyaan (muncul ke siswa)"
-                            className="w-full p-2 rounded-md border border-amber-200 bg-white text-xs outline-none resize-y focus:border-amber-400"
-                          />
-                          <textarea
+                            onChange={v => updateHint(h.id, 'question', v)}
                             rows={2}
-                            value={h.answer}
-                            onChange={e => updateHint(h.id, 'answer', e.target.value)}
-                            placeholder="Jawaban kisi-kisi ini (muncul setelah siswa klik 'Lihat Jawaban')"
-                            className="w-full p-2 mt-1.5 rounded-md border border-amber-100 bg-white/70 text-xs outline-none resize-y focus:border-amber-400 italic"
+                            accent="amber"
+                            placeholder="Tulisan pemandu / pertanyaan (boleh LaTeX: $x^2$)"
                           />
+                          <div className="mt-1.5">
+                            <MathInput
+                              value={h.answer}
+                              onChange={v => updateHint(h.id, 'answer', v)}
+                              rows={2}
+                              accent="amber"
+                              placeholder="Jawaban kisi-kisi (boleh LaTeX, muncul setelah siswa klik 'Lihat Jawaban')"
+                              inputClassName="bg-amber-50/60 italic"
+                            />
+                          </div>
                         </div>
                       ))}
                     </div>
