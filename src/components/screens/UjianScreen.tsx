@@ -232,24 +232,66 @@ function buildAnswerHtml(
       return `<div style="font-size:12px;line-height:1.6;">${renderInlineMath(b.value || '')}</div>`;
     }).join('') : '<em style="color:#94a3b8;font-size:11px;">(tidak ada narasi)</em>';
 
-    // 4 tahap jawaban — tabel 2 kolom
+    // 4 tahap jawaban — tabel lengkap dengan poin AI dan komentar
     const stageRows = STAGE_KEYS.map((sk, si) => {
       const ans    = renderMathToHtml(String(parsedAns[sk] || '—'));
-      const aiData = parsedAns.ai_scores?.[sk] as { skor: number; skor_maks: number; alasan: string } | undefined;
-      const pct    = aiData && aiData.skor_maks > 0 ? Math.round(aiData.skor / aiData.skor_maks * 100) : null;
-      const scolor = pct !== null ? (pct >= 75 ? '#16a34a' : pct >= 50 ? '#d97706' : '#dc2626') : '#94a3b8';
+      const aiData = (parsedAns.ai_scores)?.[sk] as { skor: number; skor_maks: number; alasan: string } | undefined;
+      const skor    = aiData?.skor ?? null;
+      const sMaks   = aiData?.skor_maks ?? null;
+      const alasan  = aiData?.alasan ?? null;
+      const pct     = skor !== null && sMaks && sMaks > 0 ? Math.round(skor / sMaks * 100) : null;
+      const scolor  = pct !== null ? (pct >= 75 ? '#16a34a' : pct >= 50 ? '#d97706' : '#dc2626') : '#64748b';
+      const bgColor = pct !== null ? (pct >= 75 ? '#f0fdf4' : pct >= 50 ? '#fffbeb' : '#fff1f2') : '#f8fafc';
+      const bdColor = pct !== null ? (pct >= 75 ? '#bbf7d0' : pct >= 50 ? '#fde68a' : '#fecaca') : '#e2e8f0';
 
-      return `<tr>
-        <td valign="top" style="border:1px solid #e2e8f0;padding:7px 10px;background:#f8fafc;width:90px;">
-          <div style="font-size:8px;font-weight:900;text-transform:uppercase;color:#64748b;">Tahap ${si + 1}</div>
-          <div style="font-size:11px;font-weight:700;color:#334155;">${STAGE_LABELS[si]}</div>
-          ${aiData ? `<div style="font-size:13px;font-weight:900;color:${scolor};margin-top:4px;">${aiData.skor}/${aiData.skor_maks}</div><div style="font-size:9px;color:${scolor};">poin</div>` : ''}
+      // Format komentar AI: "Mendapatkan nilai X dari Y poin. Alasan..."
+      const komentarAI = skor !== null && sMaks !== null && alasan
+        ? `Mendapatkan nilai <strong style="color:${scolor}">${skor} dari ${sMaks} poin</strong>. ${escHtml(alasan)}`
+        : alasan
+        ? escHtml(alasan)
+        : null;
+
+      return `
+      <tr>
+        <td colspan="2" style="border:1px solid #e2e8f0;padding:0;margin:0;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+            <tr>
+              <!-- Header tahap -->
+              <td colspan="2" style="background:#f1f5f9;padding:6px 10px;border-bottom:1px solid #e2e8f0;">
+                <table width="100%" cellpadding="0" cellspacing="0"><tr>
+                  <td>
+                    <span style="font-size:8px;font-weight:900;text-transform:uppercase;color:#64748b;letter-spacing:.06em;">
+                      Tahap ${si + 1} — ${STAGE_LABELS[si]}
+                    </span>
+                  </td>
+                  ${skor !== null && sMaks !== null ? `
+                  <td style="text-align:right;">
+                    <span style="font-size:12px;font-weight:900;color:${scolor};">${skor}</span>
+                    <span style="font-size:9px;color:#64748b;">/${sMaks} poin</span>
+                    <span style="margin-left:6px;font-size:9px;font-weight:700;color:${scolor};
+                      border:1.5px solid ${scolor};padding:1px 5px;border-radius:3px;">${pct}%</span>
+                  </td>` : ''}
+                </tr></table>
+              </td>
+            </tr>
+            <tr>
+              <!-- Jawaban siswa -->
+              <td width="50%" valign="top" style="padding:8px 10px;border-right:1px solid #e2e8f0;font-size:11px;line-height:1.5;color:#1e293b;">
+                <div style="font-size:8px;font-weight:900;text-transform:uppercase;color:#94a3b8;margin-bottom:4px;">Jawaban Siswa</div>
+                ${ans}
+              </td>
+              <!-- Komentar AI -->
+              <td width="50%" valign="top" style="padding:8px 10px;background:${bgColor};border-top:2px solid ${bdColor};font-size:11px;line-height:1.6;">
+                <div style="font-size:8px;font-weight:900;text-transform:uppercase;color:#6366f1;margin-bottom:4px;">🤖 Evaluasi AI</div>
+                ${komentarAI
+                  ? `<div style="color:#334155;">${komentarAI}</div>`
+                  : `<div style="color:#94a3b8;font-style:italic;">Belum dinilai AI</div>`}
+              </td>
+            </tr>
+          </table>
         </td>
-        <td valign="top" style="border:1px solid #e2e8f0;border-left:none;padding:7px 10px;background:#fff;">
-          <div style="font-size:12px;line-height:1.5;color:#1e293b;margin-bottom:6px;">${ans}</div>
-          ${aiData?.alasan ? `<div style="background:#eef2ff;border-left:3px solid #6366f1;padding:5px 8px;font-size:10px;color:#4338ca;font-style:italic;line-height:1.5;">🤖 ${escHtml(aiData.alasan)}</div>` : ''}
-        </td>
-      </tr>`;
+      </tr>
+      <tr><td colspan="2" style="height:6px;background:#fff;"></td></tr>`;
     }).join('');
 
     // Jawaban angka
