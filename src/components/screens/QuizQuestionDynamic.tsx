@@ -138,6 +138,7 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
 
   // AI scoring state
   const [scoring, setScoring] = useState(false);  // sedang memanggil AI
+  const [scoringStage, setScoringStage] = useState('');  // label tahap yang sedang dinilai
   const [aiScores, setAiScores] = useState<Record<string, { skor: number; skor_maks: number; alasan: string }>>({});
 
   useEffect(() => {
@@ -219,8 +220,11 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
     const scoreMap: Record<string, { skor: number; skor_maks: number; alasan: string }> = {};
 
     // Panggil AI per tahap — jika gagal (lokal/timeout), isi dengan fallback
-    for (const sk of stageKeys) {
-      // Flatten multi-blok ke teks yang bisa dibaca AI
+    const STAGE_LABELS_MAP: Record<string, string> = {
+      diketahui: 'Diketahui', ditanya: 'Ditanya', pengerjaan: 'Pengerjaan', kesimpulan: 'Kesimpulan',
+    };
+    for (let si = 0; si < stageKeys.length; si++) {
+      const sk = stageKeys[si];      // Flatten multi-blok ke teks yang bisa dibaca AI
       // - blok teks: ambil apa adanya
       // - blok latex: wrap dengan $$ agar AI tahu itu persamaan matematika
       // - blok gambar: skip (AI tidak bisa memproses gambar)
@@ -235,6 +239,14 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
         .join('\n');
       const rubrik   = (keys as any)[`ref_${sk}`] as string || '';
       const skorMaks = (keys as any)[`points_${sk}`] as number || 20;
+
+      // Update progress label
+      setScoringStage(`Menilai Tahap ${STAGE_LABELS_MAP[sk]} (${si + 1}/4)...`);
+
+      // Jeda antar tahap untuk menghindari rate limit Gemini
+      if (si > 0) {
+        await new Promise(r => setTimeout(r, 1500));
+      }
 
       // Flatten rubrik: bisa berupa JSON blok array atau plain string
       let rubrikText = rubrik;
@@ -261,6 +273,8 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
           skorMaks,
         });
         scoreMap[sk] = { skor: result.skor, skor_maks: skorMaks, alasan: result.alasan };
+        // Update progress secara realtime
+        setAiScores(prev => ({ ...prev, [sk]: scoreMap[sk] }));
       } catch (e: any) {
         // API tidak tersedia (dev lokal) atau timeout — beri skor 0 dengan keterangan
         const isNetworkErr = e.message?.includes('Tidak dapat terhubung') || e.message?.includes('timeout');
@@ -502,7 +516,28 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
             </div>
             <div className="text-center">
               <p className="font-bold text-slate-700">AI sedang menilai jawabanmu...</p>
-              <p className="text-xs text-slate-400 mt-1">Ini mungkin memakan waktu 10–30 detik</p>
+              <p className="text-xs text-indigo-500 font-bold mt-1">{scoringStage}</p>
+              <p className="text-xs text-slate-400 mt-1">Mohon tunggu, proses ini otomatis</p>
+            </div>
+            {/* Progress dots */}
+            <div className="flex gap-2">
+              {['Diketahui','Ditanya','Pengerjaan','Kesimpulan'].map((label, i) => {
+                const stageKeyMap = ['diketahui','ditanya','pengerjaan','kesimpulan'];
+                const isDone = aiScores[stageKeyMap[i]] !== undefined;
+                const isCurrent = scoringStage.includes(label);
+                return (
+                  <div key={label} className={`flex flex-col items-center gap-1`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all ${
+                      isDone ? 'bg-emerald-500 text-white' :
+                      isCurrent ? 'bg-indigo-600 text-white animate-pulse' :
+                      'bg-slate-200 text-slate-400'
+                    }`}>
+                      {isDone ? '✓' : i + 1}
+                    </div>
+                    <span className="text-[9px] text-slate-400 font-bold">{label}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
