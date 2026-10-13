@@ -43,11 +43,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `RUBRIK (maks ${skorMaks} poin):\n${rubrik || '(tidak ada rubrik)'}\n\n` +
       `JAWABAN SISWA:\n${jawaban || '(tidak ada jawaban)'}`;
 
-    // Model yang tersedia di Gemini API — dari yang paling cepat ke fallback
+    // Model yang tersedia — dari yang paling cepat ke fallback
     const MODELS = [
-      'gemini-1.5-flash',
-      'gemini-1.5-flash-8b',
-      'gemini-1.5-pro',
+      'gemini-2.5-flash',
+      'gemini-2.5-flash-lite',
+      'gemini-flash-latest',
     ];
 
     const tryGenerate = async (modelName: string) => {
