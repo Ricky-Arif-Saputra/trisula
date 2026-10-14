@@ -11,6 +11,7 @@ import { AdminSoalManager } from './components/screens/AdminSoalManager';
 import { ExamViewer } from './components/screens/ExamViewer';
 import { ExamViewerRme } from './components/screens/ExamViewerRme';
 import { QuizQuestionDynamic } from './components/screens/QuizQuestionDynamic';
+import { ExamSession } from './components/screens/ExamSession';
 import { useAuth } from './components/Auth/AuthProvider';
 import AuthLayout from './components/Auth/AuthLayout';
 import AuthTabs from './components/Auth/AuthTabs';
@@ -24,6 +25,14 @@ export default function App() {
   const [activeExamId, setActiveExamId] = useState<string | null>(null);
   const [activeRmeExamId, setActiveRmeExamId] = useState<string | null>(null);
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
+  // Multi-soal exam session state
+  const [activeExamSession, setActiveExamSession] = useState<{
+    questionIds: string[];
+    examTitle: string;
+    examDuration: number;
+    testType: 'pretest' | 'postest';
+    strand: string;
+  } | null>(null);
   const [rmeExamOrigin, setRmeExamOrigin] = useState<'ujian' | 'materi'>('ujian');
   const [isDark, setIsDark] = useState<boolean>(false);
   const [userXp, setUserXp] = useState<number>(4850);
@@ -88,13 +97,14 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const isDetailView = (currentScreen === 'materi' && materiCategory !== null) || (currentScreen === 'latihan' && latihanCategory !== null) || currentScreen === 'ujian-rme' || (currentScreen as string) === 'ujian-soal';
+  const isDetailView = (currentScreen === 'materi' && materiCategory !== null) || (currentScreen === 'latihan' && latihanCategory !== null) || currentScreen === 'ujian-rme' || (currentScreen as string) === 'ujian-soal' || (currentScreen as string) === 'ujian-session';
 
   const handleBack = () => {
     if (currentScreen === 'materi') setMateriCategory(null);
     if (currentScreen === 'latihan') setLatihanCategory(null);
     if (currentScreen === 'ujian-rme') { setActiveRmeExamId(null); setCurrentScreen(rmeExamOrigin); }
     if ((currentScreen as string) === 'ujian-soal') { setActiveQuestionId(null); setCurrentScreen('ujian'); }
+    if ((currentScreen as string) === 'ujian-session') { setActiveExamSession(null); setCurrentScreen('ujian'); }
   };
 
   const getHeaderTitle = () => {
@@ -197,10 +207,16 @@ export default function App() {
               onNavigateToSimulasi={() => handleNavigate('simulasi')}
             />
           )}
-          {currentScreen === 'ujian' && !activeExamId && !activeQuestionId && (
-            <UjianScreen onNavigateToViewer={(qId) => {
-              setActiveQuestionId(qId);
-              setCurrentScreen('ujian-soal' as any);
+          {currentScreen === 'ujian' && !activeExamId && !activeQuestionId && !activeExamSession && (
+            <UjianScreen onNavigateToViewer={(qIds, meta) => {
+              if (Array.isArray(qIds)) {
+                setActiveExamSession({ questionIds: qIds, ...meta });
+                setCurrentScreen('ujian-session' as any);
+              } else {
+                // fallback untuk satu soal lama
+                setActiveQuestionId(qIds as any);
+                setCurrentScreen('ujian-soal' as any);
+              }
             }} />
           )}
           {currentScreen === 'dashboard' && (
@@ -231,6 +247,16 @@ export default function App() {
                 onFinish={() => { setActiveQuestionId(null); setCurrentScreen('ujian'); }}
               />
             </div>
+          )}
+          {(currentScreen as string) === 'ujian-session' && activeExamSession && (
+            <ExamSession
+              questionIds={activeExamSession.questionIds}
+              examTitle={activeExamSession.examTitle}
+              examDuration={activeExamSession.examDuration}
+              testType={activeExamSession.testType}
+              strand={activeExamSession.strand}
+              onFinish={() => { setActiveExamSession(null); setCurrentScreen('ujian'); }}
+            />
           )}
 
         </main>

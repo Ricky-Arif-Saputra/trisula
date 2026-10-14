@@ -804,7 +804,10 @@ const ExamGroupCard: React.FC<{
 // UjianScreen
 // ─────────────────────────────────────────────
 interface UjianScreenProps {
-  onNavigateToViewer: (examId: string) => void;
+  onNavigateToViewer: (
+    questionIds: string[],
+    meta: { examTitle: string; examDuration: number; testType: 'pretest' | 'postest'; strand: string }
+  ) => void;
 }
 
 export const UjianScreen: React.FC<UjianScreenProps> = ({ onNavigateToViewer }) => {
@@ -1035,7 +1038,10 @@ export const UjianScreen: React.FC<UjianScreenProps> = ({ onNavigateToViewer }) 
                         {pretestGroups.map(g => (
                           <ExamGroupCard key={g.key} group={g} attempts={attempts} isAdmin={isAdmin}
                             colorClass="amber"
-                            onStart={() => onNavigateToViewer(g.questions[0].id)}
+                            onStart={() => onNavigateToViewer(
+                              g.questions.map(q => q.id),
+                              { examTitle: g.examTitle, examDuration: g.examDuration, testType: g.testType, strand: selectedStrand! }
+                            )}
                             onEdit={() => setFormMode(g.questions[0].id)}
                             onDelete={() => g.questions.forEach(q => handleDelete(q.id))}
                             onDownload={() => setDownloadQ(g.questions[0])}
@@ -1057,7 +1063,10 @@ export const UjianScreen: React.FC<UjianScreenProps> = ({ onNavigateToViewer }) 
                         {posttestGroups.map(g => (
                           <ExamGroupCard key={g.key} group={g} attempts={attempts} isAdmin={isAdmin}
                             colorClass="emerald"
-                            onStart={() => onNavigateToViewer(g.questions[0].id)}
+                            onStart={() => onNavigateToViewer(
+                              g.questions.map(q => q.id),
+                              { examTitle: g.examTitle, examDuration: g.examDuration, testType: g.testType, strand: selectedStrand! }
+                            )}
                             onEdit={() => setFormMode(g.questions[0].id)}
                             onDelete={() => g.questions.forEach(q => handleDelete(q.id))}
                             onDownload={() => setDownloadQ(g.questions[0])}

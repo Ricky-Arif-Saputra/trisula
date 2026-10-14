@@ -19,6 +19,7 @@ interface QuizQuestionDynamicProps {
   questionId: string;
   onFinish: () => void;
   onBack?: () => void;
+  nextLabel?: string; // label tombol submit, default: "Cek jawaban akhir"
 }
 
 type StageKey = 'diketahui' | 'ditanya' | 'pengerjaan' | 'kesimpulan';
@@ -110,7 +111,7 @@ const AnswerBlockAdder: React.FC<{ onAdd: (t: BlockType) => void; colorCls?: str
 // ─────────────────────────────────────────────────────────────
 // Main component
 // ─────────────────────────────────────────────────────────────
-export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questionId, onFinish }) => {
+export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questionId, onFinish, nextLabel }) => {
   const { user, userName, userNisn } = useAuth();
   const [question, setQuestion] = useState<Question | null>(null);
   const [loading, setLoading] = useState(true);
@@ -520,7 +521,7 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
               ) : (
                 <button onClick={handleSubmit} disabled={!finalNumber.trim()}
                   className="flex-1 py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm disabled:bg-slate-300 cursor-pointer flex items-center justify-center gap-2 hover:bg-emerald-700 transition-colors">
-                  <CheckCircle size={16} /> Cek jawaban akhir
+                  <CheckCircle size={16} /> {nextLabel || 'Cek jawaban akhir'}
                 </button>              )}
             </div>
           </div>
