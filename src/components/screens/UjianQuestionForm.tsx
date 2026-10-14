@@ -361,28 +361,47 @@ export const UjianQuestionForm: React.FC<UjianQuestionFormProps> = ({
 
     setSaving(true);
     try {
-      // Jika edit (semua soal punya .id), update satu per satu
+      // Jika edit (semua soal punya .id DB), update satu per satu
       if (questionItems.every(q => q.id)) {
         for (const q of questionItems) {
           const rme_keys: RmeKeys = buildRmeKeys(q);
           const content_blocks = embedRmeKeys(q.blocks, rme_keys);
-          const payload = { title: examTitle.trim() || `Soal Ujian`, test_type: testType, strand, category: 'sedang', content_blocks, options: [], has_simulation: false, created_by: user?.email || 'admin', rme_keys, exam_title: examTitle.trim(), exam_duration: examDuration };
+          const payload = {
+            title: examTitle.trim() || 'Soal Ujian',
+            test_type: testType, strand, category: 'sedang',
+            content_blocks, options: [], has_simulation: false,
+            created_by: user?.email || 'admin',
+            rme_keys, exam_title: examTitle.trim(), exam_duration: examDuration,
+          };
           const { error } = await supabase.from('questions').update(payload).eq('id', q.id!);
           if (error) throw error;
         }
       } else {
-        // Insert semua soal baru sekaligus
-        const rows = questionItems.map((q, qi) => {
+        // Insert soal baru — generate UUID fresh untuk setiap soal
+        for (let qi = 0; qi < questionItems.length; qi++) {
+          const q = questionItems[qi];
           const rme_keys: RmeKeys = buildRmeKeys(q);
           const content_blocks = embedRmeKeys(q.blocks, rme_keys);
-          return { id: q.id || crypto.randomUUID(), title: `${examTitle.trim()} — Soal ${qi + 1}`, test_type: testType, strand, category: 'sedang', content_blocks, options: [], has_simulation: false, created_by: user?.email || 'admin', rme_keys, exam_title: examTitle.trim(), exam_duration: examDuration };
-        });
-        const { error } = await supabase.from('questions').insert(rows);
-        if (error) {
-          // fallback: try without extra columns
-          const rowsBase = rows.map(({ rme_keys: _r, exam_title: _et, exam_duration: _ed, ...rest }) => rest);
-          const { error: e2 } = await supabase.from('questions').insert(rowsBase);
-          if (e2) throw e2;
+          const newId = crypto.randomUUID(); // UUID baru per soal, tidak di dalam map
+          const row = {
+            id: newId,
+            title: `${examTitle.trim()} — Soal ${qi + 1}`,
+            test_type: testType, strand, category: 'sedang',
+            content_blocks, options: [], has_simulation: false,
+            created_by: user?.email || 'admin',
+            rme_keys, exam_title: examTitle.trim(), exam_duration: examDuration,
+          };
+          const { error } = await supabase.from('questions').insert([row]);
+          if (error) {
+            // Fallback: tanpa kolom exam_title/exam_duration jika kolom belum ada
+            if (/exam_title|exam_duration|column/i.test(error.message || '')) {
+              const { rme_keys: _r, exam_title: _et, exam_duration: _ed, ...rowBase } = row;
+              const { error: e2 } = await supabase.from('questions').insert([rowBase]);
+              if (e2) throw e2;
+            } else {
+              throw error;
+            }
+          }
         }
       }
       setMsg({ type: 'success', text: `${questionItems.length} soal berhasil disimpan!` });

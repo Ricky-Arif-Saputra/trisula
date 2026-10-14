@@ -203,15 +203,20 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
   if (!question) return null;
 
   const keys = parseRmeKeys(question);
-  const hints: RmeHint[] = keys.hints || [];
-  // Debug: pastikan hints terbaca (hapus setelah confirmed)
-  if (hints.length === 0 && question.rme_keys) {
-    // coba parse manual
+
+  // Baca hints dengan fallback: coba dari rme_keys column langsung jika parseRmeKeys kosong
+  const hints: RmeHint[] = (() => {
+    const fromParsed = keys.hints || [];
+    if (fromParsed.length > 0) return fromParsed;
+    // Fallback: parse rme_keys kolom secara manual
     try {
-      const rk = typeof question.rme_keys === 'string' ? JSON.parse(question.rme_keys) : question.rme_keys;
-      if (rk?.hints?.length) (hints as any[]).push(...rk.hints);
+      const rk = typeof question.rme_keys === 'string'
+        ? JSON.parse(question.rme_keys)
+        : question.rme_keys;
+      if (Array.isArray(rk?.hints) && rk.hints.length > 0) return rk.hints as RmeHint[];
     } catch {}
-  }
+    return [];
+  })();
   const contentBlocks = stripRmeMetaBlocks(question.content_blocks || []);
   const stage = STAGES[stageIdx];
   const color = STAGE_COLORS[stage.color];
