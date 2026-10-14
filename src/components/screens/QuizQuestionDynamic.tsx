@@ -204,6 +204,14 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
 
   const keys = parseRmeKeys(question);
   const hints: RmeHint[] = keys.hints || [];
+  // Debug: pastikan hints terbaca (hapus setelah confirmed)
+  if (hints.length === 0 && question.rme_keys) {
+    // coba parse manual
+    try {
+      const rk = typeof question.rme_keys === 'string' ? JSON.parse(question.rme_keys) : question.rme_keys;
+      if (rk?.hints?.length) (hints as any[]).push(...rk.hints);
+    } catch {}
+  }
   const contentBlocks = stripRmeMetaBlocks(question.content_blocks || []);
   const stage = STAGES[stageIdx];
   const color = STAGE_COLORS[stage.color];
@@ -357,6 +365,15 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
             if (block?.type === 'image') {
               return <img key={block.id} src={block.value} alt="" className="max-h-56 rounded-xl border border-slate-200 mx-auto" />;
             }
+            if (block?.type === 'latex') {
+              // Blok latex: pure expression, render sebagai display math
+              return (
+                <div key={block.id} className="overflow-x-auto py-1">
+                  <MathRenderer text={`$$${block.value || ''}$$`} />
+                </div>
+              );
+            }
+            // Teks biasa (boleh mengandung $...$ inline)
             return (
               <div key={block.id} className="text-sm leading-relaxed text-on-surface">
                 <MathRenderer text={block.value || ''} />

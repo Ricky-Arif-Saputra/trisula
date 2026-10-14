@@ -701,6 +701,106 @@ const QuestionCard: React.FC<{
 };
 
 // ─────────────────────────────────────────────
+// ExamGroupCard — kartu satu PAKET ujian (berisi N soal)
+// ─────────────────────────────────────────────
+const ExamGroupCard: React.FC<{
+  group: {
+    key: string; examTitle: string; testType: 'pretest' | 'postest';
+    questions: Question[]; examDuration: number; totalPoints: number;
+  };
+  attempts: Record<string, QuestionAttempt>;
+  isAdmin: boolean;
+  colorClass: 'amber' | 'emerald';
+  onStart: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onDownload: () => void;
+}> = ({ group, attempts, isAdmin, colorClass, onStart, onEdit, onDelete, onDownload }) => {
+  const isPretest = group.testType === 'pretest';
+  const doneCount = group.questions.filter(q => !!attempts[q.id]).length;
+  const isDone = doneCount === group.questions.length && group.questions.length > 0;
+  const c = colorClass === 'amber'
+    ? { badge: 'bg-amber-100 text-amber-700', btn: 'bg-amber-500 hover:bg-amber-600', strip: 'from-amber-500 to-orange-400', glow: 'shadow-amber-500/10' }
+    : { badge: 'bg-emerald-100 text-emerald-700', btn: 'bg-emerald-600 hover:bg-emerald-700', strip: 'from-emerald-500 to-teal-400', glow: 'shadow-emerald-500/10' };
+
+  return (
+    <div className={`bg-white dark:bg-slate-800/90 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 overflow-hidden shadow-sm hover:shadow-lg ${c.glow} hover:-translate-y-0.5 transition-all duration-200 flex flex-col`}>
+      <div className={`h-1 bg-gradient-to-r ${c.strip}`} />
+      <div className="p-4 flex flex-col flex-1 gap-3">
+        {/* Badge + status */}
+        <div className="flex items-start justify-between gap-2">
+          <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest ${c.badge}`}>
+            {isPretest ? 'Pretest' : 'Posttest'}
+          </span>
+          {!isPretest && (
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${
+              isDone ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'
+            }`}>
+              <span className="material-symbols-outlined text-[11px]">{isDone ? 'check_circle' : 'pending'}</span>
+              {isDone ? 'Selesai' : doneCount > 0 ? `${doneCount}/${group.questions.length}` : 'Belum'}
+            </span>
+          )}
+        </div>
+
+        {/* Judul paket */}
+        <h3 className="text-sm font-extrabold text-slate-800 dark:text-white leading-snug">{group.examTitle}</h3>
+
+        {/* Info */}
+        <div className="flex items-center gap-3 text-[11px] text-slate-400 flex-wrap">
+          <span className="flex items-center gap-1">
+            <span className="material-symbols-outlined text-[13px]">timer</span> {group.examDuration} mnt
+          </span>
+          {group.totalPoints > 0 && <span>🏆 {group.totalPoints} poin</span>}
+        </div>
+
+        {/* Nomor soal */}
+        <div className="flex flex-wrap gap-1.5">
+          {group.questions.map((q, qi) => {
+            const done = !!attempts[q.id];
+            return (
+              <div key={q.id} className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black border-2 transition-all ${
+                done
+                  ? 'bg-emerald-500 border-emerald-500 text-white'
+                  : 'bg-slate-100 border-slate-200 text-slate-500 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300'
+              }`}>
+                {qi + 1}
+              </div>
+            );
+          })}
+          <span className="text-[10px] text-slate-400 self-center ml-1">{group.questions.length} soal</span>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 mt-auto">
+          <button onClick={onStart}
+            className={`flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
+              isPretest || !isDone ? `${c.btn} text-white shadow-md` : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+            }`}>
+            {!isPretest && isDone ? <><Eye size={13} /> Lihat Hasil</> : <><Play size={13} /> Kerjakan</>}
+          </button>
+          {isAdmin && (
+            <>
+              <button onClick={onDownload}
+                className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-500 hover:bg-indigo-100 flex items-center justify-center cursor-pointer" title="Download">
+                <Download size={13} />
+              </button>
+              <button onClick={onEdit}
+                className="w-9 h-9 rounded-xl bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 flex items-center justify-center cursor-pointer" title="Edit">
+                <Edit3 size={13} />
+              </button>
+              <button onClick={onDelete}
+                className="w-9 h-9 rounded-xl bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-500 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center cursor-pointer" title="Hapus">
+                <Trash2 size={13} />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
 // UjianScreen
 // ─────────────────────────────────────────────
 interface UjianScreenProps {
@@ -771,6 +871,46 @@ export const UjianScreen: React.FC<UjianScreenProps> = ({ onNavigateToViewer }) 
   const posttests = questions.filter(q => q.test_type === 'postest');
   const currentStrand = STRANDS.find(s => s.id === selectedStrand);
 
+  // Kelompokkan soal berdasarkan exam_title (paket ujian)
+  type ExamGroup = {
+    key: string;
+    examTitle: string;
+    testType: 'pretest' | 'postest';
+    questions: Question[];
+    examDuration: number;
+    isDone: boolean;
+    totalPoints: number;
+  };
+
+  const groupQuestions = (qs: Question[]): ExamGroup[] => {
+    const map = new Map<string, ExamGroup>();
+    qs.forEach(q => {
+      const title = (q as any).exam_title || q.title || 'Ujian';
+      const key = `${title}__${q.test_type}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          examTitle: title,
+          testType: q.test_type,
+          questions: [],
+          examDuration: (q as any).exam_duration || 60,
+          isDone: false,
+          totalPoints: 0,
+        });
+      }
+      const g = map.get(key)!;
+      g.questions.push(q);
+      g.totalPoints += (q.rme_keys?.points_diketahui || 0) + (q.rme_keys?.points_ditanya || 0) +
+        (q.rme_keys?.points_pengerjaan || 0) + (q.rme_keys?.points_kesimpulan || 0);
+      // Paket dianggap selesai jika semua soal sudah ada attempt
+      g.isDone = g.questions.every(sq => !!attempts[sq.id]);
+    });
+    return Array.from(map.values());
+  };
+
+  const pretestGroups  = groupQuestions(pretests);
+  const posttestGroups = groupQuestions(posttests);
+
   const editingQ = formMode !== 'closed' && formMode !== 'new_pretest' && formMode !== 'new_postest'
     ? questions.find(q => q.id === formMode) || null
     : null;
@@ -835,7 +975,7 @@ export const UjianScreen: React.FC<UjianScreenProps> = ({ onNavigateToViewer }) 
             )}
             <div className="flex-1 min-w-0">
               <h2 className="text-sm font-extrabold text-slate-800 dark:text-white capitalize">{selectedStrand}</h2>
-              <p className="text-[10px] text-slate-400">{pretests.length} pretest · {posttests.length} posttest</p>
+              <p className="text-[10px] text-slate-400">{pretestGroups.length} paket pretest · {posttestGroups.length} paket posttest</p>
             </div>
           </div>
 
@@ -883,49 +1023,50 @@ export const UjianScreen: React.FC<UjianScreenProps> = ({ onNavigateToViewer }) 
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {pretests.length > 0 && (
+                  {/* PRETEST GROUPS */}
+                  {pretestGroups.length > 0 && (
                     <div>
                       <div className="flex items-center gap-2 mb-3">
                         <span className="material-symbols-outlined text-amber-600 text-[18px]">assignment</span>
                         <h3 className="text-sm font-black text-slate-700 dark:text-slate-200 uppercase tracking-wide">Pretest</h3>
-                        <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">{pretests.length}</span>
+                        <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">{pretestGroups.length}</span>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {pretests.map(q => (
-                          <QuestionCard key={q.id} q={q} attempt={attempts[q.id]} isAdmin={isAdmin}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {pretestGroups.map(g => (
+                          <ExamGroupCard key={g.key} group={g} attempts={attempts} isAdmin={isAdmin}
                             colorClass="amber"
-                            onStart={() => onNavigateToViewer(q.id)}
-                            onEdit={() => setFormMode(q.id)}
-                            onDelete={() => handleDelete(q.id)}
-                            onDownload={() => setDownloadQ(q)}
+                            onStart={() => onNavigateToViewer(g.questions[0].id)}
+                            onEdit={() => setFormMode(g.questions[0].id)}
+                            onDelete={() => g.questions.forEach(q => handleDelete(q.id))}
+                            onDownload={() => setDownloadQ(g.questions[0])}
                           />
                         ))}
                       </div>
                     </div>
                   )}
 
-                  {posttests.length > 0 && (
+                  {/* POSTTEST GROUPS */}
+                  {posttestGroups.length > 0 && (
                     <div>
                       <div className="flex items-center gap-2 mb-3">
                         <span className="material-symbols-outlined text-emerald-600 text-[18px]">assignment_turned_in</span>
                         <h3 className="text-sm font-black text-slate-700 dark:text-slate-200 uppercase tracking-wide">Posttest</h3>
-                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">{posttests.length}</span>
+                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">{posttestGroups.length}</span>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {posttests.map(q => (
-                          <QuestionCard key={q.id} q={q} attempt={attempts[q.id]} isAdmin={isAdmin}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {posttestGroups.map(g => (
+                          <ExamGroupCard key={g.key} group={g} attempts={attempts} isAdmin={isAdmin}
                             colorClass="emerald"
-                            onStart={() => onNavigateToViewer(q.id)}
-                            onEdit={() => setFormMode(q.id)}
-                            onDelete={() => handleDelete(q.id)}
-                            onDownload={() => setDownloadQ(q)}
+                            onStart={() => onNavigateToViewer(g.questions[0].id)}
+                            onEdit={() => setFormMode(g.questions[0].id)}
+                            onDelete={() => g.questions.forEach(q => handleDelete(q.id))}
+                            onDownload={() => setDownloadQ(g.questions[0])}
                           />
                         ))}
                       </div>
                     </div>
                   )}
 
-                  {/* Tombol tambah langsung di bawah grid */}
                   {isAdmin && !isFormOpen && (
                     <DirectAddButtons
                       onPretest={() => setFormMode('new_pretest')}
