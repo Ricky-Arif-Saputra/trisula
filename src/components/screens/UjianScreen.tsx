@@ -888,8 +888,13 @@ export const UjianScreen: React.FC<UjianScreenProps> = ({ onNavigateToViewer }) 
   const groupQuestions = (qs: Question[]): ExamGroup[] => {
     const map = new Map<string, ExamGroup>();
     qs.forEach(q => {
-      const title = (q as any).exam_title || q.title || 'Ujian';
-      const key = `${title}__${q.test_type}`;
+      // Prioritas: exam_title column → judul tanpa " — Soal N" suffix → judul penuh
+      let title = (q as any).exam_title as string || '';
+      if (!title.trim()) {
+        // Fallback: potong " — Soal N" dari akhir judul
+        title = q.title?.replace(/\s*[—–-]\s*soal\s*\d+\s*$/i, '').trim() || 'Ujian';
+      }
+      const key = `${title}__${q.test_type}__${q.strand}`;
       if (!map.has(key)) {
         map.set(key, {
           key,
@@ -905,8 +910,15 @@ export const UjianScreen: React.FC<UjianScreenProps> = ({ onNavigateToViewer }) 
       g.questions.push(q);
       g.totalPoints += (q.rme_keys?.points_diketahui || 0) + (q.rme_keys?.points_ditanya || 0) +
         (q.rme_keys?.points_pengerjaan || 0) + (q.rme_keys?.points_kesimpulan || 0);
-      // Paket dianggap selesai jika semua soal sudah ada attempt
       g.isDone = g.questions.every(sq => !!attempts[sq.id]);
+    });
+    // Urutkan soal dalam setiap grup berdasarkan suffix angka di title
+    map.forEach(g => {
+      g.questions.sort((a, b) => {
+        const na = parseInt(a.title?.match(/\d+$/)?.[0] || '0');
+        const nb = parseInt(b.title?.match(/\d+$/)?.[0] || '0');
+        return na - nb;
+      });
     });
     return Array.from(map.values());
   };
