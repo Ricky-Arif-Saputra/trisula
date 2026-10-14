@@ -13,7 +13,7 @@ import {
   type RmeHint,
 } from './LatihanTypes';
 import { nilaiTahap } from '../../lib/aiScoring';
-import { Lightbulb, CheckCircle, ChevronRight, Plus, Type, Sigma, ImageIcon, Trash2 } from 'lucide-react';
+import { Lightbulb, CheckCircle, ChevronRight, Plus, Type, Sigma, ImageIcon, Trash2, Eye } from 'lucide-react';
 
 interface QuizQuestionDynamicProps {
   questionId: string;
