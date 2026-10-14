@@ -431,7 +431,7 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
                     {hints.length > 0 && !showHints && (
                       <button onClick={openHints}
                         className="w-full py-3 rounded-xl border-2 border-dashed border-amber-300 bg-amber-50 text-amber-800 font-bold text-sm flex items-center justify-center gap-2 cursor-pointer hover:bg-amber-100 transition-colors">
-                        <Lightbulb size={16} /> Saya butuh kisi-kisi
+                        <Lightbulb size={16} /> Saya butuh kisi-kisi ({hints.length})
                       </button>
                     )}
 

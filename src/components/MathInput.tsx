@@ -1,9 +1,6 @@
 /**
- * MathInput — untuk blok tipe LATEX saja.
- *
- * - Input dianggap pure LaTeX expression (tanpa $ wrapper)
- * - Preview hasil render selalu tampil di bawah textarea
- * - Textarea pakai font mono untuk mengetik syntax
+ * MathInput — textarea + live LaTeX preview untuk blok tipe LATEX.
+ * Value dianggap pure LaTeX expression (tanpa $ wrapper).
  */
 import React from 'react';
 import katex from 'katex';
@@ -17,7 +14,8 @@ interface MathInputProps {
   inputClassName?: string;
   accent?: 'indigo' | 'amber' | 'violet' | 'emerald' | 'sky';
   disabled?: boolean;
-  displayMode?: boolean; // true = block/center, false = inline
+  displayMode?: boolean;
+  previewLabel?: string; // diabaikan, untuk kompatibilitas
 }
 
 const ACCENT_CLS: Record<string, string> = {
@@ -57,7 +55,6 @@ export const MathInput: React.FC<MathInputProps> = ({
 
   return (
     <div className="space-y-1.5">
-      {/* Textarea — ketik LaTeX syntax */}
       <textarea
         rows={rows}
         value={value}
@@ -71,15 +68,13 @@ export const MathInput: React.FC<MathInputProps> = ({
           disabled:bg-slate-50 disabled:cursor-not-allowed
           ${inputClassName}`}
       />
-
-      {/* Preview hasil render — selalu tampil jika ada konten */}
       {hasContent && rendered && (
         <div className="px-4 py-3 rounded-lg border border-violet-200 bg-violet-50/70 overflow-x-auto">
           <p className="text-[9px] font-black uppercase tracking-widest text-violet-400 mb-1.5">
             ∫ Tampilan LaTeX
           </p>
           <div
-            className="text-slate-800 katex-preview"
+            className="text-slate-800"
             dangerouslySetInnerHTML={{ __html: rendered }}
           />
         </div>

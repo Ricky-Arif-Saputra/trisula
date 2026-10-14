@@ -62,9 +62,17 @@ export function stripRmeMetaBlocks<T extends { type?: string; value?: string }>(
 }
 
 export function parseRmeKeys(question: { rme_keys?: RmeKeys; content_blocks?: { value?: string }[]; options?: { id: string; text: string }[] }): RmeKeys {
-  if (question.rme_keys && typeof question.rme_keys === 'object') {
-    return { ...makeBlankRmeKeys(), ...question.rme_keys, hints: question.rme_keys.hints || [] };
+  // Primary: rme_keys column — handle both object (jsonb) and string (text)
+  if (question.rme_keys) {
+    let rk: any = question.rme_keys;
+    if (typeof rk === 'string') {
+      try { rk = JSON.parse(rk); } catch { rk = null; }
+    }
+    if (rk && typeof rk === 'object') {
+      return { ...makeBlankRmeKeys(), ...rk, hints: rk.hints || [] };
+    }
   }
+  // Secondary: embedded meta block in content_blocks
   const hidden = (question.content_blocks || []).find(b => typeof b.value === 'string' && b.value.startsWith(RME_META_PREFIX));
   if (hidden?.value) {
     try {
@@ -72,6 +80,7 @@ export function parseRmeKeys(question: { rme_keys?: RmeKeys; content_blocks?: { 
       return { ...makeBlankRmeKeys(), ...parsed, hints: parsed.hints || [] };
     } catch { /* ignore */ }
   }
+  // Tertiary: options array
   const opt = (question.options || []).find(o => o.id === '__rme_keys__');
   if (opt?.text) {
     try {
