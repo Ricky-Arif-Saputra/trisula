@@ -1,9 +1,8 @@
 ﻿import React, { useState, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
-import rehypeRaw from 'rehype-raw';
+import katex from 'katex';
+import { marked } from 'marked';
 import { MathCategory } from '../../types';
 import { useAuth } from '../Auth/AuthProvider';
 import { supabase } from '../../lib/supabaseClient';
@@ -181,57 +180,92 @@ const AttachmentViewer: React.FC<{ att: Attachment }> = ({ att }) => {
 // PostCard � card ringkasan materi untuk daftar
 // -------------------------------------------------------------
 // -------------------------------------------------------------
-// MarkdownContent — render markdown + LaTeX dengan remark-math & rehype-katex
+// MarkdownContent — pipeline: KaTeX → marked → dangerouslySetInnerHTML
+// Ini pendekatan paling reliable: tidak ada konflik plugin versi.
 // -------------------------------------------------------------
-const MarkdownContent: React.FC<{ content: string }> = ({ content }) => (
-  <div className="materi-content">
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm, remarkMath]}
-      rehypePlugins={[rehypeKatex, rehypeRaw]}
-      components={{
-        h1: ({ children }) => (
-          <h1 className="materi-h1">{children}</h1>
-        ),
-        h2: ({ children }) => (
-          <h2 className="materi-h2">{children}</h2>
-        ),
-        h3: ({ children }) => (
-          <h3 className="materi-h3">{children}</h3>
-        ),
-        h4: ({ children }) => (
-          <h4 className="materi-h4">{children}</h4>
-        ),
-        p: ({ children }) => <p className="materi-p">{children}</p>,
-        ul: ({ children }) => <ul className="materi-ul">{children}</ul>,
-        ol: ({ children }) => <ol className="materi-ol">{children}</ol>,
-        li: ({ children }) => <li className="materi-li">{children}</li>,
-        strong: ({ children }) => <strong className="materi-strong">{children}</strong>,
-        em: ({ children }) => <em className="materi-em">{children}</em>,
-        code: ({ inline, children }: any) =>
-          inline
-            ? <code className="materi-code-inline">{children}</code>
-            : <code className="materi-code-block">{children}</code>,
-        pre: ({ children }) => <pre className="materi-pre">{children}</pre>,
-        blockquote: ({ children }) => (
-          <blockquote className="materi-blockquote">{children}</blockquote>
-        ),
-        hr: () => <div className="materi-hr"><span>✦</span></div>,
-        table: ({ children }) => (
-          <div className="materi-table-wrap">
-            <table className="materi-table">{children}</table>
-          </div>
-        ),
-        thead: ({ children }) => <thead className="materi-thead">{children}</thead>,
-        th: ({ children }) => <th className="materi-th">{children}</th>,
-        tbody: ({ children }) => <tbody>{children}</tbody>,
-        tr: ({ children }) => <tr className="materi-tr">{children}</tr>,
-        td: ({ children }) => <td className="materi-td">{children}</td>,
-      }}
-    >
-      {content}
-    </ReactMarkdown>
-  </div>
-);
+
+// Konfigurasi marked sekali saja
+const markedRenderer = new marked.Renderer();
+
+// Override link agar buka di tab baru
+markedRenderer.link = ({ href, text }: { href: string; text: string }) =>
+  `<a href="${href}" target="_blank" rel="noopener noreferrer" class="materi-link">${text}</a>`;
+
+marked.setOptions({ renderer: markedRenderer, gfm: true, breaks: false });
+
+/** Render semua $$...$$ dan $...$ menjadi HTML KaTeX */
+function applyKatex(src: string): string {
+  // 1. Display math — multi-line $$...$$
+  let out = src.replace(/\$\$([\s\S]+?)\$\$/g, (_m, expr) => {
+    try {
+      return katex.renderToString(expr.trim(), {
+        displayMode: true, throwOnError: false, trust: true, strict: false,
+      });
+    } catch { return `<code>${expr}</code>`; }
+  });
+
+  // 2. Inline math — single line $...$
+  //    Hati-hati: skip $$ yang sudah diproses, dan skip $ di dalam backtick
+  out = out.replace(/(?<![`\\])\$([^$\n`]{1,500}?)(?<!\\)\$/g, (_m, expr) => {
+    if (!expr.trim()) return _m;
+    try {
+      return katex.renderToString(expr.trim(), {
+        displayMode: false, throwOnError: false, trust: true, strict: false,
+      });
+    } catch { return `<code>${expr}</code>`; }
+  });
+
+  return out;
+}
+
+/** Konversi markdown + katex → HTML siap render */
+function mdToHtml(content: string): string {
+  // Step 1: render LaTeX dulu (sebelum marked karena marked bisa rusak $)
+  const withMath = applyKatex(content);
+  // Step 2: render markdown → HTML
+  const html = marked.parse(withMath) as string;
+  // Step 3: inject class CSS ke elemen HTML yang dihasilkan marked
+  return html
+    .replace(/<h1>/g, '<h1 class="materi-h1">')
+    .replace(/<h2>/g, '<h2 class="materi-h2">')
+    .replace(/<h3>/g, '<h3 class="materi-h3">')
+    .replace(/<h4>/g, '<h4 class="materi-h4">')
+    .replace(/<p>/g, '<p class="materi-p">')
+    .replace(/<ul>/g, '<ul class="materi-ul">')
+    .replace(/<ol>/g, '<ol class="materi-ol">')
+    .replace(/<li>/g, '<li class="materi-li">')
+    .replace(/<strong>/g, '<strong class="materi-strong">')
+    .replace(/<em>/g, '<em class="materi-em">')
+    .replace(/<pre><code/g, '<pre class="materi-pre"><code class="materi-code-block"')
+    .replace(/<code>/g, '<code class="materi-code-inline">')
+    .replace(/<blockquote>/g, '<blockquote class="materi-blockquote">')
+    .replace(/<hr>/g, '<div class="materi-hr"><span>✦</span></div>')
+    .replace(/<hr\/>/g, '<div class="materi-hr"><span>✦</span></div>')
+    .replace(/<table>/g, '<div class="materi-table-wrap"><table class="materi-table">')
+    .replace(/<\/table>/g, '</table></div>')
+    .replace(/<thead>/g, '<thead class="materi-thead">')
+    .replace(/<th>/g, '<th class="materi-th">')
+    .replace(/<th align="center">/g, '<th class="materi-th" style="text-align:center">')
+    .replace(/<th align="right">/g, '<th class="materi-th" style="text-align:right">')
+    .replace(/<tr>/g, '<tr class="materi-tr">')
+    .replace(/<td>/g, '<td class="materi-td">')
+    .replace(/<td align="center">/g, '<td class="materi-td" style="text-align:center">')
+    .replace(/<td align="right">/g, '<td class="materi-td" style="text-align:right">')
+    .replace(/<td style="text-align:center">/g, '<td class="materi-td" style="text-align:center">')
+    .replace(/<td style="text-align:right">/g, '<td class="materi-td" style="text-align:right">')
+    // Display math block — bungkus dalam div bergaya
+    .replace(/<span class="katex-display">/g, '<span class="katex-display materi-katex-display">');
+}
+
+const MarkdownContent: React.FC<{ content: string }> = ({ content }) => {
+  const html = React.useMemo(() => mdToHtml(content), [content]);
+  return (
+    <div
+      className="materi-content"
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
+};
 const PostCard: React.FC<{
   post: MateriPost;
   isAdmin: boolean;

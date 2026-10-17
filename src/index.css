@@ -577,3 +577,37 @@
 .katex .base, .katex .strut {
   display: inline-block;
 }
+
+/* ── KaTeX display block dari marked pipeline ── */
+.materi-content .katex-display,
+.materi-content .materi-katex-display {
+  overflow-x: auto;
+  padding: 1rem 1.5rem;
+  margin: 1.1rem 0;
+  background: linear-gradient(135deg, #eef2ff 0%, #f0fdf4 100%);
+  border-radius: 14px;
+  border: 1px solid #c7d2fe;
+  box-shadow: 0 2px 12px rgba(99,102,241,0.07);
+  text-align: center;
+}
+.dark .materi-content .katex-display,
+.dark .materi-content .materi-katex-display {
+  background: linear-gradient(135deg, rgba(99,102,241,0.09), rgba(16,185,129,0.04));
+  border-color: rgba(99,102,241,0.2);
+}
+
+/* Link dalam konten materi */
+.materi-link {
+  color: #4f46e5;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.dark .materi-link { color: #a5b4fc; }
+.materi-link:hover { color: #3730a3; }
+
+/* Tabel alignment center/right dari marked */
+.materi-content td[align="center"],
+.materi-content th[align="center"] { text-align: center; }
+.materi-content td[align="right"],
+.materi-content th[align="right"]  { text-align: right; }
