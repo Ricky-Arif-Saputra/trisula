@@ -1,6 +1,9 @@
 ﻿import React, { useState, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import rehypeRaw from 'rehype-raw';
 import { MathCategory } from '../../types';
 import { useAuth } from '../Auth/AuthProvider';
 import { supabase } from '../../lib/supabaseClient';
@@ -178,159 +181,57 @@ const AttachmentViewer: React.FC<{ att: Attachment }> = ({ att }) => {
 // PostCard � card ringkasan materi untuk daftar
 // -------------------------------------------------------------
 // -------------------------------------------------------------
-// KaTeX inline renderer untuk teks biasa yang mengandung $...$
+// MarkdownContent — render markdown + LaTeX dengan remark-math & rehype-katex
 // -------------------------------------------------------------
-let katexModule: typeof import('katex') | null = null;
-const getKatex = async () => {
-  if (!katexModule) katexModule = (await import('katex')).default as any;
-  return katexModule!;
-};
-
-// Render teks dengan inline math $...$ dan display math $$...$$
-const renderMathInText = (text: string): string => {
-  if (!katexModule) return text;
-  let result = text;
-  // display math $$...$$
-  result = result.replace(/\$\$([\s\S]+?)\$\$/g, (_m, expr) => {
-    try { return (katexModule as any).renderToString(expr.trim(), { throwOnError: false, displayMode: true }); }
-    catch { return `<code class="math-err">${expr}</code>`; }
-  });
-  // inline math $...$
-  result = result.replace(/\$([^\$\n]+?)\$/g, (_m, expr) => {
-    try { return (katexModule as any).renderToString(expr.trim(), { throwOnError: false, displayMode: false }); }
-    catch { return `<code class="math-err">${expr}</code>`; }
-  });
-  return result;
-};
-
-// React component yang render HTML string (safe — hanya dari konten kita sendiri)
-const MathText: React.FC<{ text: string }> = ({ text }) => {
-  const [html, setHtml] = React.useState(text);
-  React.useEffect(() => {
-    getKatex().then(() => setHtml(renderMathInText(text)));
-  }, [text]);
-  return <span dangerouslySetInnerHTML={{ __html: html }} />;
-};
-
-// -------------------------------------------------------------
-// MarkdownContent - render markdown dengan styling premium + LaTeX
-// -------------------------------------------------------------
-const MarkdownContent: React.FC<{ content: string }> = ({ content }) => {
-  const [katexLoaded, setKatexLoaded] = React.useState(false);
-  React.useEffect(() => {
-    getKatex().then(() => setKatexLoaded(true));
-  }, []);
-
-  // Preprocessor: pisahkan blok $$...$$ dari teks biasa agar tidak diganggu ReactMarkdown
-  // Kita ganti $$ blok dengan placeholder, lalu render manual
-  const processedParts: Array<{ type: 'md' | 'display' | 'inline'; content: string }> = [];
-  const segments = content.split(/((?:\$\$[\s\S]+?\$\$|\$[^\$\n]+?\$))/g);
-  segments.forEach(seg => {
-    if (seg.startsWith('$$') && seg.endsWith('$$')) {
-      processedParts.push({ type: 'display', content: seg.slice(2, -2).trim() });
-    } else if (seg.startsWith('$') && seg.endsWith('$') && !seg.startsWith('$$')) {
-      processedParts.push({ type: 'inline', content: seg.slice(1, -1).trim() });
-    } else if (seg) {
-      processedParts.push({ type: 'md', content: seg });
-    }
-  });
-
-  const renderKatex = (expr: string, display: boolean) => {
-    if (!katexLoaded || !katexModule) {
-      return <code className="font-mono text-violet-700 bg-violet-50 dark:bg-violet-900/20 px-1.5 py-0.5 rounded text-[13px]">{display ? `$$${expr}$$` : `$${expr}$`}</code>;
-    }
-    try {
-      const html = (katexModule as any).renderToString(expr, { throwOnError: false, displayMode: display });
-      return display
-        ? <div className="katex-display-wrap overflow-x-auto py-3 px-4 my-3 bg-indigo-50/60 dark:bg-indigo-950/30 rounded-xl border border-indigo-100 dark:border-indigo-900 text-center" dangerouslySetInnerHTML={{ __html: html }} />
-        : <span className="katex-inline-wrap" dangerouslySetInnerHTML={{ __html: html }} />;
-    } catch {
-      return <code className="font-mono text-rose-600">{expr}</code>;
-    }
-  };
-
-  return (
-    <div className="materi-content">
-      {processedParts.map((part, i) => {
-        if (part.type === 'display') return <React.Fragment key={i}>{renderKatex(part.content, true)}</React.Fragment>;
-        if (part.type === 'inline') return <React.Fragment key={i}>{renderKatex(part.content, false)}</React.Fragment>;
-        return (
-          <ReactMarkdown
-            key={i}
-            remarkPlugins={[remarkGfm]}
-            components={{
-              h1: ({children}) => (
-                <h1 className="flex items-center gap-3 text-xl font-extrabold text-slate-900 dark:text-white mt-8 mb-4">
-                  <span className="w-1 h-6 rounded-full bg-gradient-to-b from-indigo-500 to-violet-500 shrink-0" />
-                  {children}
-                </h1>
-              ),
-              h2: ({children}) => (
-                <h2 className="text-base font-extrabold text-slate-800 dark:text-slate-100 mt-7 mb-3 pb-2 border-b-2 border-slate-100 dark:border-slate-700 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
-                  {children}
-                </h2>
-              ),
-              h3: ({children}) => (
-                <h3 className="text-sm font-bold text-indigo-700 dark:text-indigo-400 mt-5 mb-2 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[14px] text-indigo-400">arrow_right</span>
-                  {children}
-                </h3>
-              ),
-              h4: ({children}) => (
-                <h4 className="text-xs font-black text-slate-500 dark:text-slate-400 mt-4 mb-1.5 uppercase tracking-widest">{children}</h4>
-              ),
-              p: ({children}) => <p className="text-[15px] leading-[1.85] mb-3 text-slate-600 dark:text-slate-300">{children}</p>,
-              ul: ({children}) => <ul className="mb-4 space-y-1.5 pl-1">{children}</ul>,
-              ol: ({children}) => <ol className="mb-4 space-y-1.5 pl-1 list-decimal list-inside">{children}</ol>,
-              li: ({children}) => (
-                <li className="flex items-start gap-2.5 text-[15px] leading-relaxed text-slate-600 dark:text-slate-300">
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0 mt-2" />
-                  <span>{children}</span>
-                </li>
-              ),
-              strong: ({children}) => <strong className="font-extrabold text-slate-800 dark:text-slate-100 bg-amber-50 dark:bg-amber-900/20 px-0.5 rounded">{children}</strong>,
-              em: ({children}) => <em className="italic text-indigo-600 dark:text-indigo-400 not-italic font-medium">{children}</em>,
-              code: ({inline, children}: any) => inline
-                ? <code className="font-mono text-[13px] text-violet-700 dark:text-violet-400 bg-violet-50 dark:bg-violet-950/40 px-1.5 py-0.5 rounded-md border border-violet-100 dark:border-violet-900">{children}</code>
-                : <code className="block font-mono text-sm text-slate-200 leading-relaxed">{children}</code>,
-              pre: ({children}) => (
-                <pre className="bg-slate-900 dark:bg-slate-950 text-slate-100 rounded-xl p-4 overflow-x-auto my-4 border border-slate-700/50 shadow-xl text-sm font-mono leading-relaxed">
-                  {children}
-                </pre>
-              ),
-              blockquote: ({children}) => (
-                <blockquote className="relative border-l-4 border-amber-400 dark:border-amber-500 bg-amber-50 dark:bg-amber-950/20 px-5 py-3 rounded-r-xl my-4 shadow-sm">
-                  <span className="absolute top-2 left-3 text-amber-300 text-3xl leading-none font-black opacity-40">"</span>
-                  <div className="ml-3 text-sm text-amber-900 dark:text-amber-300 font-medium leading-relaxed">{children}</div>
-                </blockquote>
-              ),
-              hr: () => (
-                <div className="flex items-center gap-3 my-6">
-                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-700 to-transparent" />
-                  <span className="text-slate-300 dark:text-slate-600 text-xs">✦</span>
-                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-700 to-transparent" />
-                </div>
-              ),
-              table: ({children}) => (
-                <div className="overflow-x-auto my-5 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700">
-                  <table className="w-full text-sm border-collapse">{children}</table>
-                </div>
-              ),
-              thead: ({children}) => <thead className="bg-gradient-to-r from-slate-800 to-slate-700 dark:from-slate-700 dark:to-slate-600">{children}</thead>,
-              th: ({children}) => <th className="text-left text-[11px] font-black text-white/90 px-4 py-3 tracking-wide uppercase">{children}</th>,
-              tbody: ({children}) => <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">{children}</tbody>,
-              tr: ({children}) => <tr className="hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-colors">{children}</tr>,
-              td: ({children}) => <td className="px-4 py-2.5 text-[13px] text-slate-700 dark:text-slate-300 leading-relaxed">{children}</td>,
-            }}
-          >
-            {part.content}
-          </ReactMarkdown>
-        );
-      })}
-    </div>
-  );
-};
+const MarkdownContent: React.FC<{ content: string }> = ({ content }) => (
+  <div className="materi-content">
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm, remarkMath]}
+      rehypePlugins={[rehypeKatex, rehypeRaw]}
+      components={{
+        h1: ({ children }) => (
+          <h1 className="materi-h1">{children}</h1>
+        ),
+        h2: ({ children }) => (
+          <h2 className="materi-h2">{children}</h2>
+        ),
+        h3: ({ children }) => (
+          <h3 className="materi-h3">{children}</h3>
+        ),
+        h4: ({ children }) => (
+          <h4 className="materi-h4">{children}</h4>
+        ),
+        p: ({ children }) => <p className="materi-p">{children}</p>,
+        ul: ({ children }) => <ul className="materi-ul">{children}</ul>,
+        ol: ({ children }) => <ol className="materi-ol">{children}</ol>,
+        li: ({ children }) => <li className="materi-li">{children}</li>,
+        strong: ({ children }) => <strong className="materi-strong">{children}</strong>,
+        em: ({ children }) => <em className="materi-em">{children}</em>,
+        code: ({ inline, children }: any) =>
+          inline
+            ? <code className="materi-code-inline">{children}</code>
+            : <code className="materi-code-block">{children}</code>,
+        pre: ({ children }) => <pre className="materi-pre">{children}</pre>,
+        blockquote: ({ children }) => (
+          <blockquote className="materi-blockquote">{children}</blockquote>
+        ),
+        hr: () => <div className="materi-hr"><span>✦</span></div>,
+        table: ({ children }) => (
+          <div className="materi-table-wrap">
+            <table className="materi-table">{children}</table>
+          </div>
+        ),
+        thead: ({ children }) => <thead className="materi-thead">{children}</thead>,
+        th: ({ children }) => <th className="materi-th">{children}</th>,
+        tbody: ({ children }) => <tbody>{children}</tbody>,
+        tr: ({ children }) => <tr className="materi-tr">{children}</tr>,
+        td: ({ children }) => <td className="materi-td">{children}</td>,
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  </div>
+);
 const PostCard: React.FC<{
   post: MateriPost;
   isAdmin: boolean;
@@ -480,7 +381,7 @@ const PostDetail: React.FC<{
             <div className="bg-white dark:bg-slate-800/60 rounded-3xl border border-slate-200/80 dark:border-slate-700/60 shadow-sm overflow-hidden">
               {/* Konten header strip */}
               <div className={`h-1 w-full bg-gradient-to-r ${accentGradient}`} />
-              <div className="p-6 lg:p-8">
+              <div className="p-8 lg:p-10">
                 <MarkdownContent content={post.description} />
               </div>
             </div>

@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 @import 'katex/dist/katex.min.css';
 
 /* ── KaTeX protection: pastikan styling KaTeX tidak di-override Tailwind ── */
@@ -258,104 +258,322 @@
 .dark .badge-not-started { background: rgba(100,116,139,0.15); color: #94a3b8; border-color: rgba(148,163,184,0.2); }
 
 
-/* ── Materi Content Styling ── */
+
+
+/* ═══════════════════════════════════════════════════════════
+   MATERI CONTENT — premium typography & LaTeX styling
+   ═══════════════════════════════════════════════════════════ */
+
+/* Base container */
 .materi-content {
-  font-size: 15px;
-  line-height: 1.85;
-  color: #334155;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 15.5px;
+  line-height: 1.9;
+  color: #374151;
+}
+.dark .materi-content { color: #cbd5e1; }
+
+/* ── Headings ── */
+.materi-h1 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 22px;
+  font-weight: 900;
+  color: #0f172a;
+  margin: 2.2rem 0 1rem;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #e2e8f0;
+  letter-spacing: -0.3px;
+}
+.dark .materi-h1 { color: #f1f5f9; border-color: rgba(255,255,255,0.1); }
+.materi-h1::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 26px;
+  border-radius: 4px;
+  background: linear-gradient(to bottom, #6366f1, #8b5cf6);
+  flex-shrink: 0;
 }
 
-.dark .materi-content {
-  color: #cbd5e1;
+.materi-h2 {
+  font-size: 17px;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 2rem 0 0.75rem;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #eef2ff, #f5f3ff);
+  border-left: 4px solid #6366f1;
+  border-radius: 0 10px 10px 0;
+  letter-spacing: -0.2px;
+}
+.dark .materi-h2 {
+  color: #e2e8f0;
+  background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.08));
+  border-color: #818cf8;
 }
 
-/* LaTeX display blocks */
-.katex-display-wrap {
-  overflow-x: auto;
-  padding: 0.75rem 1rem;
-  margin: 0.875rem 0;
-  background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
-  border-radius: 0.75rem;
-  border: 1px solid #e0e7ff;
-  text-align: center;
+.materi-h3 {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #4f46e5;
+  margin: 1.5rem 0 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dark .materi-h3 { color: #a5b4fc; }
+.materi-h3::before {
+  content: '▸';
+  font-size: 11px;
+  color: #818cf8;
 }
 
-.dark .katex-display-wrap {
-  background: linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(139,92,246,0.08) 100%);
-  border-color: rgba(99,102,241,0.2);
-}
-
-/* Inline KaTeX */
-.katex-inline-wrap .katex {
-  font-size: 1em;
-}
-
-/* Tables in materi */
-.materi-content table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.materi-content th {
-  background: linear-gradient(to right, #1e293b, #334155);
-  color: #fff;
+.materi-h4 {
   font-size: 11px;
   font-weight: 900;
+  color: #64748b;
+  margin: 1.2rem 0 0.4rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 10px 14px;
-  text-align: left;
+  letter-spacing: 0.1em;
 }
+.dark .materi-h4 { color: #94a3b8; }
 
-.materi-content td {
-  padding: 9px 14px;
-  border-bottom: 1px solid #f1f5f9;
+/* ── Paragraphs ── */
+.materi-p {
+  margin-bottom: 0.875rem;
   color: #475569;
-  line-height: 1.6;
+  line-height: 1.85;
+}
+.dark .materi-p { color: #94a3b8; }
+
+/* ── Lists ── */
+.materi-ul {
+  margin: 0.5rem 0 1.25rem 0;
+  padding: 0;
+  list-style: none;
+}
+.materi-ol {
+  margin: 0.5rem 0 1.25rem 1.4rem;
+  list-style: decimal;
+}
+.materi-li {
+  position: relative;
+  padding: 3px 0 3px 22px;
+  color: #475569;
+  font-size: 15px;
+  line-height: 1.75;
+}
+.dark .materi-li { color: #94a3b8; }
+.materi-ul .materi-li::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 12px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+}
+.materi-ol .materi-li::before { display: none; }
+
+/* ── Inline formatting ── */
+.materi-strong {
+  font-weight: 800;
+  color: #1e293b;
+  background: linear-gradient(120deg, #fef3c7 0%, #fde68a 100%);
+  padding: 1px 3px;
+  border-radius: 3px;
+}
+.dark .materi-strong {
+  color: #f1f5f9;
+  background: rgba(251,191,36,0.15);
 }
 
-.dark .materi-content td {
-  border-bottom-color: rgba(255,255,255,0.06);
-  color: #94a3b8;
-}
-
-.materi-content tr:hover td {
-  background-color: #f8faff;
-}
-
-.dark .materi-content tr:hover td {
-  background-color: rgba(99,102,241,0.05);
-}
-
-/* Code blocks */
-.materi-content pre {
-  background: #0f172a;
-  border-radius: 0.75rem;
-  padding: 1rem 1.25rem;
-  overflow-x: auto;
-  margin: 1rem 0;
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
-}
-
-/* Blockquote */
-.materi-content blockquote p {
-  margin: 0;
-  font-style: normal;
+.materi-em {
+  font-style: italic;
+  color: #6366f1;
   font-weight: 500;
 }
+.dark .materi-em { color: #a5b4fc; }
 
-/* List items — override react-markdown default */
-.materi-content ul > li {
-  list-style: none;
-  padding-left: 0;
+/* ── Code ── */
+.materi-code-inline {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 13px;
+  color: #7c3aed;
+  background: #f5f3ff;
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px solid #ddd6fe;
+}
+.dark .materi-code-inline {
+  color: #c4b5fd;
+  background: rgba(139,92,246,0.12);
+  border-color: rgba(139,92,246,0.25);
 }
 
-.materi-content ol > li {
-  color: #475569;
+.materi-pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 12px;
+  padding: 1.25rem;
+  overflow-x: auto;
+  margin: 1.2rem 0;
+  border: 1px solid rgba(255,255,255,0.07);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.05);
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+.materi-code-block {
+  display: block;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
 }
 
-.dark .materi-content ol > li {
+/* ── Blockquote ── */
+.materi-blockquote {
+  position: relative;
+  border-left: 4px solid #f59e0b;
+  background: linear-gradient(135deg, #fffbeb, #fef3c7);
+  padding: 14px 18px 14px 20px;
+  border-radius: 0 12px 12px 0;
+  margin: 1.2rem 0;
+  box-shadow: 0 2px 8px rgba(245,158,11,0.12);
+}
+.dark .materi-blockquote {
+  background: rgba(245,158,11,0.07);
+  border-color: #d97706;
+}
+.materi-blockquote p {
+  margin: 0;
+  color: #92400e;
+  font-weight: 600;
+  font-size: 14.5px;
+  font-style: italic;
+}
+.dark .materi-blockquote p { color: #fde68a; }
+.materi-blockquote::before {
+  content: '💡';
+  position: absolute;
+  top: -10px;
+  left: 12px;
+  font-size: 18px;
+}
+
+/* ── HR divider ── */
+.materi-hr {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 1.75rem 0;
+}
+.materi-hr::before,
+.materi-hr::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #cbd5e1, transparent);
+}
+.dark .materi-hr::before,
+.dark .materi-hr::after {
+  background: linear-gradient(to right, transparent, rgba(255,255,255,0.12), transparent);
+}
+.materi-hr span {
   color: #94a3b8;
+  font-size: 10px;
+}
+
+/* ── Tables ── */
+.materi-table-wrap {
+  overflow-x: auto;
+  margin: 1.25rem 0;
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  border: 1px solid #e2e8f0;
+}
+.dark .materi-table-wrap { border-color: rgba(255,255,255,0.08); }
+
+.materi-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.materi-thead { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); }
+
+.materi-th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.88);
+  padding: 11px 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.materi-tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s;
+}
+.dark .materi-tr { border-color: rgba(255,255,255,0.05); }
+.materi-tr:last-child { border-bottom: none; }
+.materi-tr:hover { background: #f8faff; }
+.dark .materi-tr:hover { background: rgba(99,102,241,0.05); }
+.materi-tr:nth-child(even) { background: #fafbff; }
+.dark .materi-tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+
+.materi-td {
+  padding: 10px 16px;
+  color: #475569;
+  font-size: 13.5px;
+  line-height: 1.65;
+  vertical-align: top;
+}
+.dark .materi-td { color: #94a3b8; }
+
+/* ── KaTeX display blocks — diperbesar & dipercantik ── */
+.materi-content .katex-display {
+  overflow-x: auto;
+  padding: 1rem 1.5rem;
+  margin: 1.2rem 0;
+  background: linear-gradient(135deg, #eef2ff 0%, #f0fdf4 100%);
+  border-radius: 14px;
+  border: 1px solid #c7d2fe;
+  box-shadow: 0 2px 12px rgba(99,102,241,0.08), inset 0 1px 0 rgba(255,255,255,0.8);
+  font-size: 1.1em;
+}
+.dark .materi-content .katex-display {
+  background: linear-gradient(135deg, rgba(99,102,241,0.1), rgba(16,185,129,0.05));
+  border-color: rgba(99,102,241,0.25);
+  box-shadow: 0 2px 12px rgba(99,102,241,0.15);
+}
+
+/* KaTeX inline — sedikit lebih besar dari teks biasa */
+.materi-content .katex:not(.katex-display .katex) {
+  font-size: 1.05em;
+}
+
+/* Boxed formula khusus — \boxed{} */
+.materi-content .boxed {
+  border: 2px solid #6366f1 !important;
+  border-radius: 6px !important;
+  padding: 3px 8px !important;
+  background: #eef2ff !important;
+}
+.dark .materi-content .boxed {
+  border-color: #818cf8 !important;
+  background: rgba(99,102,241,0.15) !important;
+}
+
+/* KaTeX protection */
+.katex, .katex * {
+  box-sizing: content-box !important;
+}
+.katex .base, .katex .strut {
+  display: inline-block;
 }
