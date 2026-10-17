@@ -178,38 +178,159 @@ const AttachmentViewer: React.FC<{ att: Attachment }> = ({ att }) => {
 // PostCard � card ringkasan materi untuk daftar
 // -------------------------------------------------------------
 // -------------------------------------------------------------
-// MarkdownContent - render markdown dengan styling premium
+// KaTeX inline renderer untuk teks biasa yang mengandung $...$
 // -------------------------------------------------------------
-const MarkdownContent: React.FC<{ content: string }> = ({ content }) => (
-  <div className="markdown-content text-sm leading-relaxed space-y-2">
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
-      components={{
-        h1: ({children}) => <h1 className="text-xl font-extrabold text-slate-900 dark:text-white mt-6 mb-3 pb-2 border-b border-slate-200 dark:border-slate-700">{children}</h1>,
-        h2: ({children}) => <h2 className="text-base font-extrabold text-slate-800 dark:text-slate-100 mt-5 mb-2">{children}</h2>,
-        h3: ({children}) => <h3 className="text-sm font-bold text-indigo-700 dark:text-indigo-400 mt-4 mb-2">{children}</h3>,
-        h4: ({children}) => <h4 className="text-xs font-bold text-slate-600 dark:text-slate-400 mt-3 mb-1 uppercase tracking-wider">{children}</h4>,
-        p: ({children}) => <p className="text-sm leading-relaxed mb-2 text-slate-600 dark:text-slate-300">{children}</p>,
-        ul: ({children}) => <ul className="mb-3 space-y-1 pl-4 list-disc list-outside">{children}</ul>,
-        ol: ({children}) => <ol className="mb-3 space-y-1 pl-4 list-decimal list-outside">{children}</ol>,
-        li: ({children}) => <li className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">{children}</li>,
-        strong: ({children}) => <strong className="font-bold text-slate-800 dark:text-slate-100">{children}</strong>,
-        em: ({children}) => <em className="italic text-slate-500 dark:text-slate-400">{children}</em>,
-        pre: ({children}) => <pre className="bg-slate-900 dark:bg-slate-950 text-slate-100 rounded-xl p-4 overflow-x-auto mb-4 border border-slate-700 shadow-lg text-xs font-mono">{children}</pre>,
-        blockquote: ({children}) => <blockquote className="border-l-4 border-indigo-400 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 px-4 py-3 rounded-r-xl my-4">{children}</blockquote>,
-        hr: () => <hr className="border-slate-200 dark:border-slate-700 my-5" />,
-        table: ({children}) => <div className="overflow-x-auto my-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700"><table className="w-full text-sm border-collapse">{children}</table></div>,
-        thead: ({children}) => <thead className="bg-slate-800 dark:bg-slate-700">{children}</thead>,
-        th: ({children}) => <th className="text-left text-xs font-bold text-white px-3 py-2">{children}</th>,
-        tbody: ({children}) => <tbody>{children}</tbody>,
-        tr: ({children}) => <tr className="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">{children}</tr>,
-        td: ({children}) => <td className="px-3 py-2 text-xs text-slate-700 dark:text-slate-300">{children}</td>,
-      }}
-    >
-      {content}
-    </ReactMarkdown>
-  </div>
-);
+let katexModule: typeof import('katex') | null = null;
+const getKatex = async () => {
+  if (!katexModule) katexModule = (await import('katex')).default as any;
+  return katexModule!;
+};
+
+// Render teks dengan inline math $...$ dan display math $$...$$
+const renderMathInText = (text: string): string => {
+  if (!katexModule) return text;
+  let result = text;
+  // display math $$...$$
+  result = result.replace(/\$\$([\s\S]+?)\$\$/g, (_m, expr) => {
+    try { return (katexModule as any).renderToString(expr.trim(), { throwOnError: false, displayMode: true }); }
+    catch { return `<code class="math-err">${expr}</code>`; }
+  });
+  // inline math $...$
+  result = result.replace(/\$([^\$\n]+?)\$/g, (_m, expr) => {
+    try { return (katexModule as any).renderToString(expr.trim(), { throwOnError: false, displayMode: false }); }
+    catch { return `<code class="math-err">${expr}</code>`; }
+  });
+  return result;
+};
+
+// React component yang render HTML string (safe — hanya dari konten kita sendiri)
+const MathText: React.FC<{ text: string }> = ({ text }) => {
+  const [html, setHtml] = React.useState(text);
+  React.useEffect(() => {
+    getKatex().then(() => setHtml(renderMathInText(text)));
+  }, [text]);
+  return <span dangerouslySetInnerHTML={{ __html: html }} />;
+};
+
+// -------------------------------------------------------------
+// MarkdownContent - render markdown dengan styling premium + LaTeX
+// -------------------------------------------------------------
+const MarkdownContent: React.FC<{ content: string }> = ({ content }) => {
+  const [katexLoaded, setKatexLoaded] = React.useState(false);
+  React.useEffect(() => {
+    getKatex().then(() => setKatexLoaded(true));
+  }, []);
+
+  // Preprocessor: pisahkan blok $$...$$ dari teks biasa agar tidak diganggu ReactMarkdown
+  // Kita ganti $$ blok dengan placeholder, lalu render manual
+  const processedParts: Array<{ type: 'md' | 'display' | 'inline'; content: string }> = [];
+  const segments = content.split(/((?:\$\$[\s\S]+?\$\$|\$[^\$\n]+?\$))/g);
+  segments.forEach(seg => {
+    if (seg.startsWith('$$') && seg.endsWith('$$')) {
+      processedParts.push({ type: 'display', content: seg.slice(2, -2).trim() });
+    } else if (seg.startsWith('$') && seg.endsWith('$') && !seg.startsWith('$$')) {
+      processedParts.push({ type: 'inline', content: seg.slice(1, -1).trim() });
+    } else if (seg) {
+      processedParts.push({ type: 'md', content: seg });
+    }
+  });
+
+  const renderKatex = (expr: string, display: boolean) => {
+    if (!katexLoaded || !katexModule) {
+      return <code className="font-mono text-violet-700 bg-violet-50 dark:bg-violet-900/20 px-1.5 py-0.5 rounded text-[13px]">{display ? `$$${expr}$$` : `$${expr}$`}</code>;
+    }
+    try {
+      const html = (katexModule as any).renderToString(expr, { throwOnError: false, displayMode: display });
+      return display
+        ? <div className="katex-display-wrap overflow-x-auto py-3 px-4 my-3 bg-indigo-50/60 dark:bg-indigo-950/30 rounded-xl border border-indigo-100 dark:border-indigo-900 text-center" dangerouslySetInnerHTML={{ __html: html }} />
+        : <span className="katex-inline-wrap" dangerouslySetInnerHTML={{ __html: html }} />;
+    } catch {
+      return <code className="font-mono text-rose-600">{expr}</code>;
+    }
+  };
+
+  return (
+    <div className="materi-content">
+      {processedParts.map((part, i) => {
+        if (part.type === 'display') return <React.Fragment key={i}>{renderKatex(part.content, true)}</React.Fragment>;
+        if (part.type === 'inline') return <React.Fragment key={i}>{renderKatex(part.content, false)}</React.Fragment>;
+        return (
+          <ReactMarkdown
+            key={i}
+            remarkPlugins={[remarkGfm]}
+            components={{
+              h1: ({children}) => (
+                <h1 className="flex items-center gap-3 text-xl font-extrabold text-slate-900 dark:text-white mt-8 mb-4">
+                  <span className="w-1 h-6 rounded-full bg-gradient-to-b from-indigo-500 to-violet-500 shrink-0" />
+                  {children}
+                </h1>
+              ),
+              h2: ({children}) => (
+                <h2 className="text-base font-extrabold text-slate-800 dark:text-slate-100 mt-7 mb-3 pb-2 border-b-2 border-slate-100 dark:border-slate-700 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+                  {children}
+                </h2>
+              ),
+              h3: ({children}) => (
+                <h3 className="text-sm font-bold text-indigo-700 dark:text-indigo-400 mt-5 mb-2 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[14px] text-indigo-400">arrow_right</span>
+                  {children}
+                </h3>
+              ),
+              h4: ({children}) => (
+                <h4 className="text-xs font-black text-slate-500 dark:text-slate-400 mt-4 mb-1.5 uppercase tracking-widest">{children}</h4>
+              ),
+              p: ({children}) => <p className="text-[15px] leading-[1.85] mb-3 text-slate-600 dark:text-slate-300">{children}</p>,
+              ul: ({children}) => <ul className="mb-4 space-y-1.5 pl-1">{children}</ul>,
+              ol: ({children}) => <ol className="mb-4 space-y-1.5 pl-1 list-decimal list-inside">{children}</ol>,
+              li: ({children}) => (
+                <li className="flex items-start gap-2.5 text-[15px] leading-relaxed text-slate-600 dark:text-slate-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0 mt-2" />
+                  <span>{children}</span>
+                </li>
+              ),
+              strong: ({children}) => <strong className="font-extrabold text-slate-800 dark:text-slate-100 bg-amber-50 dark:bg-amber-900/20 px-0.5 rounded">{children}</strong>,
+              em: ({children}) => <em className="italic text-indigo-600 dark:text-indigo-400 not-italic font-medium">{children}</em>,
+              code: ({inline, children}: any) => inline
+                ? <code className="font-mono text-[13px] text-violet-700 dark:text-violet-400 bg-violet-50 dark:bg-violet-950/40 px-1.5 py-0.5 rounded-md border border-violet-100 dark:border-violet-900">{children}</code>
+                : <code className="block font-mono text-sm text-slate-200 leading-relaxed">{children}</code>,
+              pre: ({children}) => (
+                <pre className="bg-slate-900 dark:bg-slate-950 text-slate-100 rounded-xl p-4 overflow-x-auto my-4 border border-slate-700/50 shadow-xl text-sm font-mono leading-relaxed">
+                  {children}
+                </pre>
+              ),
+              blockquote: ({children}) => (
+                <blockquote className="relative border-l-4 border-amber-400 dark:border-amber-500 bg-amber-50 dark:bg-amber-950/20 px-5 py-3 rounded-r-xl my-4 shadow-sm">
+                  <span className="absolute top-2 left-3 text-amber-300 text-3xl leading-none font-black opacity-40">"</span>
+                  <div className="ml-3 text-sm text-amber-900 dark:text-amber-300 font-medium leading-relaxed">{children}</div>
+                </blockquote>
+              ),
+              hr: () => (
+                <div className="flex items-center gap-3 my-6">
+                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-700 to-transparent" />
+                  <span className="text-slate-300 dark:text-slate-600 text-xs">✦</span>
+                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-700 to-transparent" />
+                </div>
+              ),
+              table: ({children}) => (
+                <div className="overflow-x-auto my-5 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700">
+                  <table className="w-full text-sm border-collapse">{children}</table>
+                </div>
+              ),
+              thead: ({children}) => <thead className="bg-gradient-to-r from-slate-800 to-slate-700 dark:from-slate-700 dark:to-slate-600">{children}</thead>,
+              th: ({children}) => <th className="text-left text-[11px] font-black text-white/90 px-4 py-3 tracking-wide uppercase">{children}</th>,
+              tbody: ({children}) => <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">{children}</tbody>,
+              tr: ({children}) => <tr className="hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-colors">{children}</tr>,
+              td: ({children}) => <td className="px-4 py-2.5 text-[13px] text-slate-700 dark:text-slate-300 leading-relaxed">{children}</td>,
+            }}
+          >
+            {part.content}
+          </ReactMarkdown>
+        );
+      })}
+    </div>
+  );
+};
 const PostCard: React.FC<{
   post: MateriPost;
   isAdmin: boolean;
@@ -293,7 +414,7 @@ const PostCard: React.FC<{
 };
 
 // -------------------------------------------------------------
-// PostDetail — tampilan penuh satu materi (premium)
+// PostDetail — full width, premium layout
 // -------------------------------------------------------------
 const PostDetail: React.FC<{
   post: MateriPost;
@@ -302,66 +423,107 @@ const PostDetail: React.FC<{
   onBack: () => void;
   onEdit: () => void;
 }> = ({ post, accentGradient, isAdmin, onBack, onEdit }) => (
-  <div className="max-w-3xl mx-auto px-4 py-5 space-y-0">
-    {/* Back + edit bar */}
-    <div className="flex items-center justify-between mb-5">
-      <button onClick={onBack}
-        className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer transition-colors">
-        <ArrowLeft size={16} /> Kembali
-      </button>
-      {isAdmin && (
-        <button onClick={onEdit}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 text-xs font-bold cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors">
-          <Edit3 size={12} /> Edit
-        </button>
-      )}
-    </div>
+  <div className="w-full">
+    {/* ── HERO BANNER full-width ── */}
+    <div className={`relative w-full bg-gradient-to-br ${accentGradient} text-white overflow-hidden`}>
+      {/* decorative blobs */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(255,255,255,0.12),transparent_55%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(0,0,0,0.18),transparent_60%)]" />
+      <div className="absolute right-8 bottom-0 opacity-[0.06] text-[160px] font-black leading-none select-none pointer-events-none">∑</div>
 
-    {/* Hero gradient header */}
-    <div className={`rounded-3xl overflow-hidden bg-gradient-to-br ${accentGradient} p-7 text-white shadow-xl mb-6`}>
-      <div className="flex flex-wrap gap-2 mb-3">
-        {post.tags.map(tag => (
-          <span key={tag} className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-white/20 border border-white/30 uppercase tracking-wide">
-            {tag}
-          </span>
-        ))}
-      </div>
-      <h1 className="text-2xl font-extrabold leading-tight mb-2">{post.title}</h1>
-      <p className="text-sm opacity-70 flex items-center gap-2 flex-wrap">
-        <span className="flex items-center gap-1"><Calendar size={12} /> {formatDate(post.created_at)}</span>
-        {post.attachments.length > 0 && (
-          <span className="flex items-center gap-1 ml-2">
-            <span className="material-symbols-outlined text-[12px]">attach_file</span>
-            {post.attachments.length} bahan ajar
-          </span>
-        )}
-      </p>
-    </div>
-
-    {/* Konten markdown */}
-    {post.description && (
-      <div className="bg-white dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden mb-6">
-        <MarkdownContent content={post.description} />
-      </div>
-    )}
-
-    {/* Bahan Ajar */}
-    {post.attachments.length > 0 && (
-      <div className="space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">Bahan Ajar &amp; Referensi</p>
-          <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+      <div className="relative z-10 px-6 lg:px-12 pt-8 pb-10 max-w-6xl mx-auto">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-[11px] font-bold text-white/60 mb-5">
+          <span>Materi</span>
+          <ChevronRight size={12} />
+          <span className="text-white/90">{post.title}</span>
         </div>
-        {post.attachments.map(att => (
-          <AttachmentViewer key={att.id} att={att} />
-        ))}
-      </div>
-    )}
 
-    <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
-      <span>Diposting oleh {post.created_by}</span>
-      <span>Diperbarui {formatDate(post.updated_at)}</span>
+        {/* Tags */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          {post.tags.map(tag => (
+            <span key={tag} className="inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-1 rounded-full bg-white/15 border border-white/25 uppercase tracking-widest">
+              <Tag size={9} /> {tag}
+            </span>
+          ))}
+        </div>
+
+        {/* Title */}
+        <h1 className="text-3xl lg:text-4xl font-extrabold leading-tight mb-4 max-w-3xl">{post.title}</h1>
+
+        {/* Meta row */}
+        <div className="flex items-center gap-4 text-sm text-white/70 flex-wrap">
+          <span className="flex items-center gap-1.5"><Calendar size={13} /> {formatDate(post.created_at)}</span>
+          {post.attachments.length > 0 && (
+            <span className="flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[14px]">attach_file</span>
+              {post.attachments.length} bahan ajar
+            </span>
+          )}
+          {isAdmin && (
+            <button onClick={onEdit}
+              className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 border border-white/25 text-white text-xs font-bold cursor-pointer hover:bg-white/25 transition-colors">
+              <Edit3 size={12} /> Edit
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+
+    {/* ── BODY: dua kolom di desktop ── */}
+    <div className="max-w-6xl mx-auto px-4 lg:px-12 py-8">
+      <div className="flex gap-8 items-start">
+
+        {/* MAIN CONTENT — kiri, lebar */}
+        <div className="flex-1 min-w-0">
+          {post.description && (
+            <div className="bg-white dark:bg-slate-800/60 rounded-3xl border border-slate-200/80 dark:border-slate-700/60 shadow-sm overflow-hidden">
+              {/* Konten header strip */}
+              <div className={`h-1 w-full bg-gradient-to-r ${accentGradient}`} />
+              <div className="p-6 lg:p-8">
+                <MarkdownContent content={post.description} />
+              </div>
+            </div>
+          )}
+
+          {/* Footer */}
+          <div className="mt-6 flex items-center justify-between text-[11px] text-slate-400 px-1">
+            <span>Oleh: {post.created_by}</span>
+            <span>Diperbarui {formatDate(post.updated_at)}</span>
+          </div>
+        </div>
+
+        {/* SIDEBAR — kanan, hanya tampil jika ada lampiran (desktop) */}
+        {post.attachments.length > 0 && (
+          <div className="hidden lg:flex flex-col gap-4 w-72 shrink-0 sticky top-20">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+              <div className={`px-4 py-3 bg-gradient-to-r ${accentGradient}`}>
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/80">Bahan Ajar</p>
+                <p className="text-sm font-extrabold text-white">{post.attachments.length} Lampiran</p>
+              </div>
+              <div className="p-3 space-y-2">
+                {post.attachments.map(att => (
+                  <AttachmentViewer key={att.id} att={att} />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Lampiran mobile (di bawah konten) */}
+      {post.attachments.length > 0 && (
+        <div className="lg:hidden mt-6 space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">Bahan Ajar &amp; Referensi</p>
+            <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+          </div>
+          {post.attachments.map(att => (
+            <AttachmentViewer key={att.id} att={att} />
+          ))}
+        </div>
+      )}
     </div>
   </div>
 );
@@ -737,19 +899,20 @@ const TopicScreen: React.FC<{
   if (openPost && !isFormOpen) {
     return (
       <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-900">
-        <div className="sticky top-0 z-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="flex items-center gap-3 px-4 py-3">
+        {/* Sticky topbar */}
+        <div className="sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="flex items-center gap-3 px-4 lg:px-10 py-3 max-w-7xl mx-auto">
             <button onClick={() => setOpenPostId(null)}
-              className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 cursor-pointer">
+              className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 cursor-pointer transition-colors shrink-0">
               <ArrowLeft size={18} />
             </button>
-            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${topic.gradient} flex items-center justify-center shadow shrink-0`}>
-              <span className="material-symbols-outlined text-white text-[16px]">{topic.icon}</span>
+            <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${topic.gradient} flex items-center justify-center shadow shrink-0`}>
+              <span className="material-symbols-outlined text-white text-[14px]">{topic.icon}</span>
             </div>
             <h2 className="text-sm font-extrabold text-slate-800 dark:text-white truncate flex-1">{openPost.title}</h2>
             {isAdmin && (
               <button onClick={() => setFormMode(openPost.id)}
-                className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-xl border border-indigo-200 text-indigo-600 text-xs font-bold cursor-pointer hover:bg-indigo-50">
+                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 text-xs font-bold cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors">
                 <Edit3 size={12} /> Edit
               </button>
             )}
@@ -769,24 +932,41 @@ const TopicScreen: React.FC<{
   return (
     <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-900">
       {/* Topic sticky header */}
-      <div className="sticky top-0 z-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm">
-        <div className="flex items-center gap-3 px-4 py-3">
+      <div className="sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-3 px-4 lg:px-10 py-3 max-w-7xl mx-auto">
           <button onClick={onBack}
             className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 cursor-pointer transition-colors shrink-0">
             <ArrowLeft size={18} />
           </button>
-          <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${topic.gradient} flex items-center justify-center shadow shrink-0`}>
+          <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${topic.gradient} flex items-center justify-center shadow-md shrink-0`}>
             <span className="material-symbols-outlined text-white text-[18px]">{topic.icon}</span>
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-sm font-extrabold text-slate-800 dark:text-white">{topic.label}</h2>
             <p className="text-[10px] text-slate-400">{posts.length} bahan ajar tersedia</p>
           </div>
-
+          {isAdmin && !isFormOpen && (
+            <button onClick={() => setFormMode('new')}
+              className={`shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r ${topic.gradient} text-white text-xs font-bold cursor-pointer hover:opacity-90 shadow-md`}>
+              <Plus size={13} /> Tambah Materi
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="px-4 py-5 space-y-5 max-w-5xl mx-auto">
+      {/* Hero banner topik */}
+      {!isFormOpen && posts.length > 0 && (
+        <div className={`relative w-full bg-gradient-to-br ${topic.gradient} text-white overflow-hidden`}>
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(0,0,0,0.2),transparent_60%)]" />
+          <div className="relative z-10 px-6 lg:px-12 py-8 max-w-7xl mx-auto">
+            <p className="text-[10px] font-black uppercase tracking-widest text-white/60 mb-2">Topik Materi</p>
+            <h1 className="text-2xl lg:text-3xl font-extrabold leading-tight mb-1">{topic.label}</h1>
+            <p className="text-sm text-white/70">{topic.desc}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="px-4 lg:px-10 py-6 max-w-7xl mx-auto">
         {/* Form tambah/edit */}
         {isFormOpen && (
           <div className="animate-in slide-in-from-top-2 duration-300">
@@ -833,27 +1013,18 @@ const TopicScreen: React.FC<{
                 )}
               </div>
             ) : (
-              <div className="space-y-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {posts.map(post => (
-                    <PostCard
-                      key={post.id}
-                      post={post}
-                      isAdmin={isAdmin}
-                      accentGradient={topic.gradient}
-                      onOpen={() => setOpenPostId(post.id)}
-                      onEdit={() => setFormMode(post.id)}
-                      onDelete={() => handleDelete(post.id)}
-                    />
-                  ))}
-                </div>
-                {/* Tombol tambah � satu-satunya, di bawah grid */}
-                {isAdmin && (
-                  <button onClick={() => setFormMode('new')}
-                    className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-sm font-bold cursor-pointer hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-all">
-                    <Plus size={16} /> Tambah Materi Baru
-                  </button>
-                )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                {posts.map(post => (
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    isAdmin={isAdmin}
+                    accentGradient={topic.gradient}
+                    onOpen={() => setOpenPostId(post.id)}
+                    onEdit={() => setFormMode(post.id)}
+                    onDelete={() => handleDelete(post.id)}
+                  />
+                ))}
               </div>
             )}
           </>

@@ -256,3 +256,106 @@
 .dark .badge-completed { background: rgba(5,150,105,0.2); color: #34d399; border-color: rgba(52,211,153,0.3); }
 .dark .badge-in-progress { background: rgba(217,119,6,0.18); color: #fbbf24; border-color: rgba(251,191,36,0.3); }
 .dark .badge-not-started { background: rgba(100,116,139,0.15); color: #94a3b8; border-color: rgba(148,163,184,0.2); }
+
+
+/* ── Materi Content Styling ── */
+.materi-content {
+  font-size: 15px;
+  line-height: 1.85;
+  color: #334155;
+}
+
+.dark .materi-content {
+  color: #cbd5e1;
+}
+
+/* LaTeX display blocks */
+.katex-display-wrap {
+  overflow-x: auto;
+  padding: 0.75rem 1rem;
+  margin: 0.875rem 0;
+  background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
+  border-radius: 0.75rem;
+  border: 1px solid #e0e7ff;
+  text-align: center;
+}
+
+.dark .katex-display-wrap {
+  background: linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(139,92,246,0.08) 100%);
+  border-color: rgba(99,102,241,0.2);
+}
+
+/* Inline KaTeX */
+.katex-inline-wrap .katex {
+  font-size: 1em;
+}
+
+/* Tables in materi */
+.materi-content table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.materi-content th {
+  background: linear-gradient(to right, #1e293b, #334155);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 10px 14px;
+  text-align: left;
+}
+
+.materi-content td {
+  padding: 9px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.dark .materi-content td {
+  border-bottom-color: rgba(255,255,255,0.06);
+  color: #94a3b8;
+}
+
+.materi-content tr:hover td {
+  background-color: #f8faff;
+}
+
+.dark .materi-content tr:hover td {
+  background-color: rgba(99,102,241,0.05);
+}
+
+/* Code blocks */
+.materi-content pre {
+  background: #0f172a;
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+
+/* Blockquote */
+.materi-content blockquote p {
+  margin: 0;
+  font-style: normal;
+  font-weight: 500;
+}
+
+/* List items — override react-markdown default */
+.materi-content ul > li {
+  list-style: none;
+  padding-left: 0;
+}
+
+.materi-content ol > li {
+  color: #475569;
+}
+
+.dark .materi-content ol > li {
+  color: #94a3b8;
+}
