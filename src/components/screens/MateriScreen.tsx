@@ -195,25 +195,41 @@ marked.setOptions({ renderer: markedRenderer, gfm: true, breaks: false });
 
 /** Render semua $$...$$ dan $...$ menjadi HTML KaTeX */
 function applyKatex(src: string): string {
-  // 1. Display math — multi-line $$...$$
-  let out = src.replace(/\$\$([\s\S]+?)\$\$/g, (_m, expr) => {
-    try {
-      return katex.renderToString(expr.trim(), {
-        displayMode: true, throwOnError: false, trust: true, strict: false,
-      });
-    } catch { return `<code>${expr}</code>`; }
+  // Lindungi blok kode ``` dari pemrosesan LaTeX
+  const codeBlocks: string[] = [];
+  let out = src.replace(/(```[\s\S]*?```|`[^`\n]+`)/g, (m) => {
+    codeBlocks.push(m);
+    return `\x00CODE${codeBlocks.length - 1}\x00`;
   });
 
-  // 2. Inline math — single line $...$
-  //    Hati-hati: skip $$ yang sudah diproses, dan skip $ di dalam backtick
-  out = out.replace(/(?<![`\\])\$([^$\n`]{1,500}?)(?<!\\)\$/g, (_m, expr) => {
-    if (!expr.trim()) return _m;
+  // 1. Display math — $$...$$ (multi-line, supports aligned/cases dll)
+  out = out.replace(/\$\$([\s\S]+?)\$\$/g, (_m, expr) => {
     try {
       return katex.renderToString(expr.trim(), {
-        displayMode: false, throwOnError: false, trust: true, strict: false,
+        displayMode: true, throwOnError: false, trust: true,
+        strict: (errCode: string) => errCode === 'unicodeTextInMathMode' ? 'ignore' : 'warn',
+        macros: { '\\dfrac': '\\frac', '\\multicolumn': '' },
       });
-    } catch { return `<code>${expr}</code>`; }
+    } catch { return `<code class="materi-code-inline">${expr}</code>`; }
   });
+
+  // 2. Inline math — $...$
+  //    Regex: $ lalu konten (tidak mengandung $, newline), lalu $
+  //    Tambah toleransi untuk ^ { } \ spasi dll
+  out = out.replace(/\$([^$\n]{1,400}?)\$/g, (_m, expr) => {
+    const e = expr.trim();
+    if (!e) return _m;
+    try {
+      return katex.renderToString(e, {
+        displayMode: false, throwOnError: false, trust: true,
+        strict: (errCode: string) => errCode === 'unicodeTextInMathMode' ? 'ignore' : 'warn',
+        macros: { '\\dfrac': '\\frac' },
+      });
+    } catch { return `<code class="materi-code-inline">${e}</code>`; }
+  });
+
+  // Kembalikan blok kode
+  out = out.replace(/\x00CODE(\d+)\x00/g, (_, i) => codeBlocks[parseInt(i)]);
 
   return out;
 }
