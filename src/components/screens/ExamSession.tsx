@@ -89,13 +89,18 @@ export const ExamSession: React.FC<ExamSessionProps> = ({
     setStatuses(prev => {
       const next = [...prev];
       next[currentIdx] = 'done';
+      // Auto-pindah ke soal berikutnya yang belum dikerjakan — pakai `next` (fresh state)
+      const nextUntouched = next.findIndex((s, i) => i !== currentIdx && s === 'untouched');
+      if (nextUntouched !== -1) {
+        // defer untuk menghindari update bersamaan
+        setTimeout(() => {
+          setCurrentIdx(nextUntouched);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 0);
+      }
       return next;
     });
-    // Auto-pindah ke soal berikutnya yang belum dikerjakan
-    const nextUntouched = questionIds.findIndex((_, i) => i !== currentIdx && statuses[i] === 'untouched');
-    if (nextUntouched !== -1) setCurrentIdx(nextUntouched);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [currentIdx, questionIds, statuses]);
+  }, [currentIdx]);
 
   const markRagu = useCallback(() => {
     setStatuses(prev => {
@@ -421,7 +426,7 @@ export const ExamSession: React.FC<ExamSessionProps> = ({
         <QuizQuestionDynamic
           key={currentId}
           questionId={currentId}
-          onFinish={handleQuestionFinish as any}
+          onFinish={handleQuestionResult as any}
           nextLabel={currentIdx < totalSoal - 1 ? `Simpan & Soal ${currentIdx + 2}` : 'Simpan Jawaban'}
           onMarkRagu={markRagu}
           showSubmitAll={allDone}
