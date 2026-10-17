@@ -576,7 +576,7 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({
                     </button>
                   )}
                 </div>
-              )              )}
+              )}
             </div>
           </div>
         )}
