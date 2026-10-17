@@ -293,7 +293,7 @@ const PostCard: React.FC<{
 };
 
 // -------------------------------------------------------------
-// PostDetail � tampilan penuh satu materi
+// PostDetail — tampilan penuh satu materi (premium)
 // -------------------------------------------------------------
 const PostDetail: React.FC<{
   post: MateriPost;
@@ -302,79 +302,69 @@ const PostDetail: React.FC<{
   onBack: () => void;
   onEdit: () => void;
 }> = ({ post, accentGradient, isAdmin, onBack, onEdit }) => (
-  <div className="max-w-3xl mx-auto px-4 py-5 space-y-5">
-    <button onClick={onBack}
-      className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer transition-colors">
-      <ArrowLeft size={16} /> Kembali ke daftar
-    </button>
+  <div className="max-w-3xl mx-auto px-4 py-5 space-y-0">
+    {/* Back + edit bar */}
+    <div className="flex items-center justify-between mb-5">
+      <button onClick={onBack}
+        className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer transition-colors">
+        <ArrowLeft size={16} /> Kembali
+      </button>
+      {isAdmin && (
+        <button onClick={onEdit}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 text-xs font-bold cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors">
+          <Edit3 size={12} /> Edit
+        </button>
+      )}
+    </div>
 
-    <div className={`h-1.5 w-full rounded-full bg-gradient-to-r ${accentGradient}`} />
-
-    <div>
-      <div className="flex items-center gap-2 mb-2 flex-wrap">
-        <span className="flex items-center gap-1 text-xs font-bold text-slate-400">
-          <Calendar size={12} /> {formatDate(post.created_at)}
-        </span>
+    {/* Hero gradient header */}
+    <div className={`rounded-3xl overflow-hidden bg-gradient-to-br ${accentGradient} p-7 text-white shadow-xl mb-6`}>
+      <div className="flex flex-wrap gap-2 mb-3">
         {post.tags.map(tag => (
-          <span key={tag} className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500">
-            <Tag size={9} /> {tag}
+          <span key={tag} className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-white/20 border border-white/30 uppercase tracking-wide">
+            {tag}
           </span>
         ))}
       </div>
-      <div className="flex items-start justify-between gap-3">
-        <h1 className="text-xl font-extrabold text-slate-900 dark:text-white leading-tight">{post.title}</h1>
-        {isAdmin && (
-          <button onClick={onEdit}
-            className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl border border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 text-xs font-bold cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors">
-            <Edit3 size={13} /> Edit
-          </button>
+      <h1 className="text-2xl font-extrabold leading-tight mb-2">{post.title}</h1>
+      <p className="text-sm opacity-70 flex items-center gap-2 flex-wrap">
+        <span className="flex items-center gap-1"><Calendar size={12} /> {formatDate(post.created_at)}</span>
+        {post.attachments.length > 0 && (
+          <span className="flex items-center gap-1 ml-2">
+            <span className="material-symbols-outlined text-[12px]">attach_file</span>
+            {post.attachments.length} bahan ajar
+          </span>
         )}
-      </div>
+      </p>
     </div>
 
+    {/* Konten markdown */}
     {post.description && (
-      <div className="bg-white dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-        <div className="px-5 py-4">
-          <MarkdownContent content={post.description} />
-        </div>
+      <div className="bg-white dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden mb-6">
+        <MarkdownContent content={post.description} />
       </div>
     )}
 
+    {/* Bahan Ajar */}
     {post.attachments.length > 0 && (
-      <div className="space-y-4">
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-          Bahan Ajar ({post.attachments.length})
-        </p>
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">Bahan Ajar &amp; Referensi</p>
+          <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+        </div>
         {post.attachments.map(att => (
           <AttachmentViewer key={att.id} att={att} />
         ))}
       </div>
     )}
 
-    {post.attachments.length === 0 && (
-      <div className="text-center py-10 text-slate-400">
-        <BookOpen size={32} className="mx-auto mb-2 opacity-30" />
-        <p className="text-sm">Belum ada lampiran pada materi ini.</p>
-      </div>
-    )}
-
-    <div className="text-xs text-slate-400 pt-4 border-t border-slate-100 dark:border-slate-800">
-      Diposting oleh {post.created_by} � Terakhir diperbarui {formatDate(post.updated_at)}
+    <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+      <span>Diposting oleh {post.created_by}</span>
+      <span>Diperbarui {formatDate(post.updated_at)}</span>
     </div>
   </div>
 );
-
-// -------------------------------------------------------------
-// AttachmentEditorRow � satu baris lampiran di form admin
-// -------------------------------------------------------------
-
-// Tipe yang bisa upload file fisik
-const FILE_UPLOAD_ACCEPT: Partial<Record<AttachmentType, string>> = {
-  pdf:   'application/pdf',
-  video: 'video/*',
-  audio: 'audio/*',
-  image: 'image/*',
-};
 
 const AttachmentEditorRow: React.FC<{
   att: Attachment;
