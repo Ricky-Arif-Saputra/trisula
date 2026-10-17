@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+ï»¿import React, { useState, useEffect, useCallback } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { MathCategory } from '../../types';
 import { useAuth } from '../Auth/AuthProvider';
 import { supabase } from '../../lib/supabaseClient';
@@ -68,7 +70,7 @@ const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
 // -------------------------------------------------------------
-// AttachmentViewer — untuk siswa melihat lampiran
+// AttachmentViewer ï¿½ untuk siswa melihat lampiran
 // -------------------------------------------------------------
 const AttachmentViewer: React.FC<{ att: Attachment }> = ({ att }) => {
   const meta = ATTACHMENT_META[att.type];
@@ -173,8 +175,41 @@ const AttachmentViewer: React.FC<{ att: Attachment }> = ({ att }) => {
 };
 
 // -------------------------------------------------------------
-// PostCard — card ringkasan materi untuk daftar
+// PostCard ï¿½ card ringkasan materi untuk daftar
 // -------------------------------------------------------------
+// -------------------------------------------------------------
+// MarkdownContent - render markdown dengan styling premium
+// -------------------------------------------------------------
+const MarkdownContent: React.FC<{ content: string }> = ({ content }) => (
+  <div className="markdown-content text-sm leading-relaxed space-y-2">
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        h1: ({children}) => <h1 className="text-xl font-extrabold text-slate-900 dark:text-white mt-6 mb-3 pb-2 border-b border-slate-200 dark:border-slate-700">{children}</h1>,
+        h2: ({children}) => <h2 className="text-base font-extrabold text-slate-800 dark:text-slate-100 mt-5 mb-2">{children}</h2>,
+        h3: ({children}) => <h3 className="text-sm font-bold text-indigo-700 dark:text-indigo-400 mt-4 mb-2">{children}</h3>,
+        h4: ({children}) => <h4 className="text-xs font-bold text-slate-600 dark:text-slate-400 mt-3 mb-1 uppercase tracking-wider">{children}</h4>,
+        p: ({children}) => <p className="text-sm leading-relaxed mb-2 text-slate-600 dark:text-slate-300">{children}</p>,
+        ul: ({children}) => <ul className="mb-3 space-y-1 pl-4 list-disc list-outside">{children}</ul>,
+        ol: ({children}) => <ol className="mb-3 space-y-1 pl-4 list-decimal list-outside">{children}</ol>,
+        li: ({children}) => <li className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">{children}</li>,
+        strong: ({children}) => <strong className="font-bold text-slate-800 dark:text-slate-100">{children}</strong>,
+        em: ({children}) => <em className="italic text-slate-500 dark:text-slate-400">{children}</em>,
+        pre: ({children}) => <pre className="bg-slate-900 dark:bg-slate-950 text-slate-100 rounded-xl p-4 overflow-x-auto mb-4 border border-slate-700 shadow-lg text-xs font-mono">{children}</pre>,
+        blockquote: ({children}) => <blockquote className="border-l-4 border-indigo-400 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 px-4 py-3 rounded-r-xl my-4">{children}</blockquote>,
+        hr: () => <hr className="border-slate-200 dark:border-slate-700 my-5" />,
+        table: ({children}) => <div className="overflow-x-auto my-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700"><table className="w-full text-sm border-collapse">{children}</table></div>,
+        thead: ({children}) => <thead className="bg-slate-800 dark:bg-slate-700">{children}</thead>,
+        th: ({children}) => <th className="text-left text-xs font-bold text-white px-3 py-2">{children}</th>,
+        tbody: ({children}) => <tbody>{children}</tbody>,
+        tr: ({children}) => <tr className="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">{children}</tr>,
+        td: ({children}) => <td className="px-3 py-2 text-xs text-slate-700 dark:text-slate-300">{children}</td>,
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  </div>
+);
 const PostCard: React.FC<{
   post: MateriPost;
   isAdmin: boolean;
@@ -258,7 +293,7 @@ const PostCard: React.FC<{
 };
 
 // -------------------------------------------------------------
-// PostDetail — tampilan penuh satu materi
+// PostDetail ï¿½ tampilan penuh satu materi
 // -------------------------------------------------------------
 const PostDetail: React.FC<{
   post: MateriPost;
@@ -298,9 +333,11 @@ const PostDetail: React.FC<{
     </div>
 
     {post.description && (
-      <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-        {post.description}
-      </p>
+      <div className="bg-white dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div className="px-5 py-4">
+          <MarkdownContent content={post.description} />
+        </div>
+      </div>
     )}
 
     {post.attachments.length > 0 && (
@@ -322,13 +359,13 @@ const PostDetail: React.FC<{
     )}
 
     <div className="text-xs text-slate-400 pt-4 border-t border-slate-100 dark:border-slate-800">
-      Diposting oleh {post.created_by} · Terakhir diperbarui {formatDate(post.updated_at)}
+      Diposting oleh {post.created_by} ï¿½ Terakhir diperbarui {formatDate(post.updated_at)}
     </div>
   </div>
 );
 
 // -------------------------------------------------------------
-// AttachmentEditorRow — satu baris lampiran di form admin
+// AttachmentEditorRow ï¿½ satu baris lampiran di form admin
 // -------------------------------------------------------------
 
 // Tipe yang bisa upload file fisik
@@ -423,7 +460,7 @@ const AttachmentEditorRow: React.FC<{
       {/* File upload fisik */}
       {canUploadFile && (
         <div className="space-y-1.5">
-          <p className="text-[10px] font-bold text-slate-400">— atau upload file langsung —</p>
+          <p className="text-[10px] font-bold text-slate-400">ï¿½ atau upload file langsung ï¿½</p>
           <div
             onClick={() => !uploading && fileInputRef.current?.click()}
             className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 border-dashed transition-colors cursor-pointer
@@ -445,7 +482,7 @@ const AttachmentEditorRow: React.FC<{
                     {att.url ? 'Ganti dengan file baru' : 'Klik untuk pilih file'}
                   </p>
                   <p className="text-[10px] text-slate-400 truncate">
-                    {FILE_UPLOAD_ACCEPT[att.type]} · Maks. 50 MB
+                    {FILE_UPLOAD_ACCEPT[att.type]} ï¿½ Maks. 50 MB
                   </p>
                 </div>
                 {att.url && <Check size={14} className="text-emerald-500 shrink-0" />}
@@ -483,7 +520,7 @@ const AttachmentEditorRow: React.FC<{
 };
 
 // -------------------------------------------------------------
-// PostForm — form tambah / edit materi (admin)
+// PostForm ï¿½ form tambah / edit materi (admin)
 // -------------------------------------------------------------
 const PostForm: React.FC<{
   strand: string;
@@ -665,7 +702,7 @@ const PostForm: React.FC<{
 };
 
 // -------------------------------------------------------------
-// TopicScreen — daftar & detail materi satu topik
+// TopicScreen ï¿½ daftar & detail materi satu topik
 // -------------------------------------------------------------
 const TopicScreen: React.FC<{
   topic: typeof TOPICS[number];
@@ -820,7 +857,7 @@ const TopicScreen: React.FC<{
                     />
                   ))}
                 </div>
-                {/* Tombol tambah — satu-satunya, di bawah grid */}
+                {/* Tombol tambah ï¿½ satu-satunya, di bawah grid */}
                 {isAdmin && (
                   <button onClick={() => setFormMode('new')}
                     className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-sm font-bold cursor-pointer hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-all">
@@ -837,7 +874,7 @@ const TopicScreen: React.FC<{
 };
 
 // -------------------------------------------------------------
-// MateriScreen — halaman pilih topik (5 materi pokok)
+// MateriScreen ï¿½ halaman pilih topik (5 materi pokok)
 // -------------------------------------------------------------
 interface MateriScreenProps {
   initialCategory?: MathCategory | null;
@@ -880,7 +917,7 @@ export const MateriScreen: React.FC<MateriScreenProps> = ({
               <span className="text-[10px] font-black uppercase tracking-widest text-indigo-300">Bahan Ajar</span>
             </div>
             <h2 className="text-2xl font-extrabold tracking-tight leading-tight mb-2">Materi Pembelajaran</h2>
-            <p className="text-sm text-slate-400">5 topik matematika · Bahan ajar dikelola langsung oleh pengajar</p>
+            <p className="text-sm text-slate-400">5 topik matematika ï¿½ Bahan ajar dikelola langsung oleh pengajar</p>
           </div>
         </div>
       </section>

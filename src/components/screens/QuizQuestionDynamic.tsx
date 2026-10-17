@@ -19,7 +19,11 @@ interface QuizQuestionDynamicProps {
   questionId: string;
   onFinish: () => void;
   onBack?: () => void;
-  nextLabel?: string; // label tombol submit, default: "Cek jawaban akhir"
+  nextLabel?: string;
+  onMarkRagu?: () => void;           // tandai ragu-ragu, pindah ke soal berikutnya
+  showSubmitAll?: boolean;           // tampilkan tombol selesai semua soal
+  onSubmitAll?: () => void;          // callback setelah semua soal dikumpulkan
+  soalInfo?: { current: number; total: number };
 }
 
 type StageKey = 'diketahui' | 'ditanya' | 'pengerjaan' | 'kesimpulan';
@@ -111,7 +115,9 @@ const AnswerBlockAdder: React.FC<{ onAdd: (t: BlockType) => void; colorCls?: str
 // ─────────────────────────────────────────────────────────────
 // Main component
 // ─────────────────────────────────────────────────────────────
-export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questionId, onFinish, nextLabel }) => {
+export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({
+  questionId, onFinish, nextLabel, onMarkRagu, showSubmitAll, onSubmitAll, soalInfo,
+}) => {
   const { user, userName, userNisn } = useAuth();
   const [question, setQuestion] = useState<Question | null>(null);
   const [loading, setLoading] = useState(true);
@@ -229,6 +235,27 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
     setNumericCorrect(isCorrect);
     setSubmitted(true);
     setScoring(true);
+
+    // Jika dalam mode ExamSession (onMarkRagu ada) → tidak scoring per soal, cukup simpan state
+    // dan panggil onFinish dengan data jawaban
+    if (onMarkRagu) {
+      // Mode ujian: simpan data dan langsung selesai (scoring dilakukan di ExamSession)
+      setScoring(false);
+      const result = {
+        questionId: question.id,
+        answerBlocks: {
+          diketahui:  answerBlocks.diketahui,
+          ditanya:    answerBlocks.ditanya,
+          pengerjaan: answerBlocks.pengerjaan,
+          kesimpulan: answerBlocks.kesimpulan,
+        },
+        finalNumber,
+        startedAt,
+        finishedAt: new Date().toISOString(),
+      };
+      (onFinish as any)(result);
+      return;
+    }
 
     const stageKeys = ['diketahui', 'ditanya', 'pengerjaan', 'kesimpulan'] as const;
     const scoreMap: Record<string, { skor: number; skor_maks: number; alasan: string }> = {};
@@ -519,10 +546,37 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({ questi
                   Lanjut <ChevronRight size={16} />
                 </button>
               ) : (
-                <button onClick={handleSubmit} disabled={!finalNumber.trim()}
-                  className="flex-1 py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm disabled:bg-slate-300 cursor-pointer flex items-center justify-center gap-2 hover:bg-emerald-700 transition-colors">
-                  <CheckCircle size={16} /> {nextLabel || 'Cek jawaban akhir'}
-                </button>              )}
+                <div className="flex flex-col gap-2 flex-1">
+                  {/* Ragu-ragu dan submit */}
+                  {onMarkRagu && (
+                    <div className="flex gap-2">
+                      <button onClick={onMarkRagu}
+                        className="flex-1 py-2.5 rounded-xl bg-amber-50 border-2 border-amber-300 text-amber-700 font-bold text-xs cursor-pointer hover:bg-amber-100 transition-colors flex items-center justify-center gap-1.5">
+                        <span className="material-symbols-outlined text-[14px]">help</span>
+                        Ragu-ragu
+                      </button>
+                      <button onClick={handleSubmit} disabled={!finalNumber.trim()}
+                        className="flex-2 flex-1 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs disabled:bg-slate-300 cursor-pointer flex items-center justify-center gap-1.5 hover:bg-emerald-700 transition-colors">
+                        <CheckCircle size={14} /> {nextLabel || 'Simpan'}
+                      </button>
+                    </div>
+                  )}
+                  {!onMarkRagu && (
+                    <button onClick={handleSubmit} disabled={!finalNumber.trim()}
+                      className="flex-1 py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm disabled:bg-slate-300 cursor-pointer flex items-center justify-center gap-2 hover:bg-emerald-700 transition-colors">
+                      <CheckCircle size={16} /> {nextLabel || 'Cek jawaban akhir'}
+                    </button>
+                  )}
+                  {/* Kumpulkan semua soal */}
+                  {showSubmitAll && onSubmitAll && (
+                    <button onClick={onSubmitAll}
+                      className="w-full py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm cursor-pointer flex items-center justify-center gap-2 hover:bg-indigo-700 transition-colors shadow-md">
+                      <span className="material-symbols-outlined text-[16px]">send</span>
+                      Kumpulkan & Nilai Semua Soal
+                    </button>
+                  )}
+                </div>
+              )              )}
             </div>
           </div>
         )}
