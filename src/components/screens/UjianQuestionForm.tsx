@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MathRenderer } from '../MathRenderer';
 import { MathInput } from '../MathInput';
+import { ImageBlockInput } from '../ImageBlockInput';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../Auth/AuthProvider';
 import type { Strand } from '../../hooks/useQuestions';
@@ -88,11 +89,10 @@ const BlockInput: React.FC<{
         </button>
       </div>
       {block.type === 'image' ? (
-        <div className="space-y-1.5">
-          <input value={block.value} onChange={e => onChange(block.id, e.target.value)} placeholder={meta.placeholder}
-            className="w-full p-2 rounded-lg border border-sky-200 bg-white text-sm outline-none focus:border-sky-400 font-mono text-xs" />
-          {block.value.trim() && <img src={block.value} alt="" className="max-h-40 rounded-lg border border-sky-200 object-contain" />}
-        </div>
+        <ImageBlockInput
+          value={block.value}
+          onChange={val => onChange(block.id, val)}
+        />
       ) : block.type === 'latex' ? (
         <MathInput
           value={block.value}

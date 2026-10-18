@@ -14,6 +14,7 @@ import {
 } from './LatihanTypes';
 import { nilaiTahap } from '../../lib/aiScoring';
 import { Lightbulb, CheckCircle, ChevronRight, Plus, Type, Sigma, ImageIcon, Trash2, Eye } from 'lucide-react';
+import { ImageBlockInput } from '../ImageBlockInput';
 
 interface QuizQuestionDynamicProps {
   questionId: string;
@@ -65,14 +66,11 @@ const AnswerBlockEditor: React.FC<{
       </div>
 
       {block.type === 'image' ? (
-        <div className="space-y-1.5">
-          <input value={block.value} onChange={e => onChange(block.id, e.target.value)}
-            placeholder={meta.placeholder}
-            className="w-full p-2 rounded-lg border border-sky-200 bg-white text-xs font-mono outline-none focus:border-sky-400" />
-          {block.value.trim() && (
-            <img src={block.value} alt="preview" className="max-h-40 rounded-lg border border-sky-200 object-contain" />
-          )}
-        </div>
+        <ImageBlockInput
+          value={block.value}
+          onChange={val => onChange(block.id, val)}
+          previewMaxH="max-h-40"
+        />
       ) : block.type === 'latex' ? (
         <MathInput
           value={block.value}

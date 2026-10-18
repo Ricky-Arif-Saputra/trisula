@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { MathRenderer } from '../MathRenderer';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../Auth/AuthProvider';
@@ -17,6 +17,7 @@ import {
 } from './LatihanTypes';
 import { Plus, Trash2, X, Type, Sigma, ImageIcon } from 'lucide-react';
 import { MathInput } from '../MathInput';
+import { ImageBlockInput } from '../ImageBlockInput';
 
 // ─────────────────────────────────────────────
 // Types
@@ -39,6 +40,7 @@ interface LatihanQuestionFormProps {
   onCancel: () => void;
   onSaved: () => void;
 }
+
 
 // ─────────────────────────────────────────────
 // BlockInput — satu baris isian dengan label tipe
@@ -76,19 +78,11 @@ const BlockInput: React.FC<{
 
       {/* Content */}
       {block.type === 'image' ? (
-        <div className="space-y-1.5">
-          <input
-            value={block.value}
-            onChange={e => onChange(block.id, e.target.value)}
-            placeholder={meta.placeholder}
-            className="w-full p-2 rounded-lg border border-sky-200 bg-white text-sm outline-none focus:border-sky-400 font-mono text-xs"
-          />
-          {block.value.trim() && (
-            <img src={block.value} alt="preview" className="max-h-40 rounded-lg border border-sky-200 object-contain" />
-          )}
-        </div>
+        <ImageBlockInput
+          value={block.value}
+          onChange={val => onChange(block.id, val)}
+        />
       ) : block.type === 'latex' ? (
-        /* LaTeX: textarea mono + preview hasil render */
         <MathInput
           value={block.value}
           onChange={v => onChange(block.id, v)}
@@ -97,7 +91,6 @@ const BlockInput: React.FC<{
           displayMode={true}
         />
       ) : (
-        /* Text: textarea biasa, tidak perlu preview */
         <textarea
           rows={3}
           value={block.value}
