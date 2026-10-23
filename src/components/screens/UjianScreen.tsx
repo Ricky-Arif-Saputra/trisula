@@ -596,13 +596,6 @@ ${soalBloks}
 
 // ─────────────────────────────────────────────
 // DownloadModal — lihat & unduh ZIP jawaban (semua soal paket)
-interface AttemptWithUser extends Attempt {
-  student_name: string;
-  student_nisn: string;
-}
-
-// ─────────────────────────────────────────────
-// DownloadModal — lihat & unduh ZIP jawaban (semua soal paket)
 // ─────────────────────────────────────────────
 interface AttemptWithUser extends Attempt {
   student_name: string;
@@ -877,6 +870,123 @@ const DownloadModal: React.FC<{
               {zipping ? <><Loader2 size={14} className="animate-spin" /> Memproses...</> : <><FileArchive size={14} /> Unduh ZIP ({students.length})</>}
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
+// DirectAddButtons
+// ─────────────────────────────────────────────
+const DirectAddButtons: React.FC<{
+  onPretest: () => void;
+  onPosttest: () => void;
+}> = ({ onPretest, onPosttest }) => (
+  <div className="flex gap-3 justify-center flex-wrap">
+    <button onClick={onPretest}
+      className="flex items-center gap-1.5 px-5 py-3 rounded-2xl bg-amber-500 text-white text-sm font-bold cursor-pointer hover:bg-amber-600 shadow-md transition-colors">
+      <Plus size={15} /> Tambah Pretest
+    </button>
+    <button onClick={onPosttest}
+      className="flex items-center gap-1.5 px-5 py-3 rounded-2xl bg-emerald-600 text-white text-sm font-bold cursor-pointer hover:bg-emerald-700 shadow-md transition-colors">
+      <Plus size={15} /> Tambah Posttest
+    </button>
+  </div>
+);
+
+// ─────────────────────────────────────────────
+// ExamGroupCard — kartu satu PAKET ujian (N soal)
+// ─────────────────────────────────────────────
+const ExamGroupCard: React.FC<{
+  group: {
+    key: string; examTitle: string; testType: 'pretest' | 'postest';
+    questions: Question[]; examDuration: number; totalPoints: number;
+  };
+  attempts: Record<string, QuestionAttempt>;
+  isAdmin: boolean;
+  colorClass: 'amber' | 'emerald';
+  onStart: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onDownload: () => void;
+}> = ({ group, attempts, isAdmin, colorClass, onStart, onEdit, onDelete, onDownload }) => {
+  const isPretest = group.testType === 'pretest';
+  const doneCount = group.questions.filter(q => !!attempts[q.id]).length;
+  const isDone = doneCount === group.questions.length && group.questions.length > 0;
+  const c = colorClass === 'amber'
+    ? { badge: 'bg-amber-100 text-amber-700', btn: 'bg-amber-500 hover:bg-amber-600', strip: 'from-amber-500 to-orange-400', glow: 'shadow-amber-500/10' }
+    : { badge: 'bg-emerald-100 text-emerald-700', btn: 'bg-emerald-600 hover:bg-emerald-700', strip: 'from-emerald-500 to-teal-400', glow: 'shadow-emerald-500/10' };
+
+  return (
+    <div className={`bg-white dark:bg-slate-800/90 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 overflow-hidden shadow-sm hover:shadow-lg ${c.glow} hover:-translate-y-0.5 transition-all duration-200 flex flex-col`}>
+      <div className={`h-1 bg-gradient-to-r ${c.strip}`} />
+      <div className="p-4 flex flex-col flex-1 gap-3">
+        {/* Badge + status */}
+        <div className="flex items-start justify-between gap-2">
+          <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest ${c.badge}`}>
+            {isPretest ? 'Pretest' : 'Posttest'}
+          </span>
+          {!isPretest && (
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${
+              isDone ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'
+            }`}>
+              <span className="material-symbols-outlined text-[11px]">{isDone ? 'check_circle' : 'pending'}</span>
+              {isDone ? 'Selesai' : doneCount > 0 ? `${doneCount}/${group.questions.length}` : 'Belum'}
+            </span>
+          )}
+        </div>
+
+        {/* Judul paket */}
+        <h3 className="text-sm font-extrabold text-slate-800 dark:text-white leading-snug">{group.examTitle}</h3>
+
+        {/* Info */}
+        <div className="flex items-center gap-3 text-[11px] text-slate-400 flex-wrap">
+          <span className="flex items-center gap-1">
+            <span className="material-symbols-outlined text-[13px]">timer</span> {group.examDuration} mnt
+          </span>
+          <span>{group.questions.length} soal</span>
+          {group.totalPoints > 0 && <span>🏆 {group.totalPoints} poin</span>}
+        </div>
+
+        {/* Nomor soal */}
+        <div className="flex flex-wrap gap-1.5">
+          {group.questions.map((q, qi) => {
+            const done = !!attempts[q.id];
+            return (
+              <div key={q.id} className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black border-2 transition-all ${
+                done ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-slate-100 border-slate-200 text-slate-500 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300'
+              }`}>
+                {qi + 1}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 mt-auto">
+          <button onClick={onStart}
+            className={`flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
+              isPretest || !isDone ? `${c.btn} text-white shadow-md` : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+            }`}>
+            {!isPretest && isDone ? <><Eye size={13} /> Kerjakan Ulang</> : <><Play size={13} /> Kerjakan</>}
+          </button>
+          {isAdmin && (
+            <>
+              <button onClick={onDownload}
+                className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-500 hover:bg-indigo-100 flex items-center justify-center cursor-pointer" title="Download">
+                <Download size={13} />
+              </button>
+              <button onClick={onEdit}
+                className="w-9 h-9 rounded-xl bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 flex items-center justify-center cursor-pointer" title="Edit">
+                <Edit3 size={13} />
+              </button>
+              <button onClick={onDelete}
+                className="w-9 h-9 rounded-xl bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-500 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center cursor-pointer" title="Hapus">
+                <Trash2 size={13} />
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
