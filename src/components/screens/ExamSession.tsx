@@ -79,9 +79,12 @@ export const ExamSession: React.FC<ExamSessionProps> = ({
   const typeGrad  = testType === 'pretest' ? 'from-amber-500 to-orange-400' : 'from-emerald-600 to-teal-500';
   const typeSolid = testType === 'pretest' ? 'bg-amber-500' : 'bg-emerald-600';
 
-  const allDone = statuses.every(s => s === 'done' || s === 'ragu');
+  // Submit hanya bisa kalau SEMUA soal statusnya 'done' (hijau) — ragu-ragu tidak cukup
+  const allGreen  = statuses.every(s => s === 'done');
+  const allDone   = statuses.every(s => s === 'done' || s === 'ragu'); // untuk navigasi otomatis
   const doneCount = statuses.filter(s => s === 'done').length;
   const raguCount = statuses.filter(s => s === 'ragu').length;
+  const isLastQ   = currentIdx === totalSoal - 1;
 
   // ── Callback dari QuizQuestionDynamic saat soal selesai ──
   const handleQuestionResult = useCallback((result: SoalResult) => {
@@ -429,8 +432,8 @@ export const ExamSession: React.FC<ExamSessionProps> = ({
           onFinish={handleQuestionResult as any}
           nextLabel={currentIdx < totalSoal - 1 ? `Simpan & Soal ${currentIdx + 2}` : 'Simpan Jawaban'}
           onMarkRagu={markRagu}
-          showSubmitAll={allDone}
-          onSubmitAll={handleSubmitAll}
+          showSubmitAll={isLastQ}
+          onSubmitAll={allGreen ? handleSubmitAll : undefined}
           soalInfo={{ current: currentIdx + 1, total: totalSoal }}
         />
       </div>

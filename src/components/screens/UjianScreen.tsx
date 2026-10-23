@@ -819,8 +819,9 @@ export const UjianScreen: React.FC<UjianScreenProps> = ({ onNavigateToViewer }) 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Form state — 'closed' | 'new_pretest' | 'new_postest' | questionId (edit)
+  // Form state — 'closed' | 'new_pretest' | 'new_postest' | 'edit_group' (edit paket)
   const [formMode, setFormMode] = useState<string>('closed');
+  const [editingGroup, setEditingGroup] = useState<{ questions: Question[]; examTitle: string; examDuration: number; testType: 'pretest' | 'postest' } | null>(null);
   const [downloadQ, setDownloadQ] = useState<Question | null>(null);
 
   const fetchQuestions = useCallback(async () => {
@@ -926,13 +927,11 @@ export const UjianScreen: React.FC<UjianScreenProps> = ({ onNavigateToViewer }) 
   const pretestGroups  = groupQuestions(pretests);
   const posttestGroups = groupQuestions(posttests);
 
-  const editingQ = formMode !== 'closed' && formMode !== 'new_pretest' && formMode !== 'new_postest'
-    ? questions.find(q => q.id === formMode) || null
-    : null;
+  const editingQs = formMode === 'edit_group' && editingGroup ? editingGroup.questions : null;
   const formTestType: 'pretest' | 'postest' =
     formMode === 'new_pretest' ? 'pretest'
     : formMode === 'new_postest' ? 'postest'
-    : (editingQ?.test_type ?? 'pretest');
+    : (editingGroup?.testType ?? 'pretest');
   const isFormOpen = formMode !== 'closed';
 
   return (
@@ -1000,9 +999,11 @@ export const UjianScreen: React.FC<UjianScreenProps> = ({ onNavigateToViewer }) 
               <UjianQuestionForm
                 strand={selectedStrand as any}
                 testType={formTestType}
-                existingQuestions={editingQ ? [editingQ] : undefined}
-                onCancel={() => setFormMode('closed')}
-                onSaved={() => { setFormMode('closed'); fetchQuestions(); }}
+                existingQuestions={editingQs as any || undefined}
+                existingExamTitle={editingGroup?.examTitle}
+                existingDuration={editingGroup?.examDuration}
+                onCancel={() => { setFormMode('closed'); setEditingGroup(null); }}
+                onSaved={() => { setFormMode('closed'); setEditingGroup(null); fetchQuestions(); }}
               />
             </div>
           )}
@@ -1054,7 +1055,10 @@ export const UjianScreen: React.FC<UjianScreenProps> = ({ onNavigateToViewer }) 
                               g.questions.map(q => q.id),
                               { examTitle: g.examTitle, examDuration: g.examDuration, testType: g.testType, strand: selectedStrand! }
                             )}
-                            onEdit={() => setFormMode(g.questions[0].id)}
+                            onEdit={() => {
+                              setEditingGroup({ questions: g.questions, examTitle: g.examTitle, examDuration: g.examDuration, testType: g.testType });
+                              setFormMode('edit_group');
+                            }}
                             onDelete={() => g.questions.forEach(q => handleDelete(q.id))}
                             onDownload={() => setDownloadQ(g.questions[0])}
                           />
@@ -1079,7 +1083,10 @@ export const UjianScreen: React.FC<UjianScreenProps> = ({ onNavigateToViewer }) 
                               g.questions.map(q => q.id),
                               { examTitle: g.examTitle, examDuration: g.examDuration, testType: g.testType, strand: selectedStrand! }
                             )}
-                            onEdit={() => setFormMode(g.questions[0].id)}
+                            onEdit={() => {
+                              setEditingGroup({ questions: g.questions, examTitle: g.examTitle, examDuration: g.examDuration, testType: g.testType });
+                              setFormMode('edit_group');
+                            }}
                             onDelete={() => g.questions.forEach(q => handleDelete(q.id))}
                             onDownload={() => setDownloadQ(g.questions[0])}
                           />
