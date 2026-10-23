@@ -9,11 +9,10 @@ import React, { useState, useCallback } from 'react';
 import { useAuth } from '../Auth/AuthProvider';
 import { QuizQuestionDynamic } from './QuizQuestionDynamic';
 import { supabase } from '../../lib/supabaseClient';
-import { nilaiTahap } from '../../lib/aiScoring';
 import { numbersMatch } from './LatihanTypes';
 import {
   CheckCircle, ChevronRight, User, Hash, BookOpen,
-  Clock, AlertTriangle, Loader2, Award, Send,
+  Clock, AlertTriangle, Send,
 } from 'lucide-react';
 
 // ─────────────────────────────────────────────
@@ -43,15 +42,18 @@ export interface AnswerDraft {
   finalNumber: string;
 }
 
-const makeBlankDraft = (): AnswerDraft => ({
-  answerBlocks: {
-    diketahui:  [{ id: `d-${Date.now()}${Math.random()}`, type: 'text', value: '' }],
-    ditanya:    [{ id: `dt-${Date.now()}${Math.random()}`, type: 'text', value: '' }],
-    pengerjaan: [{ id: `p-${Date.now()}${Math.random()}`, type: 'text', value: '' }],
-    kesimpulan: [{ id: `k-${Date.now()}${Math.random()}`, type: 'text', value: '' }],
-  },
-  finalNumber: '',
-});
+const makeBlankDraft = (): AnswerDraft => {
+  const ts = Date.now();
+  return {
+    answerBlocks: {
+      diketahui:  [{ id: `d-${ts}-0`,  type: 'text' as const, value: '' }],
+      ditanya:    [{ id: `dt-${ts}-0`, type: 'text' as const, value: '' }],
+      pengerjaan: [{ id: `p-${ts}-0`,  type: 'text' as const, value: '' }],
+      kesimpulan: [{ id: `k-${ts}-0`,  type: 'text' as const, value: '' }],
+    },
+    finalNumber: '',
+  };
+};
 
 // ─────────────────────────────────────────────
 // Tata cara

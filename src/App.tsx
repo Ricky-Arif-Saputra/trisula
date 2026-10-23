@@ -12,6 +12,7 @@ import { ExamViewer } from './components/screens/ExamViewer';
 import { ExamViewerRme } from './components/screens/ExamViewerRme';
 import { QuizQuestionDynamic } from './components/screens/QuizQuestionDynamic';
 import { ExamSession } from './components/screens/ExamSession';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { useAuth } from './components/Auth/AuthProvider';
 import AuthLayout from './components/Auth/AuthLayout';
 import AuthTabs from './components/Auth/AuthTabs';
@@ -249,14 +250,16 @@ export default function App() {
             </div>
           )}
           {(currentScreen as string) === 'ujian-session' && activeExamSession && (
-            <ExamSession
-              questionIds={activeExamSession.questionIds}
-              examTitle={activeExamSession.examTitle}
-              examDuration={activeExamSession.examDuration}
-              testType={activeExamSession.testType}
-              strand={activeExamSession.strand}
-              onFinish={() => { setActiveExamSession(null); setCurrentScreen('ujian'); }}
-            />
+            <ErrorBoundary>
+              <ExamSession
+                questionIds={activeExamSession.questionIds}
+                examTitle={activeExamSession.examTitle}
+                examDuration={activeExamSession.examDuration}
+                testType={activeExamSession.testType}
+                strand={activeExamSession.strand}
+                onFinish={() => { setActiveExamSession(null); setCurrentScreen('ujian'); }}
+              />
+            </ErrorBoundary>
           )}
 
         </main>

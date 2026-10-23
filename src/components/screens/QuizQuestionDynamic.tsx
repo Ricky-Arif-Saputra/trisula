@@ -114,6 +114,21 @@ const AnswerBlockAdder: React.FC<{ onAdd: (t: BlockType) => void; colorCls?: str
 );
 
 // ─────────────────────────────────────────────────────────────
+// Sanitize draft agar block selalu punya type yang valid
+// ─────────────────────────────────────────────────────────────
+const VALID_BLOCK_TYPES = new Set(['text', 'latex', 'image']);
+function sanitizeDraftBlocks(blocks: any[]): AnswerBlock[] {
+  if (!Array.isArray(blocks) || blocks.length === 0) {
+    return [{ id: buid(), type: 'text', value: '' }];
+  }
+  return blocks.map((b, i) => ({
+    id: b.id || buid(),
+    type: VALID_BLOCK_TYPES.has(b.type) ? (b.type as BlockType) : 'text',
+    value: String(b.value ?? ''),
+  }));
+}
+
+// ─────────────────────────────────────────────────────────────
 // Main component
 // ─────────────────────────────────────────────────────────────
 export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({
@@ -127,15 +142,16 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({
 
   const [stageIdx, setStageIdx] = useState(0);
 
-  // Jawaban siswa per stage — inisialisasi dari draft jika ada
-  const [answerBlocks, setAnswerBlocks] = useState<Record<StageKey, AnswerBlock[]>>(
-    () => initialDraft?.answerBlocks ?? {
-      diketahui:  [{ id: buid(), type: 'text', value: '' }],
-      ditanya:    [{ id: buid(), type: 'text', value: '' }],
-      pengerjaan: [{ id: buid(), type: 'text', value: '' }],
-      kesimpulan: [{ id: buid(), type: 'text', value: '' }],
-    }
-  );
+  // Jawaban siswa per stage — inisialisasi dari draft, sanitasi tipe block
+  const [answerBlocks, setAnswerBlocks] = useState<Record<StageKey, AnswerBlock[]>>(() => {
+    const draft = initialDraft?.answerBlocks;
+    return {
+      diketahui:  sanitizeDraftBlocks(draft?.diketahui),
+      ditanya:    sanitizeDraftBlocks(draft?.ditanya),
+      pengerjaan: sanitizeDraftBlocks(draft?.pengerjaan),
+      kesimpulan: sanitizeDraftBlocks(draft?.kesimpulan),
+    };
+  });
 
   const [finalNumber, setFinalNumber] = useState(() => initialDraft?.finalNumber ?? '');
 
