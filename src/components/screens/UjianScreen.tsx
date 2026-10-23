@@ -370,34 +370,43 @@ ${soalBloks}
 // ─────────────────────────────────────────────
 function renderBlocksToHtml(blocksJson: string | any[]): string {
   let blocks: { type: string; value: string }[] = [];
-  if (typeof blocksJson === 'string') {
-    // Coba parse sebagai JSON array blok
-    try {
-      const parsed = JSON.parse(blocksJson);
-      if (Array.isArray(parsed)) blocks = parsed;
-      else return renderInlineMath(blocksJson); // plain string lama
-    } catch {
-      return renderInlineMath(blocksJson); // bukan JSON, plain text
-    }
-  } else if (Array.isArray(blocksJson)) {
+
+  if (Array.isArray(blocksJson)) {
     blocks = blocksJson;
+  } else if (typeof blocksJson === 'string') {
+    if (!blocksJson || blocksJson === '—') return '—';
+    // Coba parse — bisa single atau double encoded
+    let parsed: any = blocksJson;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (typeof parsed !== 'string') break;
+      try { parsed = JSON.parse(parsed); } catch { break; }
+    }
+    if (Array.isArray(parsed)) {
+      blocks = parsed;
+    } else {
+      // Plain text (bukan JSON array)
+      return `<p style="margin:4px 0;font-size:12px;line-height:1.6;">${renderInlineMath(String(parsed))}</p>`;
+    }
   }
 
+  if (blocks.length === 0) return '<em style="color:#94a3b8;">—</em>';
+
   return blocks.map(b => {
-    if (!b.value?.trim()) return '';
+    const val = String(b.value ?? '').trim();
+    if (!val) return '';
     if (b.type === 'image') {
-      return `<div style="margin:6px 0;"><img src="${escHtml(b.value)}" style="max-width:100%;max-height:200px;display:block;border-radius:6px;border:1px solid #e2e8f0;" alt="gambar"/></div>`;
+      return `<div style="margin:8px 0;"><img src="${escHtml(val)}" style="max-width:100%;max-height:220px;display:block;border-radius:6px;border:1px solid #e2e8f0;" alt="gambar jawaban"/></div>`;
     }
     if (b.type === 'latex') {
       try {
-        return `<div style="margin:6px 0;overflow-x:auto;text-align:center;">${katex.renderToString(b.value.trim(), { throwOnError: false, displayMode: true })}</div>`;
+        return `<div style="margin:6px 0;overflow-x:auto;text-align:center;background:#f8fafc;padding:6px;border-radius:6px;">${katex.renderToString(val, { throwOnError: false, displayMode: true })}</div>`;
       } catch {
-        return `<code style="font-size:11px;background:#f1f5f9;padding:2px 4px;">${escHtml(b.value)}</code>`;
+        return `<code style="font-size:11px;background:#f1f5f9;padding:2px 6px;border-radius:3px;">${escHtml(val)}</code>`;
       }
     }
     // text — proses inline math $...$
-    return `<p style="margin:4px 0;font-size:12px;line-height:1.6;">${renderInlineMath(b.value)}</p>`;
-  }).join('');
+    return `<p style="margin:4px 0;font-size:12px;line-height:1.6;">${renderInlineMath(val)}</p>`;
+  }).filter(Boolean).join('');
 }
 
 function buildStudentPackagePdf(
@@ -476,11 +485,12 @@ function buildStudentPackagePdf(
   // ── Detail per soal ──
   const soalBloks = questions.map((q, qi) => {
     const ans = student.answers[q.id] || {};
-    const isCorrect = !!ans.isCorrect;
-    const verdictBg  = isCorrect ? '#f0fdf4' : '#fef2f2';
-    const verdictBdr = isCorrect ? '#86efac' : '#fca5a5';
-    const verdictClr = isCorrect ? '#15803d' : '#b91c1c';
-    const verdictTxt = isCorrect ? '&#10003;&nbsp;BENAR' : '&#10007;&nbsp;SALAH';
+    const hasAnswer = !!student.answers[q.id];
+    const isCorrect = hasAnswer && !!ans.isCorrect;
+    const verdictBg  = !hasAnswer ? '#f8fafc' : isCorrect ? '#f0fdf4' : '#fef2f2';
+    const verdictBdr = !hasAnswer ? '#e2e8f0' : isCorrect ? '#86efac' : '#fca5a5';
+    const verdictClr = !hasAnswer ? '#94a3b8' : isCorrect ? '#15803d' : '#b91c1c';
+    const verdictTxt = !hasAnswer ? '&#8213;&nbsp;BELUM DIJAWAB' : isCorrect ? '&#10003;&nbsp;BENAR' : '&#10007;&nbsp;SALAH';
 
     // Narasi soal
     const narasiBloks = (q.content_blocks || []).filter((b: any) => !String(b.value || '').startsWith('__RME_KEYS__'));
@@ -497,9 +507,11 @@ function buildStudentPackagePdf(
 
     // 4 tahap jawaban siswa
     const stageRows = STAGE_KEYS.map((sk, si) => {
-      // Jawaban bisa berupa JSON array block atau string lama
-      const rawAns = ans[sk] || '—';
-      const ansHtml = renderBlocksToHtml(rawAns);
+      // Jawaban bisa berupa JSON array block atau string lama atau kosong
+      const rawAns = ans[sk];
+      const ansHtml = rawAns
+        ? renderBlocksToHtml(rawAns)
+        : '<em style="color:#94a3b8;font-style:italic;">Tidak ada jawaban untuk tahap ini</em>';
 
       return `
       <tr>
@@ -513,8 +525,8 @@ function buildStudentPackagePdf(
               </td>
             </tr>
             <tr>
-              <td valign="top" style="padding:8px 10px;font-size:11px;line-height:1.5;color:#1e293b;">
-                ${ansHtml || '<em style="color:#94a3b8;">—</em>'}
+              <td valign="top" style="padding:8px 10px;font-size:11px;line-height:1.5;color:#1e293b;min-height:32px;">
+                ${ansHtml}
               </td>
             </tr>
           </table>
@@ -691,16 +703,31 @@ const DownloadModal: React.FC<{
     setProgress('Menghapus semua jawaban...');
     try {
       // Hapus semua jawaban untuk semua soal dalam paket
-      const { error } = await supabase
+      const { error, count } = await supabase
         .from('jawaban')
         .delete()
         .in('soal_id', questionIds);
+
       if (error) throw error;
+
+      // Konfirmasi dengan re-fetch untuk pastikan benar-benar terhapus
+      const { data: remaining } = await supabase
+        .from('jawaban')
+        .select('id')
+        .in('soal_id', questionIds)
+        .limit(1);
+
+      if (remaining && remaining.length > 0) {
+        throw new Error('Beberapa jawaban tidak terhapus — pastikan policy RLS DELETE sudah aktif di Supabase. Jalankan file supabase/fix_jawaban_rls_delete.sql terlebih dahulu.');
+      }
+
       setStudents([]);
       setProgress('✅ Semua jawaban berhasil dihapus.');
       setConfirmDelete(false);
     } catch (err: any) {
       setProgress(`❌ Gagal hapus: ${err.message}`);
+      // Refresh untuk tampilkan data aktual
+      await fetchAttempts();
     } finally {
       setDeleting(false);
     }
