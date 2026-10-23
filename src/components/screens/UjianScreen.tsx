@@ -380,24 +380,43 @@ const DownloadModal: React.FC<{
   const [loading, setLoading] = useState(true);
   const [zipping, setZipping] = useState(false);
   const [progress, setProgress] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        // Jawaban disimpan di jawaban table dengan soal_id = question.id
-        // Tapi untuk ujian RME kita pakai exam_attempts (essay_answers keyed by question id)
-        // Coba fetch dari jawaban table dulu
-        const { data } = await supabase
-          .from('jawaban')
-          .select('*')
-          .eq('soal_id', question.id)
-          .order('created_at', { ascending: false });
-        setAttempts((data || []) as AttemptWithUser[]);
-      } catch (e) { console.error(e); }
-      finally { setLoading(false); }
-    })();
-  }, [question.id]);
+  const fetchAttempts = async () => {
+    setLoading(true);
+    setProgress('');
+    try {
+      const { data } = await supabase
+        .from('jawaban')
+        .select('*')
+        .eq('soal_id', question.id)
+        .order('created_at', { ascending: false });
+      setAttempts((data || []) as AttemptWithUser[]);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchAttempts(); }, [question.id]);
+
+  const handleDeleteAll = async () => {
+    setDeleting(true);
+    setProgress('Menghapus semua jawaban...');
+    try {
+      const { error } = await supabase
+        .from('jawaban')
+        .delete()
+        .eq('soal_id', question.id);
+      if (error) throw error;
+      setAttempts([]);
+      setProgress('✅ Semua jawaban berhasil dihapus.');
+      setConfirmDelete(false);
+    } catch (err: any) {
+      setProgress(`❌ Gagal hapus: ${err.message}`);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const handleDownloadZip = async () => {
     if (attempts.length === 0) return;
@@ -512,10 +531,24 @@ const DownloadModal: React.FC<{
             <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Jawaban Siswa</div>
             <h3 className="font-extrabold text-sm text-slate-800 dark:text-white truncate max-w-xs mt-0.5">{question.title}</h3>
           </div>
-          <button onClick={onClose}
-            className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 flex items-center justify-center cursor-pointer">
-            <X size={16} />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Refresh */}
+            <button
+              onClick={fetchAttempts}
+              disabled={loading}
+              className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 flex items-center justify-center cursor-pointer transition-colors disabled:opacity-50"
+              title="Refresh data"
+            >
+              {loading
+                ? <Loader2 size={14} className="animate-spin" />
+                : <span className="material-symbols-outlined text-[16px]">refresh</span>
+              }
+            </button>
+            <button onClick={onClose}
+              className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 flex items-center justify-center cursor-pointer">
+              <X size={16} />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5">
@@ -557,15 +590,47 @@ const DownloadModal: React.FC<{
 
         <div className="px-5 py-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
           {progress && (
-            <div className="text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 rounded-lg px-3 py-2">
+            <div className={`text-xs font-bold rounded-lg px-3 py-2 ${
+              progress.startsWith('✅') ? 'text-emerald-700 bg-emerald-50 dark:bg-emerald-900/20'
+              : progress.startsWith('❌') ? 'text-rose-700 bg-rose-50 dark:bg-rose-900/20'
+              : 'text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800'
+            }`}>
               {progress}
             </div>
           )}
+
+          {/* Konfirmasi hapus semua */}
+          {confirmDelete && (
+            <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 space-y-2">
+              <p className="text-xs font-bold text-rose-700 dark:text-rose-400">
+                ⚠ Yakin hapus semua {attempts.length} jawaban? Tindakan ini tidak dapat dibatalkan.
+              </p>
+              <div className="flex gap-2">
+                <button onClick={() => setConfirmDelete(false)}
+                  className="flex-1 py-2 rounded-lg bg-white dark:bg-slate-800 border border-rose-200 text-rose-600 font-bold text-xs cursor-pointer hover:bg-rose-50 transition-colors">
+                  Batal
+                </button>
+                <button onClick={handleDeleteAll} disabled={deleting}
+                  className="flex-1 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs cursor-pointer disabled:opacity-60 transition-colors flex items-center justify-center gap-1">
+                  {deleting ? <><Loader2 size={12} className="animate-spin" /> Menghapus...</> : '🗑 Hapus Semua'}
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-2">
             <button onClick={onClose}
               className="flex-1 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-sm cursor-pointer hover:bg-slate-200 transition-colors">
               Tutup
             </button>
+            {/* Tombol hapus semua — hanya jika ada data */}
+            {attempts.length > 0 && !confirmDelete && (
+              <button onClick={() => setConfirmDelete(true)}
+                className="py-3 px-4 rounded-xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 font-bold text-sm cursor-pointer hover:bg-rose-100 transition-colors flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[15px]">delete_sweep</span>
+                Hapus Semua
+              </button>
+            )}
             <button onClick={handleDownloadZip} disabled={zipping || attempts.length === 0}
               className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white font-bold text-sm cursor-pointer transition-colors flex items-center justify-center gap-2">
               {zipping ? <><Loader2 size={14} className="animate-spin" /> Memproses...</> : <><FileArchive size={14} /> Unduh ZIP ({attempts.length})</>}

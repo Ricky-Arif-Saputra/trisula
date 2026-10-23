@@ -15,16 +15,21 @@ import {
 import { nilaiTahap } from '../../lib/aiScoring';
 import { Lightbulb, CheckCircle, ChevronRight, Plus, Type, Sigma, ImageIcon, Trash2, Eye } from 'lucide-react';
 import { ImageBlockInput } from '../ImageBlockInput';
+import type { AnswerDraft } from './ExamSession';
 
 interface QuizQuestionDynamicProps {
   questionId: string;
   onFinish: () => void;
   onBack?: () => void;
   nextLabel?: string;
-  onMarkRagu?: () => void;           // tandai ragu-ragu, pindah ke soal berikutnya
-  showSubmitAll?: boolean;           // tampilkan tombol selesai semua soal
-  onSubmitAll?: () => void;          // callback setelah semua soal dikumpulkan
+  onMarkRagu?: () => void;
+  showSubmitAll?: boolean;
+  onSubmitAll?: () => void;
   soalInfo?: { current: number; total: number };
+  /** Draft jawaban dari ExamSession — agar jawaban tidak hilang saat ganti soal */
+  initialDraft?: AnswerDraft;
+  /** Callback setiap kali user mengubah jawaban — untuk menyimpan draft */
+  onDraftChange?: (draft: AnswerDraft) => void;
 }
 
 type StageKey = 'diketahui' | 'ditanya' | 'pengerjaan' | 'kesimpulan';
@@ -115,6 +120,7 @@ const AnswerBlockAdder: React.FC<{ onAdd: (t: BlockType) => void; colorCls?: str
 // ─────────────────────────────────────────────────────────────
 export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({
   questionId, onFinish, nextLabel, onMarkRagu, showSubmitAll, onSubmitAll, soalInfo,
+  initialDraft, onDraftChange,
 }) => {
   const { user, userName, userNisn } = useAuth();
   const [question, setQuestion] = useState<Question | null>(null);
@@ -123,28 +129,37 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({
 
   const [stageIdx, setStageIdx] = useState(0);
 
-  // Jawaban siswa per stage — multi blok
-  const [answerBlocks, setAnswerBlocks] = useState<Record<StageKey, AnswerBlock[]>>({
-    diketahui:  [{ id: buid(), type: 'text', value: '' }],
-    ditanya:    [{ id: buid(), type: 'text', value: '' }],
-    pengerjaan: [{ id: buid(), type: 'text', value: '' }],
-    kesimpulan: [{ id: buid(), type: 'text', value: '' }],
-  });
+  // Jawaban siswa per stage — inisialisasi dari draft jika ada
+  const [answerBlocks, setAnswerBlocks] = useState<Record<StageKey, AnswerBlock[]>>(
+    () => initialDraft?.answerBlocks ?? {
+      diketahui:  [{ id: buid(), type: 'text', value: '' }],
+      ditanya:    [{ id: buid(), type: 'text', value: '' }],
+      pengerjaan: [{ id: buid(), type: 'text', value: '' }],
+      kesimpulan: [{ id: buid(), type: 'text', value: '' }],
+    }
+  );
+
+  const [finalNumber, setFinalNumber] = useState(() => initialDraft?.finalNumber ?? '');
 
   // Kisi-kisi
   const [showHints, setShowHints] = useState(false);
   const [activeHint, setActiveHint] = useState(0);
   const [hintAnswerRevealed, setHintAnswerRevealed] = useState<boolean[]>([]);
 
-  const [finalNumber, setFinalNumber] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [numericCorrect, setNumericCorrect] = useState(false);
   const [startedAt] = useState<string>(new Date().toISOString());
 
-  // AI scoring state
-  const [scoring, setScoring] = useState(false);  // sedang memanggil AI
-  const [scoringStage, setScoringStage] = useState('');  // label tahap yang sedang dinilai
+  // AI scoring state (dipakai di mode ujian, tidak di latihan)
+  const [scoring, setScoring] = useState(false);
+  const [scoringStage, setScoringStage] = useState('');
   const [aiScores, setAiScores] = useState<Record<string, { skor: number; skor_maks: number; alasan: string }>>({});
+
+  // ── Kirim draft ke ExamSession setiap kali jawaban berubah ──
+  useEffect(() => {
+    if (!onDraftChange) return;
+    onDraftChange({ answerBlocks, finalNumber });
+  }, [answerBlocks, finalNumber]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const fetchQ = async () => {

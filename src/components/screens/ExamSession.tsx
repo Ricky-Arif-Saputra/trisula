@@ -3,9 +3,11 @@
  *  1. Intro screen premium
  *  2. Navigasi soal bebas via kotak nomor
  *  3. Status soal: abu=belum, kuning=ragu-ragu, hijau=selesai
- *  4. Penilaian AI di akhir (setelah semua soal selesai)
+ *  4. Draft jawaban tersimpan di ExamSession (tidak hilang saat ganti soal)
+ *  5. Submit muncul di soal terakhir SETELAH soal terakhir disimpan
+ *  6. Penilaian AI di akhir
  */
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useAuth } from '../Auth/AuthProvider';
 import { QuizQuestionDynamic } from './QuizQuestionDynamic';
 import { supabase } from '../../lib/supabaseClient';
@@ -20,7 +22,7 @@ import {
 // ─────────────────────────────────────────────
 type QuestionStatus = 'untouched' | 'ragu' | 'done';
 
-interface ExamSessionProps {
+export interface ExamSessionProps {
   questionIds: string[];
   examTitle: string;
   examDuration: number;
@@ -29,13 +31,29 @@ interface ExamSessionProps {
   onFinish: () => void;
 }
 
-interface SoalResult {
+export interface SoalResult {
   questionId: string;
   answerBlocks: Record<string, any[]>;
   finalNumber: string;
   startedAt: string;
   finishedAt: string;
 }
+
+// Draft jawaban per soal (belum disimpan / di-submit)
+export interface AnswerDraft {
+  answerBlocks: Record<string, any[]>;
+  finalNumber: string;
+}
+
+const makeBlankDraft = (): AnswerDraft => ({
+  answerBlocks: {
+    diketahui:  [{ id: `d-${Date.now()}`, type: 'text', value: '' }],
+    ditanya:    [{ id: `dt-${Date.now()}`, type: 'text', value: '' }],
+    pengerjaan: [{ id: `p-${Date.now()}`, type: 'text', value: '' }],
+    kesimpulan: [{ id: `k-${Date.now()}`, type: 'text', value: '' }],
+  },
+  finalNumber: '',
+});
 
 // ─────────────────────────────────────────────
 // Tata cara
@@ -48,7 +66,7 @@ const TATA_CARA = [
 ];
 
 // ─────────────────────────────────────────────
-// StatusChip — kotak nomor soal
+// StatusChip styles
 // ─────────────────────────────────────────────
 const statusCls: Record<QuestionStatus, string> = {
   untouched: 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600',
@@ -66,44 +84,67 @@ export const ExamSession: React.FC<ExamSessionProps> = ({
 
   const [phase, setPhase] = useState<'intro' | 'exam' | 'scoring' | 'done'>('intro');
   const [currentIdx, setCurrentIdx] = useState(0);
+
   const [statuses, setStatuses] = useState<QuestionStatus[]>(
     () => questionIds.map(() => 'untouched' as QuestionStatus)
   );
-  // Simpan jawaban per soal agar bisa dinilai di akhir
+
+  // ── Draft jawaban per soal (KEY: questionId) ──
+  // Disimpan di sini agar tidak hilang saat ganti soal
+  const [drafts, setDrafts] = useState<Record<string, AnswerDraft>>(
+    () => Object.fromEntries(questionIds.map(id => [id, makeBlankDraft()]))
+  );
+
+  // Hasil final per soal (setelah "Simpan")
   const [results, setResults] = useState<Record<string, SoalResult>>({});
+
   const [aiProgress, setAiProgress] = useState('');
   const [aiScoresSummary, setAiScoresSummary] = useState<Record<string, number>>({});
 
-  const totalSoal = questionIds.length;
-  const typeLabel = testType === 'pretest' ? 'Pretest' : 'Posttest';
-  const typeGrad  = testType === 'pretest' ? 'from-amber-500 to-orange-400' : 'from-emerald-600 to-teal-500';
-  const typeSolid = testType === 'pretest' ? 'bg-amber-500' : 'bg-emerald-600';
+  const totalSoal  = questionIds.length;
+  const typeLabel  = testType === 'pretest' ? 'Pretest' : 'Posttest';
+  const typeGrad   = testType === 'pretest' ? 'from-amber-500 to-orange-400' : 'from-emerald-600 to-teal-500';
 
-  // Submit hanya bisa kalau SEMUA soal statusnya 'done' (hijau) — ragu-ragu tidak cukup
-  const allGreen  = statuses.every(s => s === 'done');
-  const allDone   = statuses.every(s => s === 'done' || s === 'ragu'); // untuk navigasi otomatis
-  const doneCount = statuses.filter(s => s === 'done').length;
-  const raguCount = statuses.filter(s => s === 'ragu').length;
-  const isLastQ   = currentIdx === totalSoal - 1;
+  // Submit hanya bisa jika SEMUA soal hijau (done)
+  const allGreen   = statuses.every(s => s === 'done');
+  const doneCount  = statuses.filter(s => s === 'done').length;
+  const raguCount  = statuses.filter(s => s === 'ragu').length;
+  const isLastQ    = currentIdx === totalSoal - 1;
 
-  // ── Callback dari QuizQuestionDynamic saat soal selesai ──
+  // Apakah soal terakhir sudah disimpan (done)?
+  const lastQDone  = statuses[totalSoal - 1] === 'done';
+
+  const currentId  = questionIds[currentIdx];
+
+  // ── Update draft saat user mengetik (dipanggil dari QuizQuestionDynamic) ──
+  const handleDraftChange = useCallback((questionId: string, draft: AnswerDraft) => {
+    setDrafts(prev => ({ ...prev, [questionId]: draft }));
+  }, []);
+
+  // ── Callback saat soal di-simpan (klik Simpan) ──
   const handleQuestionResult = useCallback((result: SoalResult) => {
     setResults(prev => ({ ...prev, [result.questionId]: result }));
     setStatuses(prev => {
       const next = [...prev];
       next[currentIdx] = 'done';
-      // Auto-pindah ke soal berikutnya yang belum dikerjakan — pakai `next` (fresh state)
-      const nextUntouched = next.findIndex((s, i) => i !== currentIdx && s === 'untouched');
-      if (nextUntouched !== -1) {
-        // defer untuk menghindari update bersamaan
+      // Auto-pindah ke soal berikutnya yang belum dikerjakan
+      const nextIdx = next.findIndex((s, i) => i !== currentIdx && s === 'untouched');
+      if (nextIdx !== -1 && nextIdx !== totalSoal - 1) {
+        // Jangan auto-pindah ke soal terakhir setelah semua soal sebelumnya selesai
+        // biarkan siswa memilih sendiri
         setTimeout(() => {
-          setCurrentIdx(nextUntouched);
+          setCurrentIdx(nextIdx);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 0);
+      } else if (nextIdx !== -1) {
+        setTimeout(() => {
+          setCurrentIdx(nextIdx);
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }, 0);
       }
       return next;
     });
-  }, [currentIdx]);
+  }, [currentIdx, totalSoal]);
 
   const markRagu = useCallback(() => {
     setStatuses(prev => {
@@ -111,7 +152,6 @@ export const ExamSession: React.FC<ExamSessionProps> = ({
       next[currentIdx] = 'ragu';
       return next;
     });
-    // Pindah ke soal berikutnya
     const next = (currentIdx + 1) % totalSoal;
     setCurrentIdx(next);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -148,8 +188,7 @@ export const ExamSession: React.FC<ExamSessionProps> = ({
 
         try {
           const result = await nilaiTahap({
-            soalId: qId,
-            tahap: sk,
+            soalId: qId, tahap: sk,
             jawaban: jawabanTahap || '—',
             rubrik: `Berikan nilai untuk tahap ${sk}`,
             skorMaks: 20,
@@ -186,7 +225,7 @@ export const ExamSession: React.FC<ExamSessionProps> = ({
           user_id: user.id, soal_id: qId,
           jawaban: answerJson, skor: normScore, skor_maks: 100,
           alasan: `Skor AI: ${normScore}/100`,
-        }]).then(() => {});
+        }]);
       }
     }
 
@@ -213,9 +252,8 @@ export const ExamSession: React.FC<ExamSessionProps> = ({
           </div>
         </div>
 
-        {/* Identitas + Rincian dalam satu kartu */}
+        {/* Identitas + Rincian */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700 shadow-sm overflow-hidden">
-          {/* Identitas */}
           <div className="p-4">
             <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-3">Identitas Peserta</p>
             <div className="grid grid-cols-2 gap-3">
@@ -239,8 +277,6 @@ export const ExamSession: React.FC<ExamSessionProps> = ({
               </div>
             </div>
           </div>
-
-          {/* Rincian */}
           <div className="p-4">
             <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-3">Rincian Ujian</p>
             <div className="grid grid-cols-3 gap-2">
@@ -259,7 +295,7 @@ export const ExamSession: React.FC<ExamSessionProps> = ({
           </div>
         </div>
 
-        {/* Tata cara ringkas */}
+        {/* Tata cara */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
           <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-3">Tata Cara — 4 Tahap RME</p>
           <div className="grid grid-cols-2 gap-2.5">
@@ -278,7 +314,7 @@ export const ExamSession: React.FC<ExamSessionProps> = ({
           <div className="mt-3 flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl">
             <AlertTriangle size={14} className="text-amber-600 shrink-0 mt-0.5" />
             <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-relaxed">
-              Isi semua tahap setiap soal. Penilaian AI dijalankan setelah semua soal selesai. Kamu bisa tandai soal sebagai <strong>ragu-ragu</strong> untuk dikerjakan lagi sebelum mengumpulkan.
+              Jawaban yang sudah diketik <strong>tetap tersimpan</strong> meski berpindah soal. Klik <strong>Simpan</strong> di tiap soal untuk menandai selesai, lalu kumpulkan semua di soal terakhir.
             </p>
           </div>
         </div>
@@ -316,7 +352,6 @@ export const ExamSession: React.FC<ExamSessionProps> = ({
           <p className="text-xs text-indigo-500 font-bold mt-1.5">{aiProgress}</p>
           <p className="text-xs text-slate-400 mt-1">Mohon jangan tutup halaman ini</p>
         </div>
-        {/* Progress dots */}
         <div className="flex gap-2">
           {questionIds.map((qId, i) => {
             const scored = aiScoresSummary[qId] !== undefined;
@@ -352,7 +387,6 @@ export const ExamSession: React.FC<ExamSessionProps> = ({
             {totalSoal} soal {typeLabel} — dinilai oleh AI
           </p>
         </div>
-        {/* Nilai rata-rata */}
         {avgScore > 0 && (
           <div className="w-full bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
             <div className="flex items-center gap-3">
@@ -360,7 +394,6 @@ export const ExamSession: React.FC<ExamSessionProps> = ({
               <p className="text-sm font-black text-slate-700 dark:text-slate-200 flex-1">Rata-rata Nilai AI</p>
               <p className={`text-2xl font-black ${scoreColor}`}>{avgScore}</p>
             </div>
-            {/* Per soal */}
             <div className="flex gap-2 flex-wrap mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
               {questionIds.map((qId, i) => {
                 const s = aiScoresSummary[qId] ?? '?';
@@ -386,8 +419,6 @@ export const ExamSession: React.FC<ExamSessionProps> = ({
   // ═══════════════════════════════════════════
   // EXAM PHASE
   // ═══════════════════════════════════════════
-  const currentId = questionIds[currentIdx];
-
   return (
     <div className="w-full pb-20 animate-in fade-in">
       {/* Navigator soal — sticky */}
@@ -411,12 +442,10 @@ export const ExamSession: React.FC<ExamSessionProps> = ({
           </div>
           <div className="text-right shrink-0">
             <p className="text-[10px] font-black text-slate-500">Soal {currentIdx + 1}/{totalSoal}</p>
-            <p className="text-[9px] text-slate-400">
-              ✓{doneCount} · ?{raguCount}
-            </p>
+            <p className="text-[9px] text-slate-400">✓{doneCount} · ?{raguCount}</p>
           </div>
         </div>
-        {/* Legenda warna */}
+        {/* Legenda */}
         <div className="max-w-4xl mx-auto px-4 pb-2 flex gap-3 text-[9px] text-slate-400">
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-slate-200 inline-block" /> Belum</span>
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-200 border border-amber-300 inline-block" /> Ragu-ragu</span>
@@ -424,15 +453,19 @@ export const ExamSession: React.FC<ExamSessionProps> = ({
         </div>
       </div>
 
-      {/* Soal */}
+      {/* Soal — key=currentId agar reset view saat ganti soal, tapi draft tetap dari props */}
       <div className="px-4 pt-2">
         <QuizQuestionDynamic
           key={currentId}
           questionId={currentId}
+          // Draft jawaban dari ExamSession (tidak hilang saat navigasi)
+          initialDraft={drafts[currentId]}
+          onDraftChange={(draft) => handleDraftChange(currentId, draft)}
           onFinish={handleQuestionResult as any}
           nextLabel={currentIdx < totalSoal - 1 ? `Simpan & Soal ${currentIdx + 2}` : 'Simpan Jawaban'}
           onMarkRagu={markRagu}
-          showSubmitAll={isLastQ}
+          // Submit hanya tampil di soal terakhir DAN soal terakhir sudah disimpan (hijau)
+          showSubmitAll={isLastQ && lastQDone}
           onSubmitAll={allGreen ? handleSubmitAll : undefined}
           soalInfo={{ current: currentIdx + 1, total: totalSoal }}
         />
