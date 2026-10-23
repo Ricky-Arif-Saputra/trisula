@@ -242,14 +242,11 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({
 
   const handleSubmit = async () => {
     if (!question) return;
-    const isCorrect = numbersMatch(finalNumber, keys.finalNumericAnswer);
-    setNumericCorrect(isCorrect);
-    setSubmitted(true);
 
     // ── Mode Ujian (ExamSession) ──
-    // Tidak scoring di sini, cukup kumpulkan data jawaban untuk dinilai di akhir
+    // Tidak grading di sini — kumpulkan data saja, verdict di ExamSession.
+    // JANGAN set submitted/numericCorrect agar tidak muncul koreksi prematur.
     if (onMarkRagu) {
-      setScoring(false);
       const result = {
         questionId: question.id,
         answerBlocks: {
@@ -266,20 +263,20 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({
       return;
     }
 
-    // ── Mode Latihan ──
-    // Tidak pakai AI — cukup cek kunci jawaban angka akhir
-    setScoring(false);
-
+    // ── Mode Latihan ── cek angka, tampilkan verdict, simpan DB
     const isCorrectFinal = numbersMatch(finalNumber, keys.finalNumericAnswer);
-    const normScore = isCorrectFinal ? 100 : 0;
+    setNumericCorrect(isCorrectFinal);
+    setSubmitted(true);
+    setScoring(false);
 
     if (user) {
       try {
         const answerJson = JSON.stringify({
-          diketahui:  answerBlocks.diketahui.map(b => b.value).join('\n'),
-          ditanya:    answerBlocks.ditanya.map(b => b.value).join('\n'),
-          pengerjaan: answerBlocks.pengerjaan.map(b => b.value).join('\n'),
-          kesimpulan: answerBlocks.kesimpulan.map(b => b.value).join('\n'),
+          // Simpan block sebagai JSON array agar PDF bisa render gambar/latex
+          diketahui:  JSON.stringify(answerBlocks.diketahui.map(b => ({ type: b.type, value: b.value }))),
+          ditanya:    JSON.stringify(answerBlocks.ditanya.map(b => ({ type: b.type, value: b.value }))),
+          pengerjaan: JSON.stringify(answerBlocks.pengerjaan.map(b => ({ type: b.type, value: b.value }))),
+          kesimpulan: JSON.stringify(answerBlocks.kesimpulan.map(b => ({ type: b.type, value: b.value }))),
           finalNumber,
           isCorrect: isCorrectFinal,
           student_name: userName,
@@ -289,6 +286,8 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({
           test_type: question.test_type,
           strand: question.strand,
         });
+        // Hapus jawaban lama untuk soal ini (per user) sebelum insert yang baru
+        await supabase.from('jawaban').delete().eq('user_id', user.id).eq('soal_id', question.id);
         await supabase.from('jawaban').insert([{
           user_id:   user.id,
           soal_id:   question.id,

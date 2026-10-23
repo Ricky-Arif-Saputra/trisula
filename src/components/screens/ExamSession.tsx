@@ -188,14 +188,15 @@ export const ExamSession: React.FC<ExamSessionProps> = ({
       const benar = kunci !== null && numbersMatch(res.finalNumber, kunci);
       resultList.push({ questionId: qId, benar, finalNumber: res.finalNumber, kunci });
 
-      // Simpan ke DB
+      // Simpan ke DB — hapus jawaban lama dulu agar tidak duplikat
       if (user) {
         try {
+          // Simpan block sebagai JSON array agar gambar/latex ter-render di PDF
           const answerJson = JSON.stringify({
-            diketahui:  (res.answerBlocks.diketahui || []).map((b: any) => b.value).join('\n'),
-            ditanya:    (res.answerBlocks.ditanya || []).map((b: any) => b.value).join('\n'),
-            pengerjaan: (res.answerBlocks.pengerjaan || []).map((b: any) => b.value).join('\n'),
-            kesimpulan: (res.answerBlocks.kesimpulan || []).map((b: any) => b.value).join('\n'),
+            diketahui:  JSON.stringify((res.answerBlocks.diketahui || []).map((b: any) => ({ type: b.type, value: b.value }))),
+            ditanya:    JSON.stringify((res.answerBlocks.ditanya || []).map((b: any) => ({ type: b.type, value: b.value }))),
+            pengerjaan: JSON.stringify((res.answerBlocks.pengerjaan || []).map((b: any) => ({ type: b.type, value: b.value }))),
+            kesimpulan: JSON.stringify((res.answerBlocks.kesimpulan || []).map((b: any) => ({ type: b.type, value: b.value }))),
             finalNumber: res.finalNumber,
             isCorrect: benar,
             student_name: userName,
@@ -203,6 +204,8 @@ export const ExamSession: React.FC<ExamSessionProps> = ({
             started_at: res.startedAt,
             finished_at: res.finishedAt,
           });
+          // Hapus jawaban lama user ini untuk soal ini sebelum insert baru
+          await supabase.from('jawaban').delete().eq('user_id', user.id).eq('soal_id', qId);
           await supabase.from('jawaban').insert([{
             user_id: user.id, soal_id: qId,
             jawaban: answerJson,
