@@ -23,8 +23,6 @@ interface QuizQuestionDynamicProps {
   onBack?: () => void;
   nextLabel?: string;
   onMarkRagu?: () => void;
-  showSubmitAll?: boolean;
-  onSubmitAll?: () => void;
   soalInfo?: { current: number; total: number };
   /** Draft jawaban dari ExamSession — agar jawaban tidak hilang saat ganti soal */
   initialDraft?: AnswerDraft;
@@ -119,7 +117,7 @@ const AnswerBlockAdder: React.FC<{ onAdd: (t: BlockType) => void; colorCls?: str
 // Main component
 // ─────────────────────────────────────────────────────────────
 export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({
-  questionId, onFinish, nextLabel, onMarkRagu, showSubmitAll, onSubmitAll, soalInfo,
+  questionId, onFinish, nextLabel, onMarkRagu, soalInfo,
   initialDraft, onDraftChange,
 }) => {
   const { user, userName, userNisn } = useAuth();
@@ -481,6 +479,7 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({
               ) : (
                 <div className="flex flex-col gap-2 flex-1">
                   {/* Ragu-ragu dan submit */}
+                  {/* Tombol simpan/ragu */}
                   {onMarkRagu && (
                     <div className="flex gap-2">
                       <button onClick={onMarkRagu}
@@ -499,28 +498,6 @@ export const QuizQuestionDynamic: React.FC<QuizQuestionDynamicProps> = ({
                       className="flex-1 py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm disabled:bg-slate-300 cursor-pointer flex items-center justify-center gap-2 hover:bg-emerald-700 transition-colors">
                       <CheckCircle size={16} /> {nextLabel || 'Cek jawaban akhir'}
                     </button>
-                  )}
-                  {/* Kumpulkan semua soal — hanya di soal terakhir */}
-                  {showSubmitAll && (
-                    <div className="space-y-2">
-                      {onSubmitAll ? (
-                        <button onClick={onSubmitAll}
-                          className="w-full py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm cursor-pointer flex items-center justify-center gap-2 hover:bg-indigo-700 transition-colors shadow-md">
-                          <span className="material-symbols-outlined text-[16px]">send</span>
-                          Kumpulkan & Nilai Semua Soal
-                        </button>
-                      ) : (
-                        <div className="w-full py-3 rounded-xl bg-slate-100 dark:bg-slate-700 border-2 border-dashed border-slate-300 dark:border-slate-600 text-slate-400 font-bold text-sm flex flex-col items-center justify-center gap-1 cursor-not-allowed">
-                          <div className="flex items-center gap-2">
-                            <span className="material-symbols-outlined text-[16px] text-slate-400">lock</span>
-                            <span>Kumpulkan & Nilai Semua Soal</span>
-                          </div>
-                          <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
-                            Selesaikan semua soal (hijau) terlebih dahulu
-                          </span>
-                        </div>
-                      )}
-                    </div>
                   )}
                 </div>
               )}
