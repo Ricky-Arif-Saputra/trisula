@@ -146,10 +146,8 @@ function renderStageAnswer(raw: any): string {
 
 /**
  * buildStudentPackagePdf
- * Menghasilkan HTML satu PDF per siswa yang mencakup:
- *  - Cover identitas + rekap nilai
- *  - Semua soal dalam paket
- *  - Semua jawaban per tahap RME (teks/LaTeX/gambar)
+ * Layout 100% table-based (tidak ada flex/grid) agar html2pdf stabil.
+ * Struktur: cover → identitas → rekap nilai → ringkasan → detail per soal
  */
 function buildStudentPackagePdf(
   questions: Question[],
@@ -162,148 +160,153 @@ function buildStudentPackagePdf(
   },
   examTitle: string,
 ): string {
-  // ── Metadata waktu (ambil dari soal pertama yang dijawab) ──
+  // ── Metadata ──
   const firstAns = Object.values(student.answers)[0] || {};
   const tgl      = fmtDate(firstAns.started_at);
   const jamMulai = fmtTime(firstAns.started_at);
   const jamSls   = fmtTime(firstAns.finished_at);
   const durasi   = durasiStr(firstAns.started_at, firstAns.finished_at);
 
-  // ── Hitung benar / salah ──
   let benar = 0;
   questions.forEach(q => { if (student.answers[q.id]?.isCorrect) benar++; });
-  const salah = questions.length - benar;
-  const nilai = questions.length > 0 ? Math.round((benar / questions.length) * 100) : 0;
-  const nilaiColor  = nilai >= 75 ? '#16a34a' : nilai >= 50 ? '#d97706' : '#dc2626';
-  const nilaiLabel  = nilai >= 75 ? 'LULUS' : nilai >= 50 ? 'CUKUP' : 'PERLU PERBAIKAN';
+  const salah      = questions.length - benar;
+  const nilai      = questions.length > 0 ? Math.round((benar / questions.length) * 100) : 0;
+  const nilaiColor = nilai >= 75 ? '#16a34a' : nilai >= 50 ? '#d97706' : '#dc2626';
+  const nilaiLabel = nilai >= 75 ? 'LULUS' : nilai >= 50 ? 'CUKUP' : 'PERLU PERBAIKAN';
   const nilaiLabelBg = nilai >= 75 ? '#f0fdf4' : nilai >= 50 ? '#fffbeb' : '#fef2f2';
 
   const strand = questions[0]?.strand || '';
   const tipe   = questions[0]?.test_type === 'pretest' ? 'Pre-Test' : 'Post-Test';
+  const strandLabel = strand.charAt(0).toUpperCase() + strand.slice(1);
 
-  // ════════════════════════════════════════
-  // COVER — identitas + rekap
-  // ════════════════════════════════════════
+  // ═══════════════════════════════════════
+  // COVER
+  // ═══════════════════════════════════════
   const cover = `
-<div class="cover">
-  <!-- Header strip warna -->
-  <div class="cover-header">
-    <div class="cover-logo">TRISULA EduMath</div>
-    <div class="cover-subtitle">Laporan Jawaban Ujian &mdash; ${tipe}</div>
-  </div>
+<!-- HEADER -->
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:0;">
+  <tr>
+    <td style="background:#1e293b;padding:14px 18px;border-radius:8px 8px 0 0;">
+      <div style="font-size:9px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#64748b;margin-bottom:3px;">TRISULA EduMath &mdash; Laporan Jawaban Ujian</div>
+      <div style="font-size:18px;font-weight:900;color:#fff;margin-bottom:2px;">${escHtml(examTitle)}</div>
+      <div style="font-size:10px;color:#94a3b8;">${escHtml(strandLabel)} &nbsp;&bull;&nbsp; ${tipe} &nbsp;&bull;&nbsp; ${tgl}</div>
+    </td>
+  </tr>
+</table>
 
-  <!-- Judul ujian -->
-  <div class="cover-title">${escHtml(examTitle)}</div>
-  <div class="cover-meta">${escHtml(strand.charAt(0).toUpperCase() + strand.slice(1))} &nbsp;&bull;&nbsp; ${tipe} &nbsp;&bull;&nbsp; ${tgl}</div>
+<!-- IDENTITAS + NILAI side by side -->
+<table width="100%" cellpadding="0" cellspacing="0"
+  style="border-collapse:collapse;border:1px solid #e2e8f0;border-top:none;margin-bottom:0;">
+  <!-- Identitas siswa -->
+  <tr>
+    <td width="65%" valign="top" style="padding:12px 16px;border-right:1px solid #e2e8f0;">
+      <div style="font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:8px;">Identitas Peserta</div>
+      <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+        <tr>
+          <td style="font-size:11px;color:#64748b;padding:2px 0;width:100px;">Nama Peserta</td>
+          <td style="font-size:11px;color:#64748b;padding:2px 4px;">:</td>
+          <td style="font-size:12px;font-weight:700;color:#0f172a;padding:2px 0;">${escHtml(student.displayName)}</td>
+        </tr>
+        <tr>
+          <td style="font-size:11px;color:#64748b;padding:2px 0;">NISN</td>
+          <td style="font-size:11px;color:#64748b;padding:2px 4px;">:</td>
+          <td style="font-size:12px;font-weight:700;color:#0f172a;padding:2px 0;">${escHtml(student.displayNisn)}</td>
+        </tr>
+        <tr>
+          <td style="font-size:11px;color:#64748b;padding:2px 0;">Waktu Mulai</td>
+          <td style="font-size:11px;color:#64748b;padding:2px 4px;">:</td>
+          <td style="font-size:11px;color:#334155;padding:2px 0;">${jamMulai}</td>
+        </tr>
+        <tr>
+          <td style="font-size:11px;color:#64748b;padding:2px 0;">Waktu Selesai</td>
+          <td style="font-size:11px;color:#64748b;padding:2px 4px;">:</td>
+          <td style="font-size:11px;color:#334155;padding:2px 0;">${jamSls}</td>
+        </tr>
+        <tr>
+          <td style="font-size:11px;color:#64748b;padding:2px 0;">Durasi</td>
+          <td style="font-size:11px;color:#64748b;padding:2px 4px;">:</td>
+          <td style="font-size:11px;color:#334155;padding:2px 0;">${durasi}</td>
+        </tr>
+        <tr>
+          <td style="font-size:11px;color:#64748b;padding:2px 0;">Jumlah Soal</td>
+          <td style="font-size:11px;color:#64748b;padding:2px 4px;">:</td>
+          <td style="font-size:11px;color:#334155;padding:2px 0;">${questions.length} soal</td>
+        </tr>
+      </table>
+    </td>
+    <!-- Rekap nilai -->
+    <td width="35%" valign="top" style="padding:12px 16px;background:#f8fafc;text-align:center;">
+      <div style="font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:10px;">Rekap Nilai</div>
+      <!-- Nilai besar -->
+      <div style="font-size:44px;font-weight:900;color:${nilaiColor};line-height:1;">${nilai}</div>
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:${nilaiColor};
+        background:${nilaiLabelBg};border-radius:20px;padding:3px 10px;display:inline-block;margin:4px 0 10px;">${nilaiLabel}</div>
+      <!-- Benar / Salah -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:6px;">
+        <tr>
+          <td width="50%" style="text-align:center;border-right:1px solid #e2e8f0;padding-bottom:4px;">
+            <div style="font-size:24px;font-weight:900;color:#16a34a;">${benar}</div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#94a3b8;">Benar</div>
+          </td>
+          <td width="50%" style="text-align:center;padding-bottom:4px;">
+            <div style="font-size:24px;font-weight:900;color:#dc2626;">${salah}</div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#94a3b8;">Salah</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
 
-  <hr class="divider"/>
+<!-- RINGKASAN PER SOAL -->
+<table width="100%" cellpadding="0" cellspacing="0"
+  style="border-collapse:collapse;border:1px solid #e2e8f0;border-top:none;margin-bottom:22px;border-radius:0 0 8px 8px;">
+  <tr>
+    <td colspan="4" style="padding:8px 16px;background:#f1f5f9;border-bottom:1px solid #e2e8f0;">
+      <span style="font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#64748b;">Ringkasan Jawaban</span>
+    </td>
+  </tr>
+  <tr style="background:#1e293b;">
+    <td style="padding:6px 12px;font-size:10px;font-weight:700;color:#fff;text-align:center;width:40px;">No</td>
+    <td style="padding:6px 12px;font-size:10px;font-weight:700;color:#fff;">Soal</td>
+    <td style="padding:6px 12px;font-size:10px;font-weight:700;color:#fff;text-align:center;width:80px;">Jawaban</td>
+    <td style="padding:6px 12px;font-size:10px;font-weight:700;color:#fff;text-align:center;width:80px;">Status</td>
+  </tr>
+  ${questions.map((q, qi) => {
+    const a     = student.answers[q.id] || {};
+    const done  = !!student.answers[q.id];
+    const ok    = done && !!a.isCorrect;
+    const rowBg = qi % 2 === 0 ? '#fff' : '#f8fafc';
+    const stClr = !done ? '#94a3b8' : ok ? '#16a34a' : '#dc2626';
+    const stBg  = !done ? '#f8fafc' : ok ? '#f0fdf4' : '#fef2f2';
+    const stTxt = !done ? '—' : ok ? '✓ Benar' : '✗ Salah';
+    const jwb   = done ? escHtml(String(a.finalNumber || '—')) : '—';
+    return `<tr style="background:${rowBg};border-bottom:1px solid #f1f5f9;">
+      <td style="padding:6px 12px;font-size:11px;font-weight:700;color:#1e293b;text-align:center;">${qi + 1}</td>
+      <td style="padding:6px 12px;font-size:11px;color:#334155;">${escHtml(q.title || `Soal ${qi + 1}`)}</td>
+      <td style="padding:6px 12px;font-size:11px;font-family:monospace;font-weight:700;color:#1e293b;text-align:center;">${jwb}</td>
+      <td style="padding:6px 12px;font-size:10px;font-weight:700;color:${stClr};background:${stBg};text-align:center;">${stTxt}</td>
+    </tr>`;
+  }).join('')}
+</table>`;
 
-  <!-- Identitas peserta -->
-  <table class="id-table">
-    <tr>
-      <td class="id-label">Nama Peserta</td>
-      <td class="id-colon">:</td>
-      <td class="id-value"><strong>${escHtml(student.displayName)}</strong></td>
-    </tr>
-    <tr>
-      <td class="id-label">NISN</td>
-      <td class="id-colon">:</td>
-      <td class="id-value">${escHtml(student.displayNisn)}</td>
-    </tr>
-    <tr>
-      <td class="id-label">Waktu Mulai</td>
-      <td class="id-colon">:</td>
-      <td class="id-value">${jamMulai}</td>
-    </tr>
-    <tr>
-      <td class="id-label">Waktu Selesai</td>
-      <td class="id-colon">:</td>
-      <td class="id-value">${jamSls}</td>
-    </tr>
-    <tr>
-      <td class="id-label">Durasi</td>
-      <td class="id-colon">:</td>
-      <td class="id-value">${durasi}</td>
-    </tr>
-    <tr>
-      <td class="id-label">Jumlah Soal</td>
-      <td class="id-colon">:</td>
-      <td class="id-value">${questions.length} soal</td>
-    </tr>
-  </table>
-
-  <hr class="divider"/>
-
-  <!-- Rekap nilai -->
-  <div class="score-box">
-    <div class="score-item">
-      <div class="score-num" style="color:${nilaiColor};">${nilai}</div>
-      <div class="score-lbl">Nilai</div>
-    </div>
-    <div class="score-item score-item-green">
-      <div class="score-num" style="color:#16a34a;">${benar}</div>
-      <div class="score-lbl">Benar</div>
-    </div>
-    <div class="score-item score-item-red">
-      <div class="score-num" style="color:#dc2626;">${salah}</div>
-      <div class="score-lbl">Salah</div>
-    </div>
-    <div class="score-item" style="background:${nilaiLabelBg};">
-      <div class="score-num" style="font-size:14px;color:${nilaiColor};">${nilaiLabel}</div>
-      <div class="score-lbl">Predikat</div>
-    </div>
-  </div>
-
-  <!-- Ringkasan per soal -->
-  <div class="summary-title">Ringkasan Jawaban</div>
-  <table class="summary-table">
-    <thead>
-      <tr>
-        <th>No</th>
-        <th>Jawaban Siswa</th>
-        <th>Kunci</th>
-        <th>Status</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${questions.map((q, qi) => {
-        const a = student.answers[q.id] || {};
-        const done = !!student.answers[q.id];
-        const ok = done && !!a.isCorrect;
-        const statusColor = !done ? '#94a3b8' : ok ? '#16a34a' : '#dc2626';
-        const statusBg    = !done ? '#f8fafc'  : ok ? '#f0fdf4' : '#fef2f2';
-        const statusTxt   = !done ? '—' : ok ? '✓ Benar' : '✗ Salah';
-        // Cari kunci dari rme_keys (disimpan di content_blocks meta)
-        const jawaban = done ? escHtml(String(a.finalNumber || '—')) : '—';
-        return `<tr>
-          <td style="text-align:center;font-weight:700;">${qi + 1}</td>
-          <td style="text-align:center;font-family:monospace;font-size:11px;">${jawaban}</td>
-          <td style="text-align:center;font-size:10px;color:#64748b;">—</td>
-          <td style="text-align:center;background:${statusBg};color:${statusColor};font-weight:700;font-size:11px;">${statusTxt}</td>
-        </tr>`;
-      }).join('')}
-    </tbody>
-  </table>
-</div>
-`;
-
-  // ════════════════════════════════════════
+  // ═══════════════════════════════════════
   // DETAIL PER SOAL
-  // ════════════════════════════════════════
+  // ═══════════════════════════════════════
   const STAGE_INFO = [
-    { key: 'diketahui',  label: 'Tahap 1 — Diketahui',  color: '#0369a1', bg: '#f0f9ff' },
-    { key: 'ditanya',    label: 'Tahap 2 — Ditanya',    color: '#7c3aed', bg: '#f5f3ff' },
-    { key: 'pengerjaan', label: 'Tahap 3 — Pengerjaan', color: '#b45309', bg: '#fffbeb' },
-    { key: 'kesimpulan', label: 'Tahap 4 — Kesimpulan', color: '#15803d', bg: '#f0fdf4' },
+    { key: 'diketahui',  label: 'Tahap 1 — Diketahui',  hdrBg: '#e0f2fe', hdrClr: '#0369a1', bodyBg: '#f0f9ff' },
+    { key: 'ditanya',    label: 'Tahap 2 — Ditanya',    hdrBg: '#ede9fe', hdrClr: '#7c3aed', bodyBg: '#f5f3ff' },
+    { key: 'pengerjaan', label: 'Tahap 3 — Pengerjaan', hdrBg: '#fef3c7', hdrClr: '#b45309', bodyBg: '#fffbeb' },
+    { key: 'kesimpulan', label: 'Tahap 4 — Kesimpulan', hdrBg: '#dcfce7', hdrClr: '#15803d', bodyBg: '#f0fdf4' },
   ];
 
-  const soalPages = questions.map((q, qi) => {
-    const ans     = student.answers[q.id] || {};
-    const hasAns  = !!student.answers[q.id];
-    const ok      = hasAns && !!ans.isCorrect;
-    const badgeBg = !hasAns ? '#f1f5f9' : ok ? '#dcfce7' : '#fee2e2';
-    const badgeClr= !hasAns ? '#64748b'  : ok ? '#15803d' : '#dc2626';
-    const badgeTxt= !hasAns ? 'BELUM DIJAWAB' : ok ? '✓ BENAR' : '✗ SALAH';
+  const soalBloks = questions.map((q, qi) => {
+    const ans    = student.answers[q.id] || {};
+    const hasAns = !!student.answers[q.id];
+    const ok     = hasAns && !!ans.isCorrect;
+    const badgeBg  = !hasAns ? '#f1f5f9' : ok ? '#dcfce7' : '#fee2e2';
+    const badgeClr = !hasAns ? '#64748b'  : ok ? '#15803d' : '#dc2626';
+    const badgeTxt = !hasAns ? 'BELUM DIJAWAB' : ok ? '✓ BENAR' : '✗ SALAH';
 
     // Narasi soal
     const narasiBloks = (q.content_blocks || []).filter(
@@ -313,234 +316,140 @@ function buildStudentPackagePdf(
       ? narasiBloks.map((b: any) => {
           const v = (b.value || '').trim();
           if (!v) return '';
-          if (b.type === 'image') return `<img src="${escHtml(v)}" style="display:block;max-width:100%;max-height:160px;margin:6px 0;border-radius:4px;border:1px solid #e2e8f0;" alt=""/>`;
-          if (b.type === 'latex') {
-            try { return `<div class="latex-block">${katex.renderToString(v, { throwOnError: false, displayMode: true })}</div>`; }
-            catch { return `<code>${escHtml(v)}</code>`; }
+          if (b.type === 'image') {
+            return `<img src="${escHtml(v)}" style="max-width:100%;max-height:160px;display:block;margin:6px 0;border-radius:4px;border:1px solid #e2e8f0;" alt=""/>`;
           }
-          return `<p class="narasi-p">${renderInlineMath(v)}</p>`;
+          if (b.type === 'latex') {
+            try { return `<div style="margin:6px 0;overflow-x:auto;">${katex.renderToString(v, { throwOnError: false, displayMode: true })}</div>`; }
+            catch { return `<code style="font-size:11px;">${escHtml(v)}</code>`; }
+          }
+          return `<div style="font-size:12px;line-height:1.7;margin:3px 0;">${renderInlineMath(v)}</div>`;
         }).join('')
-      : '<p style="color:#94a3b8;font-style:italic;">(narasi soal tidak tersedia)</p>';
+      : '<em style="font-size:11px;color:#94a3b8;">(narasi tidak tersedia)</em>';
 
     // 4 tahap jawaban
-    const stageHtml = STAGE_INFO.map(st => {
-      const rawAns  = ans[st.key as keyof typeof ans];
-      const stageHtmlContent = renderStageAnswer(rawAns);
+    const stagesHtml = STAGE_INFO.map(st => {
+      const rawAns      = ans[st.key as keyof typeof ans];
+      const stageContent = renderStageAnswer(rawAns);
       return `
-<div class="stage-block" style="border-left:3px solid ${st.color};">
-  <div class="stage-header" style="background:${st.bg};color:${st.color};">
-    ${escHtml(st.label)}
-  </div>
-  <div class="stage-body">
-    ${stageHtmlContent}
-  </div>
-</div>`;
+<tr>
+  <td style="padding:0;border-bottom:1px solid #e2e8f0;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+      <tr>
+        <td style="background:${st.hdrBg};padding:5px 12px;border-bottom:1px solid #e2e8f0;">
+          <span style="font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;color:${st.hdrClr};">${st.label}</span>
+        </td>
+      </tr>
+      <tr>
+        <td style="background:${st.bodyBg};padding:8px 12px;font-size:12px;line-height:1.65;color:#1e293b;min-height:30px;">
+          ${stageContent}
+        </td>
+      </tr>
+    </table>
+  </td>
+</tr>`;
     }).join('');
 
     // Jawaban angka akhir
     const finalNum = hasAns ? escHtml(String(ans.finalNumber || '—')) : '—';
-    const finalBg  = !hasAns ? '#f8fafc' : ok ? '#dcfce7' : '#fee2e2';
-    const finalClr = !hasAns ? '#64748b'  : ok ? '#15803d' : '#dc2626';
+    const finalBg  = !hasAns ? '#f8fafc' : ok ? '#f0fdf4' : '#fef2f2';
+    const finalBdr = !hasAns ? '#e2e8f0' : ok ? '#86efac' : '#fca5a5';
+    const finalClr = !hasAns ? '#64748b' : ok ? '#15803d' : '#dc2626';
 
     return `
-<div class="soal-block">
-  <!-- Soal header -->
-  <div class="soal-header">
-    <div class="soal-num">Soal ${qi + 1}</div>
-    <div class="soal-title">${escHtml(q.title || '')}</div>
-    <div class="soal-badge" style="background:${badgeBg};color:${badgeClr};">${badgeTxt}</div>
-  </div>
-
+<!-- SOAL ${qi + 1} -->
+<table width="100%" cellpadding="0" cellspacing="0"
+  style="border-collapse:collapse;margin-bottom:20px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+  <!-- Header soal -->
+  <tr>
+    <td style="background:#1e293b;padding:8px 12px;width:72px;">
+      <div style="font-size:11px;font-weight:900;color:#fff;text-align:center;
+        background:rgba(255,255,255,.15);border-radius:20px;padding:2px 8px;">Soal ${qi + 1}</div>
+    </td>
+    <td style="background:#1e293b;padding:8px 12px;">
+      <div style="font-size:12px;font-weight:700;color:#e2e8f0;">${escHtml(q.title || '')}</div>
+    </td>
+    <td style="background:#1e293b;padding:8px 12px;width:110px;text-align:right;">
+      <span style="font-size:9px;font-weight:900;color:${badgeClr};background:${badgeBg};
+        padding:3px 10px;border-radius:20px;">${badgeTxt}</span>
+    </td>
+  </tr>
   <!-- Narasi soal -->
-  <div class="narasi-block">
-    <div class="section-label">📋 Soal</div>
-    ${narasiHtml}
-  </div>
-
-  <!-- Jawaban 4 tahap -->
-  <div class="section-label" style="margin-top:10px;">✏️ Jawaban Siswa</div>
-  ${stageHtml}
-
+  <tr>
+    <td colspan="3" style="padding:10px 14px;background:#fffbeb;border-bottom:1px solid #e2e8f0;">
+      <div style="font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;color:#92400e;margin-bottom:6px;">📋 Soal / Konteks</div>
+      ${narasiHtml}
+    </td>
+  </tr>
+  <!-- Label jawaban -->
+  <tr>
+    <td colspan="3" style="padding:6px 14px 4px;background:#f8fafc;border-bottom:1px solid #f1f5f9;">
+      <div style="font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;color:#475569;">✏️ Jawaban Siswa — 4 Tahap RME</div>
+    </td>
+  </tr>
+  <!-- 4 Tahap -->
+  ${stagesHtml}
   <!-- Jawaban angka akhir -->
-  <div class="final-answer" style="background:${finalBg};border-color:${finalClr};">
-    <span class="final-label">Jawaban Akhir (Angka):</span>
-    <span class="final-value" style="color:${finalClr};">${finalNum}</span>
-    <span class="final-badge" style="background:${finalClr}15;color:${finalClr};border:1px solid ${finalClr}40;">${badgeTxt}</span>
-  </div>
-</div>`;
+  <tr>
+    <td colspan="3" style="padding:8px 14px;background:${finalBg};border-top:2px solid ${finalBdr};">
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+        <tr>
+          <td style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:#64748b;">
+            Jawaban Angka Akhir
+          </td>
+          <td style="text-align:right;">
+            <span style="font-size:16px;font-weight:900;font-family:monospace;color:${finalClr};">${finalNum}</span>
+            &nbsp;&nbsp;
+            <span style="font-size:9px;font-weight:900;color:${finalClr};
+              border:1.5px solid ${finalBdr};padding:2px 10px;border-radius:20px;">${badgeTxt}</span>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>`;
   }).join('');
 
-  // ════════════════════════════════════════
+  // ═══════════════════════════════════════
   // HTML LENGKAP
-  // ════════════════════════════════════════
+  // ═══════════════════════════════════════
   return `<!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="utf-8"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.18.7/dist/katex.min.css"/>
   <style>
-    /* ── Reset & Base ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+      font-family: Arial, Helvetica, sans-serif;
       font-size: 12px;
-      line-height: 1.6;
+      line-height: 1.5;
       color: #1e293b;
       background: #fff;
-      padding: 0;
+      padding: 20px 24px;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-    img { max-width: 100%; height: auto; display: block; }
-    .katex { font-size: 1em; }
-    .katex-display { overflow-x: auto; margin: 4px 0; text-align: center; }
-    code { background: #f1f5f9; padding: 1px 5px; border-radius: 3px; font-size: 11px; }
-
-    /* ── Page wrapper ── */
-    .page { padding: 28px 30px; max-width: 800px; margin: 0 auto; }
-
-    /* ── COVER ── */
-    .cover-header {
-      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-      color: #fff;
-      padding: 16px 20px;
-      border-radius: 8px 8px 0 0;
-    }
-    .cover-logo { font-size: 11px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px; }
-    .cover-subtitle { font-size: 14px; font-weight: 700; color: #e2e8f0; }
-    .cover-title { font-size: 20px; font-weight: 900; color: #0f172a; margin: 16px 0 4px; letter-spacing: -.3px; }
-    .cover-meta { font-size: 11px; color: #64748b; margin-bottom: 16px; }
-    .divider { border: none; border-top: 2px solid #e2e8f0; margin: 14px 0; }
-
-    .id-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
-    .id-table tr td { padding: 4px 6px; font-size: 12px; vertical-align: top; }
-    .id-label { color: #64748b; width: 120px; }
-    .id-colon { color: #64748b; width: 12px; }
-    .id-value { color: #1e293b; font-weight: 600; }
-
-    .score-box { display: flex; gap: 10px; margin-bottom: 16px; }
-    .score-item {
-      flex: 1;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 10px 8px;
-      text-align: center;
-    }
-    .score-num { font-size: 28px; font-weight: 900; line-height: 1.1; }
-    .score-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #94a3b8; margin-top: 3px; }
-
-    .summary-title { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; color: #64748b; margin-bottom: 8px; }
-    .summary-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .summary-table thead tr { background: #1e293b; }
-    .summary-table th { color: #fff; padding: 7px 10px; text-align: center; font-size: 10px; font-weight: 700; text-transform: uppercase; }
-    .summary-table td { padding: 7px 10px; border-bottom: 1px solid #f1f5f9; }
-    .summary-table tbody tr:nth-child(even) { background: #f8fafc; }
-
-    /* ── SOAL BLOCK ── */
-    .soal-block {
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      overflow: hidden;
-      margin-top: 20px;
-      page-break-inside: avoid;
-    }
-    .soal-header {
-      background: #1e293b;
-      padding: 10px 14px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .soal-num {
-      background: rgba(255,255,255,.15);
-      color: #fff;
-      font-size: 11px;
-      font-weight: 900;
-      padding: 3px 10px;
-      border-radius: 20px;
-      white-space: nowrap;
-    }
-    .soal-title { color: #e2e8f0; font-size: 13px; font-weight: 700; flex: 1; }
-    .soal-badge { font-size: 10px; font-weight: 900; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
-
-    .narasi-block {
-      padding: 12px 14px;
-      background: #fffbeb;
-      border-bottom: 1px solid #e2e8f0;
-    }
-    .narasi-p { font-size: 12px; line-height: 1.7; color: #1e293b; margin-bottom: 4px; }
-    .latex-block { margin: 6px 0; overflow-x: auto; }
-    .section-label {
-      font-size: 9px;
-      font-weight: 900;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      color: #64748b;
-      margin-bottom: 6px;
-      padding: 0 14px;
-    }
-
-    .stage-block {
-      margin: 6px 14px 0;
-      border-radius: 6px;
-      overflow: hidden;
-      border: 1px solid #e2e8f0;
-    }
-    .stage-header {
-      padding: 5px 10px;
-      font-size: 9px;
-      font-weight: 900;
-      text-transform: uppercase;
-      letter-spacing: .07em;
-    }
-    .stage-body {
-      padding: 8px 10px;
-      font-size: 12px;
-      line-height: 1.65;
-      background: #fff;
-      color: #1e293b;
-      min-height: 28px;
-    }
-
-    .final-answer {
-      margin: 10px 14px 14px;
-      padding: 10px 14px;
-      border-radius: 8px;
-      border: 1.5px solid;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .final-label { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .05em; }
-    .final-value { font-size: 18px; font-weight: 900; font-family: monospace; flex: 1; }
-    .final-badge { font-size: 10px; font-weight: 900; padding: 2px 10px; border-radius: 20px; }
-
-    /* ── Footer ── */
-    .footer {
-      margin-top: 24px;
-      padding-top: 10px;
-      border-top: 1px solid #e2e8f0;
-      font-size: 9px;
-      color: #94a3b8;
-      text-align: center;
-    }
+    img { max-width: 100%; height: auto; }
+    .katex { font-size: .95em; }
+    .katex-display { overflow-x: auto; margin: 3px 0; text-align: center; }
+    code { background: #f1f5f9; padding: 1px 4px; border-radius: 3px; font-size: 11px; }
+    table { border-radius: 4px; }
   </style>
 </head>
 <body>
-<div class="page">
-  ${cover}
-  ${soalPages}
-  <div class="footer">
-    TRISULA EduMath &nbsp;&mdash;&nbsp; Dicetak ${new Date().toLocaleDateString('id-ID', { weekday:'long', day:'2-digit', month:'long', year:'numeric' })}
-    &nbsp;&mdash;&nbsp; Dokumen ini bersifat rahasia dan hanya untuk keperluan arsip akademik.
-  </div>
+${cover}
+<div style="font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:12px;">
+  Detail Jawaban Per Soal
+</div>
+${soalBloks}
+<div style="margin-top:20px;padding-top:8px;border-top:1px solid #e2e8f0;font-size:9px;color:#94a3b8;text-align:center;">
+  TRISULA EduMath &nbsp;&mdash;&nbsp; Dicetak: ${new Date().toLocaleDateString('id-ID', { weekday:'long', day:'2-digit', month:'long', year:'numeric' })}
+  &nbsp;&mdash;&nbsp; Dokumen ini untuk keperluan arsip akademik
 </div>
 </body>
 </html>`;
 }
-
 // ─────────────────────────────────────────────
 // DownloadModal — lihat & unduh ZIP jawaban (semua soal paket)
 // ─────────────────────────────────────────────
