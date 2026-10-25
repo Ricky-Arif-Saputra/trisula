@@ -66,6 +66,26 @@ function escHtml(s: string): string {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function fmtTime(iso: string | undefined): string {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }); }
+  catch { return '—'; }
+}
+
+function fmtDate(iso: string | undefined): string {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleDateString('id-ID', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }); }
+  catch { return '—'; }
+}
+
+function durasiStr(start: string | undefined, end: string | undefined): string {
+  if (!start || !end) return '—';
+  try {
+    const s = Math.round((new Date(end).getTime() - new Date(start).getTime()) / 1000);
+    return `${Math.floor(s / 60)} mnt ${s % 60} dtk`;
+  } catch { return '—'; }
+}
+
 function renderInlineMath(text: string): string {
   let r = text.replace(/\$\$([\s\S]+?)\$\$/g, (_m, e) => {
     try { return katex.renderToString(e.trim(), { throwOnError: false, displayMode: true }); }
